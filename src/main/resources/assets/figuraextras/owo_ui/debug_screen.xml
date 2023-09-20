@@ -33,13 +33,6 @@
 
                         <flow-layout direction="horizontal">
                             <children>
-                                <button id="isolate-component">
-                                    <text>Isolate Components</text>
-
-                                    <renderer>
-                                        <flat color="black" hovered-color="#333333" disabled-color="#111111"/>
-                                    </renderer>
-                                </button>
                                 <button id="toggle-gui-scale">
                                     <text>Gui Scale</text>
 

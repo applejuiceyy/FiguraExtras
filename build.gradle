@@ -35,7 +35,7 @@ dependencies {
     modImplementation "org.figuramc:figura-fabric:${project.figura}+1.20.1"
     modImplementation "io.wispforest:owo-lib:0.11.1+1.20"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-    //include "io.wispforest:owo-sentinel:0.11.1+1.20"
+    include "io.wispforest:owo-sentinel:0.11.1+1.20"
 
     compileOnly("com.github.FiguraMC.LuaJ:luaj-core:3.0.6-figura")
     compileOnly("com.github.FiguraMC.LuaJ:luaj-jse:3.0.6-figura")

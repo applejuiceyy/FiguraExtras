@@ -1,6 +1,5 @@
 package com.github.applejuiceyy.figuraextras.screen;
 
-import com.github.applejuiceyy.figuraextras.mixin.gui.owolib.OwoUIAdapterAccessor;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.github.applejuiceyy.figuraextras.window.WindowContext;
@@ -11,8 +10,6 @@ import io.wispforest.owo.ui.component.ButtonComponent;
 import io.wispforest.owo.ui.component.DropdownComponent;
 import io.wispforest.owo.ui.component.LabelComponent;
 import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.CursorStyle;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -28,7 +25,6 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
     LabelComponent currentAvatar;
     WindowContext context;
     AvatarInfoDisplay avatarInfoDisplay = null;
-    WidgetIsolator isolator;
 
     boolean windowIsActive = true;
 
@@ -40,64 +36,54 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
 
     @Override
     protected void build(FlowLayout rootComponent) {
-        isolator = new WidgetIsolator(uiAdapter.rootComponent) {
-            @Override
-            void setStyle(CursorStyle style) {
-                ((OwoUIAdapterAccessor) uiAdapter).getCursorAdapter().applyStyle(style);
-            }
-        };
-
         ButtonComponent button = rootComponent.childById(ButtonComponent.class, "avatar-chooser");
         guiScale = rootComponent.childById(ButtonComponent.class, "toggle-gui-scale");
         currentAvatar = rootComponent.childById(LabelComponent.class, "current-avatar-name");
-        isolateComponent = rootComponent.childById(ButtonComponent.class, "isolate-dropdownComponent");
 
         if (button != null) {
-            button.onPress(ignored -> {
-                DropdownComponent.openContextMenu(
-                        this, rootComponent, FlowLayout::child, button.x(), button.y() + button.height(),
-                        dropdown -> {
-                            boolean none = true;
-                            for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
-                                none = false;
-                                Component text = Component.literal(loadedAvatar.entityName).append(": ").append(loadedAvatar.name);
-                                dropdown.button(text, drop -> {
-                                    if (avatarInfoDisplay != null) {
-                                        avatarInfoDisplay.root.remove();
+            button.onPress(ignored -> DropdownComponent.openContextMenu(
+                    this, rootComponent, FlowLayout::child, button.x(), button.y() + button.height(),
+                    dropdown -> {
+                        boolean none = true;
+                        for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
+                            none = false;
+                            Component text = Component.literal(loadedAvatar.entityName).append(": ").append(loadedAvatar.name);
+                            dropdown.button(text, drop -> {
+                                if (avatarInfoDisplay != null) {
+                                    avatarInfoDisplay.root.remove();
+                                }
+                                currentAvatar.text(text);
+                                avatarInfoDisplay = new AvatarInfoDisplay(new InfoViews.Context() {
+                                    @Override
+                                    public MainInfoScreen getScreen() {
+                                        return MainInfoScreen.this;
                                     }
-                                    currentAvatar.text(text);
-                                    avatarInfoDisplay = new AvatarInfoDisplay(new InfoViews.Context() {
-                                        @Override
-                                        public MainInfoScreen getScreen() {
-                                            return MainInfoScreen.this;
-                                        }
 
-                                        @Override
-                                        public Avatar getAvatar() {
-                                            return loadedAvatar;
-                                        }
+                                    @Override
+                                    public Avatar getAvatar() {
+                                        return loadedAvatar;
+                                    }
 
-                                        @Override
-                                        public FlowLayout getRoot() {
-                                            return uiAdapter.rootComponent;
-                                        }
+                                    @Override
+                                    public FlowLayout getRoot() {
+                                        return uiAdapter.rootComponent;
+                                    }
 
-                                        @Override
-                                        public WindowContentPopOutHost getHost() {
-                                            return context.getContentPopOutHost();
-                                        }
-                                    });
-                                    Objects.requireNonNull(rootComponent.childById(FlowLayout.class, "avatar-mounting-point"))
-                                            .child(avatarInfoDisplay.root);
-                                    drop.remove();
+                                    @Override
+                                    public WindowContentPopOutHost getHost() {
+                                        return context.getContentPopOutHost();
+                                    }
                                 });
-                            }
+                                Objects.requireNonNull(rootComponent.childById(FlowLayout.class, "avatar-mounting-point"))
+                                        .child(avatarInfoDisplay.root);
+                                drop.remove();
+                            });
+                        }
 
-                            if (none) {
-                                dropdown.text(Component.literal("No avatars loaded"));
-                            }
-                        });
-            });
+                        if (none) {
+                            dropdown.text(Component.literal("No avatars loaded"));
+                        }
+                    }));
         }
 
         if (guiScale != null) {
@@ -124,10 +110,6 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
                     o.setMessage(Component.literal("Gui Scale: " + current));
                 }
             });
-        }
-        if (isolateComponent != null) {
-            isolateComponent.visible = true;
-            isolateComponent.onPress(o -> isolator.startIsolating());
         }
     }
 
@@ -168,7 +150,7 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
 
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        if (windowIsActive || isolator.isolatedWidgets.size() == 0 || !this.context.isCompletelyOverlaying()) {
+        if (windowIsActive || !this.context.isCompletelyOverlaying()) {
             RenderSystem.enableBlend();
             RenderSystem.setShaderColor(64 / 255f, 64 / 255f, 64 / 255f, alpha);
             context.blit(Screen.BACKGROUND_LOCATION, 0, 0, 0, 0, width, height, 32, 32);
@@ -180,8 +162,6 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
                 avatarInfoDisplay.render();
             }
         }
-
-        isolator.render(OwoUIDrawContext.of(context), mouseX, mouseY, delta);
     }
 
     @Override
@@ -194,22 +174,16 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isolator.onMouseDown(mouseX, mouseY, button))
-            return true;
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (isolator.onMouseReleased(mouseX, mouseY, button))
-            return true;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dX, double dY) {
-        if (isolator.onMouseDragged(mouseX, mouseY, button, dX, dY))
-            return true;
         return super.mouseDragged(mouseX, mouseY, button, dX, dY);
     }
 
@@ -225,12 +199,6 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
 
     @Override
     public boolean testTransparency(Double x, Double y) {
-        if (!windowIsActive && isolator.isolatedWidgets.size() != 0) {
-            return false;
-        }
-        if (isolator.hitTest(x, y)) {
-            return true;
-        }
         if (alpha > 0.2) {
             return true;
         }
