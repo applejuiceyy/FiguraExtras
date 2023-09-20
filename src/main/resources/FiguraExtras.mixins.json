@@ -1,0 +1,42 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.github.applejuiceyy.figuraextras.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "figura.AvatarMixin",
+    "figura.InstructionsMixin",
+    "figura.LuaRuntimeAccessor",
+    "figura.printer.FiguraLuaPrinterAccessor",
+    "figura.printer.FiguraLuaPrinterLambda1Mixin",
+    "figura.printer.FiguraLuaPrinterLambda2Mixin",
+    "figura.printer.FiguraLuaPrinterLambda3Mixin",
+    "figura.printer.FiguraLuaPrinterMixin",
+    "gui.owolib.OwoUIAdapterAccessor"
+  ],
+  "client": [
+    "DeadSlotMixin",
+    "MinecraftMixin",
+    "MouseHandlerMixin",
+    "TableMixin",
+    "figura.BlockStateAPIMixin",
+    "figura.EventsMixin",
+    "figura.FiguraAPIManagerMixin",
+    "figura.FiguraTextureMixin",
+    "figura.ModelPartMixin",
+    "gui.ChatScreenMixin",
+    "gui.CommandSuggestionsMixin",
+    "gui.SuggestionListMixin",
+    "gui.owolib.BlurProgramAccessor",
+    "gui.owolib.ButtonComponentMixin",
+    "render.AbstractWidgetMixin",
+    "render.LivingEntityRendererMixin",
+    "render.ModelPartMixin",
+    "render.PartDefinitionMixin",
+    "window.VirtualScreenMixin",
+    "window.WindowMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
