@@ -41,7 +41,7 @@ class FiguraLuaPrinterLambda1Mixin {
         }
     }
 
-    @Inject(method = "invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "FIELD", target = "Lorg/figuramc/figura/config/ConfigType$BoolConfig;value:Ljava/lang/Object;", shift = At.Shift.AFTER), remap = false)
+    @Inject(method = "invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "FIELD", target = "Lorg/figuramc/figura/config/ConfigType$BoolConfig;value:Ljava/lang/Object;", shift = At.Shift.AFTER))
     private void c(Varargs args, CallbackInfoReturnable<Varargs> cir) {
         Configs.LOG_OTHERS.value = switchLogOthersBack;
     }
