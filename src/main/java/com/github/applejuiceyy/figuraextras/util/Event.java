@@ -69,11 +69,13 @@ public class Event<T> {
 
     public class Sink {
         public void run(Consumer<T> running) {
-            isFiring = true;
-            running.accept(dispatcher.apply(subscribers));
-            isFiring = false;
-            toRun.forEach(Runnable::run);
-            toRun.clear();
+            if (subscribers.size() > 0) {
+                isFiring = true;
+                running.accept(dispatcher.apply(subscribers));
+                isFiring = false;
+                toRun.forEach(Runnable::run);
+                toRun.clear();
+            }
         }
     }
 }

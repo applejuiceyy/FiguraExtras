@@ -97,5 +97,7 @@ public class InfoViews {
         WindowContentPopOutHost getHost();
 
         MainInfoScreen getScreen();
+
+        void setView(Function<InfoViews.Context, InfoViews.View> view);
     }
 }

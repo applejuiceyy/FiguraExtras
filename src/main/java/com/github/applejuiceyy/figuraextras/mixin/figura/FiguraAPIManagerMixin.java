@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
-import com.github.applejuiceyy.figuraextras.DelayedResponse;
+import com.github.applejuiceyy.figuraextras.lua.DebuggerAPI;
+import com.github.applejuiceyy.figuraextras.lua.DelayedResponse;
 import com.github.applejuiceyy.figuraextras.render.rendertasks.EntityTask;
 import org.figuramc.figura.lua.FiguraAPIManager;
 import org.spongepowered.asm.mixin.Final;
@@ -16,6 +17,7 @@ public class FiguraAPIManagerMixin {
     public static Set<Class<?>> WHITELISTED_CLASSES;
 
     static {
+        WHITELISTED_CLASSES.add(DebuggerAPI.class);
         WHITELISTED_CLASSES.add(DelayedResponse.class);
         WHITELISTED_CLASSES.add(EntityTask.class);
     }

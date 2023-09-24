@@ -6,7 +6,7 @@
   "description": "",
   "authors": [],
   "contact": {},
-  "icon": "assets/FiguraExtras/icon.png",
+  "icon": "assets/figuraextras/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [

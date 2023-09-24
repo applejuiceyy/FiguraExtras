@@ -19,7 +19,6 @@ public class AvatarInfoDisplay {
     public final FlowLayout root;
     private final InfoViews.Context context;
     private InfoViews.View view = null;
-
     DropdownComponent dropdownComponent;
     FlowLayout mountingPoint;
 
@@ -53,11 +52,19 @@ public class AvatarInfoDisplay {
                 InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, c -> new MetricsView(context, c.getAvatar().render), Component.literal("Script not detected"))
         );
 
+        dropdownComponent.divider();
+
         addView(Component.literal("Loaded textures"), TextureView::new);
+
+        addView(Component.literal("Loaded sounds"), SoundView::new);
 
         dropdownComponent.divider();
 
         addView(Component.literal("Output"), ChatLikeView::new);
+
+        dropdownComponent.divider();
+
+        addView(Component.literal("Capture"), CaptureView::new);
 
         dropdownComponent.divider();
 
@@ -70,7 +77,12 @@ public class AvatarInfoDisplay {
     }
 
     public void addView(Component text, Function<InfoViews.Context, InfoViews.View> v) {
-        Function<InfoViews.Context, InfoViews.View> actual = InfoViews.onlyIf(
+        Function<InfoViews.Context, InfoViews.View> actual = wrap(v);
+        dropdownComponent.button(text, o -> switchToView(actual.apply(context)));
+    }
+
+    private Function<InfoViews.Context, InfoViews.View> wrap(Function<InfoViews.Context, InfoViews.View> v) {
+        return InfoViews.onlyIf(
                 avatar -> Minecraft.getInstance().level != null,
                 InfoViews.onlyIf(
                         avatar -> !((AvatarAccess) avatar).figuraExtrass$isCleaned(),
@@ -79,17 +91,17 @@ public class AvatarInfoDisplay {
                 ),
                 Component.literal("World not loaded")
         );
+    }
 
-        dropdownComponent.button(text, o -> {
-            if (view != null) {
-                view.dispose();
-                view.getRoot().remove();
-            }
+    private void switchToView(InfoViews.View apply) {
+        if (view != null) {
+            view.dispose();
+            view.getRoot().remove();
+        }
 
-            view = actual.apply(context);
+        view = apply;
 
-            mountingPoint.child(view.getRoot());
-        });
+        mountingPoint.child(view.getRoot());
     }
 
     public void tick() {
@@ -106,5 +118,9 @@ public class AvatarInfoDisplay {
 
     public void dispose() {
         view.dispose();
+    }
+
+    public void setView(Function<InfoViews.Context, InfoViews.View> view) {
+        switchToView(wrap(view).apply(context));
     }
 }

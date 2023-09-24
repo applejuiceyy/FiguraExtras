@@ -1,8 +1,8 @@
 package com.github.applejuiceyy.figuraextras.ducks;
 
+import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
+import com.github.applejuiceyy.figuraextras.tech.trees.dummy.DummyExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
-import com.github.applejuiceyy.figuraextras.views.trees.core.Expander;
-import com.github.applejuiceyy.figuraextras.views.trees.dummy.DummyExpander;
 import net.minecraft.network.chat.Component;
 import org.luaj.vm2.LuaValue;
 

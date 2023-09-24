@@ -18,6 +18,7 @@ import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 
 import java.util.Objects;
+import java.util.function.Function;
 
 public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements WindowContextReceiver {
     ButtonComponent guiScale;
@@ -57,6 +58,11 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
                                     @Override
                                     public MainInfoScreen getScreen() {
                                         return MainInfoScreen.this;
+                                    }
+
+                                    @Override
+                                    public void setView(Function<InfoViews.Context, InfoViews.View> view) {
+                                        avatarInfoDisplay.setView(view);
                                     }
 
                                     @Override

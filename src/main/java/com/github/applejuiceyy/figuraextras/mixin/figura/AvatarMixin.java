@@ -2,20 +2,23 @@ package com.github.applejuiceyy.figuraextras.mixin.figura;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.FiguraLuaPrinterDuck;
+import com.github.applejuiceyy.figuraextras.ducks.SoundBufferAccess;
+import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
+import com.github.applejuiceyy.figuraextras.tech.trees.core.Registration;
+import com.github.applejuiceyy.figuraextras.tech.trees.dummy.DummyExpander;
+import com.github.applejuiceyy.figuraextras.tech.trees.lua.LuaClosureExpander;
+import com.github.applejuiceyy.figuraextras.tech.trees.lua.LuaTableExpander;
+import com.github.applejuiceyy.figuraextras.tech.trees.lua.LuaValueInterpreter;
+import com.github.applejuiceyy.figuraextras.tech.trees.lua.UserdataExpander;
+import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.ModelPartExpander;
+import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.ModelPartInterpreter;
+import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.ModelPartRenderTaskExpander;
+import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.RenderTaskInterpreter;
+import com.github.applejuiceyy.figuraextras.tech.trees.objects.ObjectScraperExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import com.github.applejuiceyy.figuraextras.views.trees.core.Expander;
-import com.github.applejuiceyy.figuraextras.views.trees.core.Registration;
-import com.github.applejuiceyy.figuraextras.views.trees.dummy.DummyExpander;
-import com.github.applejuiceyy.figuraextras.views.trees.lua.LuaClosureExpander;
-import com.github.applejuiceyy.figuraextras.views.trees.lua.LuaTableExpander;
-import com.github.applejuiceyy.figuraextras.views.trees.lua.LuaValueInterpreter;
-import com.github.applejuiceyy.figuraextras.views.trees.lua.UserdataExpander;
-import com.github.applejuiceyy.figuraextras.views.trees.modelpart.ModelPartExpander;
-import com.github.applejuiceyy.figuraextras.views.trees.modelpart.ModelPartInterpreter;
-import com.github.applejuiceyy.figuraextras.views.trees.modelpart.ModelPartRenderTaskExpander;
-import com.github.applejuiceyy.figuraextras.views.trees.modelpart.RenderTaskInterpreter;
-import com.github.applejuiceyy.figuraextras.views.trees.objects.ObjectScraperExpander;
+import com.mojang.blaze3d.audio.OggAudioStream;
+import com.mojang.blaze3d.audio.SoundBuffer;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.lua.FiguraLuaRuntime;
@@ -29,7 +32,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
+import java.io.ByteArrayInputStream;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
@@ -99,6 +104,11 @@ public class AvatarMixin implements AvatarAccess {
         ));
         objectRootUpdater.getSink().run(Runnable::run);
         modelRootUpdater.getSink().run(Runnable::run);
+    }
+
+    @Inject(method = "loadSound", at = @At(value = "INVOKE", target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"), locals = LocalCapture.CAPTURE_FAILSOFT)
+    void e(String name, byte[] data, CallbackInfo ci, ByteArrayInputStream inputStream, OggAudioStream oggAudioStream, SoundBuffer sound) {
+        ((SoundBufferAccess) sound).figuraExtrass$keepBuffer();
     }
 
 

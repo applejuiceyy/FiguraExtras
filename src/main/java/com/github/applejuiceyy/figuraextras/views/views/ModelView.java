@@ -1,14 +1,14 @@
 package com.github.applejuiceyy.figuraextras.views.views;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
+import com.github.applejuiceyy.figuraextras.tech.trees.ObjectTreeView;
+import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
+import com.github.applejuiceyy.figuraextras.tech.trees.dummy.DummyExpander;
+import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
-import com.github.applejuiceyy.figuraextras.views.trees.ObjectTreeView;
-import com.github.applejuiceyy.figuraextras.views.trees.core.Expander;
-import com.github.applejuiceyy.figuraextras.views.trees.dummy.DummyExpander;
-import com.github.applejuiceyy.figuraextras.views.trees.interfaces.ObjectExpander;
 import io.wispforest.owo.ui.component.Components;
 import io.wispforest.owo.ui.component.LabelComponent;
 import io.wispforest.owo.ui.container.FlowLayout;
