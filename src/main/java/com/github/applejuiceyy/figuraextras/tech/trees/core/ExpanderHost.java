@@ -1,6 +1,5 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.core;
 
-import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 
@@ -29,9 +28,6 @@ public class ExpanderHost<V> {
     }
 
     public Runnable getCancel() {
-        return () -> {
-            FiguraExtras.logger.info("Now no longer ticking item listings");
-            stopUpdatingEntries.getSink().run(Runnable::run);
-        };
+        return () -> stopUpdatingEntries.getSink().run(Runnable::run);
     }
 }

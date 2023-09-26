@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.ducks;
+package com.github.applejuiceyy.figuraextras.ducks.statics;
 
 public class WindowDuck {
     private WindowDuck() {

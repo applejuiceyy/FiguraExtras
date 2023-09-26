@@ -1,5 +1,6 @@
 package com.github.applejuiceyy.figuraextras.tech.captures.captures;
 
+import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
 import org.jetbrains.annotations.Nullable;
 import org.luaj.vm2.Globals;
@@ -12,27 +13,24 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class FlameGraph implements SecondaryCallHook {
-
-    private final Globals globals;
     private final Consumer<Frame> after;
-    private Frame currentFrame = new Frame(null);
+    private Frame currentFrame = new Frame(null, LuaDuck.CallType.NORMAL);
     private int instructions = 0;
 
     public FlameGraph(Globals globals, Consumer<Frame> after) {
-        this.globals = globals;
         this.after = after;
     }
 
     @Override
-    public void intoFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack) {
+    public void intoFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.CallType type) {
         flushInstructions();
-        Frame newFrame = new Frame(currentFrame).setClosure(luaClosure);
+        Frame newFrame = new Frame(currentFrame, type).setClosure(luaClosure);
         currentFrame.children.add(newFrame);
         currentFrame = newFrame;
     }
 
     @Override
-    public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack) {
+    public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
         flushInstructions();
         if (currentFrame.currentlyConstructingRegion != null) {
             currentFrame.regions.add(
@@ -44,6 +42,7 @@ public class FlameGraph implements SecondaryCallHook {
             );
             currentFrame.currentlyConstructingRegion = null;
         }
+        currentFrame.returnType = type;
         currentFrame = currentFrame.previous;
         assert currentFrame != null;
         currentFrame.invalidateCachedInstructions();
@@ -123,9 +122,11 @@ public class FlameGraph implements SecondaryCallHook {
     public static class Frame extends Child {
         @Nullable
         final Frame previous;
+        public final LuaDuck.CallType type;
 
         @Nullable
         public LuaClosure boundClosure;
+        private LuaDuck.ReturnType returnType = LuaDuck.ReturnType.NORMAL;
 
         private int cachedInstructions = -1;
 
@@ -136,7 +137,8 @@ public class FlameGraph implements SecondaryCallHook {
 
         ArrayList<Region> regions = new ArrayList<>();
 
-        Frame(@Nullable Frame previous) {
+        Frame(@Nullable Frame previous, LuaDuck.CallType type) {
+            this.type = type;
             this.previous = previous;
         }
 
@@ -162,6 +164,10 @@ public class FlameGraph implements SecondaryCallHook {
 
         public List<Region> getRegions() {
             return regions;
+        }
+
+        public LuaDuck.ReturnType getReturnType() {
+            return returnType;
         }
 
         Frame setClosure(LuaClosure closure) {

@@ -1,6 +1,5 @@
 package com.github.applejuiceyy.figuraextras.util;
 
-import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.mixin.figura.printer.FiguraLuaPrinterAccessor;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.platform.Window;
@@ -73,14 +72,8 @@ public class Util {
     }
 
     public static <T> void subscribeIfNeeded(Observers.Observer<T> observer, Event<Runnable>.Source source, Runnable toRun) {
-        observer.shouldListen().subscribe(() -> {
-            FiguraExtras.logger.info("Now listening");
-            source.subscribe(toRun);
-        });
-        observer.shouldStopListen().subscribe(() -> {
-            FiguraExtras.logger.info("Now no longer listening");
-            source.unsubscribe(toRun);
-        });
+        observer.shouldListen().subscribe(() -> source.subscribe(toRun));
+        observer.shouldStopListen().subscribe(() -> source.unsubscribe(toRun));
     }
 
     public static void pipeObservation(Observers.Observer<?> in, Observers.Observer<?> out) {

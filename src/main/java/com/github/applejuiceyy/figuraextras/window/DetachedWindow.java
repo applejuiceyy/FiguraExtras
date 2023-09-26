@@ -1,7 +1,7 @@
 package com.github.applejuiceyy.figuraextras.window;
 
 import com.github.applejuiceyy.figuraextras.ducks.MinecraftAccess;
-import com.github.applejuiceyy.figuraextras.ducks.WindowDuck;
+import com.github.applejuiceyy.figuraextras.ducks.statics.WindowDuck;
 import com.github.applejuiceyy.figuraextras.screen.MainInfoScreen;
 import com.github.applejuiceyy.figuraextras.screen.ScreenContainer;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
@@ -25,8 +25,6 @@ public class DetachedWindow implements WindowContext {
 
     Window mainWindow;
     WindowContentPopOutHost host;
-    Runnable undo = () -> {
-    };
 
     public DetachedWindow() {
         // garbage code 0/10
@@ -37,9 +35,7 @@ public class DetachedWindow implements WindowContext {
         };
 
         window = new SecondaryWindow((screen) -> {
-            WindowDuck.hints = () -> {
-                GLFW.glfwWindowHint(GLFW.GLFW_TRANSPARENT_FRAMEBUFFER, GLFW.GLFW_TRUE);
-            };
+            WindowDuck.hints = () -> GLFW.glfwWindowHint(GLFW.GLFW_TRANSPARENT_FRAMEBUFFER, GLFW.GLFW_TRUE);
             Window window = screen.newWindow(new DisplayData(300, 200, OptionalInt.empty(), OptionalInt.empty(), false), null, "e");
             WindowDuck.hints = null;
 

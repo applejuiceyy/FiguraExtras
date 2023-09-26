@@ -1,5 +1,6 @@
 package com.github.applejuiceyy.figuraextras.components;
 
+import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
@@ -86,6 +87,36 @@ public class FlameGraphComponent extends BaseComponent {
             bufferBuilder.vertex(stack, startOffset, y + 20, 0).color(selectionColor).endVertex();
             bufferBuilder.vertex(stack, endOffset, y + 20, 0).color(selectionColor).endVertex();
             bufferBuilder.vertex(stack, endOffset, y + 19, 0).color(selectionColor).endVertex();
+
+            if (frame.type == LuaDuck.CallType.TAIL) {
+                int previous = ((0xaa / (pos - 1)) << 16) + ((0x55 / (pos - 1)) << 8) + 0x22 / (pos - 1);
+
+                bufferBuilder.vertex(stack, startOffset - 1, y + 4, 0).color(selectionColor).endVertex();
+                bufferBuilder.vertex(stack, startOffset - 1, y + 16, 0).color(selectionColor).endVertex();
+                bufferBuilder.vertex(stack, startOffset + 4, y + 16, 0).color(selectionColor).endVertex();
+                bufferBuilder.vertex(stack, startOffset + 4, y + 4, 0).color(selectionColor).endVertex();
+
+                bufferBuilder.vertex(stack, startOffset - 1, y + 5, 0).color(0xff000000 + previous).endVertex();
+                bufferBuilder.vertex(stack, startOffset - 1, y + 15, 0).color(0xff000000 + previous).endVertex();
+                bufferBuilder.vertex(stack, startOffset + 3, y + 15, 0).color(0xff000000 + previous).endVertex();
+                bufferBuilder.vertex(stack, startOffset + 3, y + 5, 0).color(0xff000000 + previous).endVertex();
+            }
+        }
+
+        if (frame.getReturnType() == LuaDuck.ReturnType.ERROR) {
+            if (selectedFrame == frame) {
+                bufferBuilder.vertex(stack, endOffset - 1, y, 0).color(0xffff0000).endVertex();
+                bufferBuilder.vertex(stack, endOffset - 1, y + 20, 0).color(0xffff0000).endVertex();
+                bufferBuilder.vertex(stack, endOffset, y + 20, 0).color(0xffff0000).endVertex();
+                bufferBuilder.vertex(stack, endOffset, y, 0).color(0xffff0000).endVertex();
+            } else {
+                for (int yy = 0; yy < 20; yy += 5) {
+                    bufferBuilder.vertex(stack, endOffset - 1, y + yy + 1, 0).color(0xffff0000).endVertex();
+                    bufferBuilder.vertex(stack, endOffset - 1, y + yy + 2 + 1, 0).color(0xffff0000).endVertex();
+                    bufferBuilder.vertex(stack, endOffset, y + yy + 2 + 1 + 1, 0).color(0xffff0000).endVertex();
+                    bufferBuilder.vertex(stack, endOffset, y + yy + 1 + 1, 0).color(0xffff0000).endVertex();
+                }
+            }
         }
 
         for (FlameGraph.Marker child : frame.getMarkers()) {
@@ -143,7 +174,7 @@ public class FlameGraphComponent extends BaseComponent {
             component = Component.literal(frame.boundClosure == null ? "[JAVA]" : frame.boundClosure.name());
             if (end - start <= font.width(component)) {
                 component = Component.literal("...");
-                if (end - start <= font.width(component)) {
+                if (end - start <= font.width(component) + 4) {
                     return;
                 }
             }
@@ -179,19 +210,42 @@ public class FlameGraphComponent extends BaseComponent {
 
             if (thing != null) {
                 FlameGraph.Frame frame = thing.getA();
-                FlameGraph.Marker marker = getMarkerInPos(frame, thing.getB(), mouseX, mouseY);
 
-                Component component;
+
+                Component component = null;
+
+                FlameGraph.Marker marker = getMarkerInPos(frame, thing.getB(), mouseX, mouseY);
                 if (marker != null) {
                     component = Component.literal(marker.name() + " (" + marker.instruction() + " instructions into the function)");
-                } else {
+                }
+
+                if (component == null) {
                     FlameGraph.Region region = getRegionInPos(frame, thing.getB(), mouseX, mouseY);
                     if (region != null) {
                         component = Component.literal(region.name() + " (" + region.instruction() + " instructions into the function taking " + region.duration() + " instructions)");
-                    } else {
-                        component = Component.literal((frame.boundClosure == null ? "[JAVA]" : frame.boundClosure.name()) + " (" + frame.getInstructions() + " instructions)");
-
                     }
+                }
+
+                if (component == null) {
+                    if (frame.type == LuaDuck.CallType.TAIL) {
+                        int x = toView(thing.getB());
+                        if (mouseX < x + 5) {
+                            component = Component.literal("Function was called on a tail return");
+                        }
+                    }
+                }
+
+                if (component == null) {
+                    if (frame.getReturnType() == LuaDuck.ReturnType.ERROR) {
+                        int x = toView(thing.getB() + frame.getInstructions());
+                        if (mouseX > x - 3) {
+                            component = Component.literal("Function returned non-graciously with an error");
+                        }
+                    }
+                }
+
+                if (component == null) {
+                    component = Component.literal((frame.boundClosure == null ? "[JAVA]" : frame.boundClosure.name()) + " (" + frame.getInstructions() + " instructions)");
                 }
 
 
@@ -245,7 +299,7 @@ public class FlameGraphComponent extends BaseComponent {
             return null;
         }
 
-        if (x > toView(offset) && x < toView(frame.getInstructions() + offset)) {
+        if (x >= toView(offset) && x <= toView(frame.getInstructions() + offset)) {
             return new Tuple<>(frame, offset);
         }
 

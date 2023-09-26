@@ -2,7 +2,7 @@ package com.github.applejuiceyy.figuraextras.views.views;
 
 import com.github.applejuiceyy.figuraextras.components.MessageStackComponent;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
-import com.github.applejuiceyy.figuraextras.ducks.FiguraLuaPrinterDuck;
+import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import io.wispforest.owo.ui.component.CheckboxComponent;
@@ -66,9 +66,7 @@ public class ChatLikeView implements InfoViews.View {
 
         root.child(stack);
 
-        sub = event.getSource().subscribe((message, kind) -> {
-            stack.addMessage(message, () -> show.contains(kind));
-        });
+        sub = event.getSource().subscribe((message, kind) -> stack.addMessage(message, () -> show.contains(kind)));
     }
 
     private <T> Consumer<Boolean> hideOrShow(List<T> list, T value, Runnable after) {

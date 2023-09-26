@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.ducks;
+package com.github.applejuiceyy.figuraextras.ducks.statics;
 
 import org.figuramc.figura.avatar.Avatar;
 

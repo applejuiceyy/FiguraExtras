@@ -64,7 +64,7 @@ public class AvatarInfoDisplay {
 
         dropdownComponent.divider();
 
-        addView(Component.literal("Capture"), CaptureView::new);
+        addView(Component.literal("Capture"), InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, CaptureView::new, Component.literal("Script not detected")));
 
         dropdownComponent.divider();
 

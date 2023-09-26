@@ -1,6 +1,6 @@
 package com.github.applejuiceyy.figuraextras.screen.contentpopout;
 
-import com.github.applejuiceyy.figuraextras.ducks.WindowDuck;
+import com.github.applejuiceyy.figuraextras.ducks.statics.WindowDuck;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.window.SecondaryWindow;
 import com.mojang.blaze3d.platform.DisplayData;

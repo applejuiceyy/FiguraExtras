@@ -12,16 +12,11 @@ import io.wispforest.owo.ui.core.Sizing;
 
 public class FlameGraphView implements InfoViews.View {
 
-    private final InfoViews.Context context;
-    private final FlameGraph.Frame frame;
-    private FlowLayout root;
+    private final FlowLayout root;
     FlameGraphComponent component;
     RangeSliderComponent slider;
 
     public FlameGraphView(InfoViews.Context context, FlameGraph.Frame frame) {
-        this.context = context;
-        this.frame = frame;
-
         component = new FlameGraphComponent(frame) {
             @Override
             protected void frameSelected(FlameGraph.Frame a, Integer b) {

@@ -1,7 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura.printer;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
-import com.github.applejuiceyy.figuraextras.ducks.FiguraLuaPrinterDuck;
+import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.config.Configs;

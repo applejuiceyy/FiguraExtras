@@ -1,8 +1,8 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
-import com.github.applejuiceyy.figuraextras.ducks.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.ducks.SoundBufferAccess;
+import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Registration;
 import com.github.applejuiceyy.figuraextras.tech.trees.dummy.DummyExpander;

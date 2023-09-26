@@ -67,9 +67,15 @@ public class RangeSliderComponent extends BaseComponent {
     public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
         int lowerKnob = knobPosition(this.lowerKnob);
         int higherKnob = knobPosition(this.higherKnob);
+
+        context.fill(lowerKnob + x, y + height / 2 - 8, higherKnob + x, y + height / 2 - 2, 0xffff0000);
+
         context.fill(lowerKnob + x - 1, y, lowerKnob + x + 1, y + height, 0xffffffff);
         context.fill(higherKnob + x - 1, y, higherKnob + x + 1, y + height, 0xffffffff);
-        context.fill(lowerKnob + x, y + height / 2 - 1, higherKnob + x, y + height / 2 + 1, 0xff000000);
+
+        context.fill(lowerKnob + x - 5, (int) (y + height * (2 / 3f)), lowerKnob + x + 5, y + height, 0xffffffff);
+        context.fill(higherKnob + x - 5, (int) (y + height * (2 / 3f)), higherKnob + x + 5, y + height, 0xffffffff);
+
     }
 
     @Override
@@ -79,13 +85,17 @@ public class RangeSliderComponent extends BaseComponent {
         draggingHigherKnob = false;
         draggingLowerKnob = false;
         offset = 0;
-        if (mouseY > 0 && mouseY < height && mouseX > lowerKnob - 1 && mouseX < higherKnob + 1) {
+        int w = 1;
+        if (mouseY > height * (2 / 3f)) {
+            w = 5;
+        }
+        if (mouseY > 0 && mouseY < height && mouseX > lowerKnob - w && mouseX < higherKnob + w) {
             dragging = true;
             startLowerKnob = this.lowerKnob;
             startHigherKnob = this.higherKnob;
-            if (mouseX < lowerKnob + 1) {
+            if (mouseX < lowerKnob + w) {
                 draggingLowerKnob = true;
-            } else if (mouseX < higherKnob - 1) {
+            } else if (mouseX < higherKnob - w) {
                 draggingHigherKnob = true;
                 draggingLowerKnob = true;
             } else {

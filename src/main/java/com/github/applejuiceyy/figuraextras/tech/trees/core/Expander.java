@@ -1,6 +1,5 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.core;
 
-import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 
@@ -22,7 +21,6 @@ public class Expander<V> {
     }
 
     public Runnable listEntries(Callback callback) {
-        FiguraExtras.logger.info("Now ticking item listings");
         ExpanderHost<V> host = new ExpanderHost<>(observer, registration, callback, updater);
         return host.getCancel();
     }

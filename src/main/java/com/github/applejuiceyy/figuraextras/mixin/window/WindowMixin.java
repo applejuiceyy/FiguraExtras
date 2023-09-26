@@ -1,7 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.window;
 
 import com.github.applejuiceyy.figuraextras.ducks.WindowAccess;
-import com.github.applejuiceyy.figuraextras.ducks.WindowDuck;
+import com.github.applejuiceyy.figuraextras.ducks.statics.WindowDuck;
 import com.mojang.blaze3d.platform.DisplayData;
 import com.mojang.blaze3d.platform.ScreenManager;
 import com.mojang.blaze3d.platform.Window;

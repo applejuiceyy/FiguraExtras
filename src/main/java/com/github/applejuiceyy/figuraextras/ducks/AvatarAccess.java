@@ -1,5 +1,6 @@
 package com.github.applejuiceyy.figuraextras.ducks;
 
+import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
 import com.github.applejuiceyy.figuraextras.tech.trees.dummy.DummyExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;

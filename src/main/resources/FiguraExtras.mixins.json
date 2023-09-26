@@ -15,7 +15,8 @@
     "figura.printer.FiguraLuaPrinterMixin",
     "gui.owolib.OwoUIAdapterAccessor",
     "lua.GlobalsMixin",
-    "lua.LuaClosureMixin"
+    "lua.LuaClosureMixin",
+    "lua.TailCallVarargsMixin"
   ],
   "client": [
     "MinecraftMixin",

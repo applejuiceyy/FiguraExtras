@@ -156,17 +156,15 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
 
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        if (windowIsActive || !this.context.isCompletelyOverlaying()) {
-            RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(64 / 255f, 64 / 255f, 64 / 255f, alpha);
-            context.blit(Screen.BACKGROUND_LOCATION, 0, 0, 0, 0, width, height, 32, 32);
-            RenderSystem.disableBlend();
-            RenderSystem.setShaderColor(1, 1, 1, 1);
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(64 / 255f, 64 / 255f, 64 / 255f, alpha);
+        context.blit(Screen.BACKGROUND_LOCATION, 0, 0, 0, 0, width, height, 32, 32);
+        RenderSystem.disableBlend();
+        RenderSystem.setShaderColor(1, 1, 1, 1);
 
-            super.render(context, mouseX, mouseY, delta);
-            if (avatarInfoDisplay != null) {
-                avatarInfoDisplay.render();
-            }
+        super.render(context, mouseX, mouseY, delta);
+        if (avatarInfoDisplay != null) {
+            avatarInfoDisplay.render();
         }
     }
 
