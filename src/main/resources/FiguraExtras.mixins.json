@@ -29,6 +29,7 @@
     "figura.FiguraAPIManagerMixin",
     "figura.FiguraTextureMixin",
     "figura.ModelPartMixin",
+    "figura.WardrobeScreenMixin",
     "gui.ChatScreenMixin",
     "gui.CommandSuggestionsMixin",
     "gui.SuggestionListMixin",

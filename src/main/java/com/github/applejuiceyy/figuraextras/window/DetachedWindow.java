@@ -36,7 +36,7 @@ public class DetachedWindow implements WindowContext {
 
         window = new SecondaryWindow((screen) -> {
             WindowDuck.hints = () -> GLFW.glfwWindowHint(GLFW.GLFW_TRANSPARENT_FRAMEBUFFER, GLFW.GLFW_TRUE);
-            Window window = screen.newWindow(new DisplayData(300, 200, OptionalInt.empty(), OptionalInt.empty(), false), null, "e");
+            Window window = screen.newWindow(new DisplayData(300, 200, OptionalInt.empty(), OptionalInt.empty(), false), null, "Debug Window");
             WindowDuck.hints = null;
 
             if (Util.getPlatform() == Util.OS.WINDOWS) {
