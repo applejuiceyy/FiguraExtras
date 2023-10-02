@@ -3,10 +3,7 @@ package com.github.applejuiceyy.figuraextras.mixin.lua;
 import com.github.applejuiceyy.figuraextras.ducks.GlobalsAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
-import org.luaj.vm2.Globals;
-import org.luaj.vm2.LuaClosure;
-import org.luaj.vm2.LuaValue;
-import org.luaj.vm2.Varargs;
+import org.luaj.vm2.*;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -21,15 +18,26 @@ public class LuaClosureMixin {
     @Final
     Globals globals;
 
-    @Inject(method = "execute([Lorg/luaj/vm2/LuaValue;Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "FIELD", target = "Lorg/luaj/vm2/LuaClosure;globals:Lorg/luaj/vm2/Globals;", ordinal = 0))
+    @Inject(method = "execute([Lorg/luaj/vm2/LuaValue;Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "INVOKE", target = "Lorg/luaj/vm2/lib/DebugLib;onCall(Lorg/luaj/vm2/LuaClosure;Lorg/luaj/vm2/Varargs;[Lorg/luaj/vm2/LuaValue;)V", ordinal = 0, shift = At.Shift.BY, by = 1))
     void a(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir) {
         LuaDuck.CallType type = LuaDuck.currentCallType;
         LuaDuck.currentCallType = LuaDuck.CallType.NORMAL;
+
+
         if (globals != null) {
             GlobalsAccess globalsAccess = ((GlobalsAccess) globals);
             SecondaryCallHook capture = globalsAccess.figuraExtrass$getCurrentCapture();
             if (capture != null) {
-                capture.intoFunction((LuaClosure) (Object) this, varargs, stack, type);
+                String possibleName = null;
+
+                if (globals.debuglib != null) {
+                    LuaTable debugLib = ((GlobalsAccess) globals).figuraExtrass$getOffTheShelfDebugLib();
+                    LuaTable o = debugLib.get("getinfo").invoke(LuaValue.varargsOf(LuaValue.valueOf(1), LuaValue.valueOf("n"))).arg1().checktable();
+                    possibleName = o.get("name").checkjstring();
+                    possibleName = possibleName.equals("?") ? null : possibleName;
+                }
+
+                capture.intoFunction((LuaClosure) (Object) this, varargs, stack, type, possibleName);
             }
         }
     }

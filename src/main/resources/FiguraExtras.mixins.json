@@ -14,6 +14,7 @@
     "figura.printer.FiguraLuaPrinterLambda3Mixin",
     "figura.printer.FiguraLuaPrinterMixin",
     "gui.owolib.OwoUIAdapterAccessor",
+    "lua.DebugLibMixin",
     "lua.GlobalsMixin",
     "lua.LuaClosureMixin",
     "lua.TailCallVarargsMixin"

@@ -6,7 +6,7 @@ import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 
 public interface SecondaryCallHook {
-    void intoFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.CallType type);
+    void intoFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.CallType type, String possibleName);
 
     void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type);
 

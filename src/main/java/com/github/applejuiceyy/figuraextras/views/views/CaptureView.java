@@ -70,7 +70,7 @@ public class CaptureView implements InfoViews.View {
             root = new SmallButtonComponent(net.minecraft.network.chat.Component.empty());
             root.mouseDown().subscribe((x, y, d) -> {
                 Globals globals = ((LuaRuntimeAccessor) context.getAvatar().luaRuntime).getUserGlobals();
-                ((GlobalsAccess) globals).figuraExtrass$setCurrentlySearchingForCapture(new ActiveOpportunity<SecondaryCallHook>(value, new FlameGraph(globals, frame -> {
+                ((GlobalsAccess) globals).figuraExtrass$setCurrentlySearchingForCapture(new ActiveOpportunity<SecondaryCallHook>(value, new FlameGraph(context.getAvatar().luaRuntime.typeManager, frame -> {
                     context.setView(context -> new FlameGraphView(context, frame));
                 })));
                 return true;

@@ -8,21 +8,29 @@ import net.minecraft.network.chat.MutableComponent;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.lua.FiguraLuaPrinter;
+import org.figuramc.figura.lua.LuaTypeManager;
 import org.figuramc.figura.utils.TextUtils;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.function.BiConsumer;
 
 
 @Mixin(FiguraLuaPrinter.class)
-public class FiguraLuaPrinterMixin {
+public abstract class FiguraLuaPrinterMixin {
+
+    @Shadow
+    private static MutableComponent getPrintText(LuaTypeManager typeManager, LuaValue value, boolean hasTooltip, boolean quoteStrings) {
+        return null;
+    }
 
     @Inject(method = "sendLuaChatMessage", at = @At("HEAD"), cancellable = true)
     private static void cheese(Component message, CallbackInfo ci) {
@@ -78,5 +86,12 @@ public class FiguraLuaPrinterMixin {
     @Inject(method = "sendPingMessage", at = @At(value = "TAIL"))
     private static void AAAAAAAAAAAAAAAAAAA(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci) {
         FiguraLuaPrinterDuck.currentKind = FiguraLuaPrinterDuck.Kind.OTHER;
+    }
+
+    @Inject(method = "userdataToText", at = @At(value = "HEAD"), cancellable = true)
+    private static void amDead(LuaTypeManager typeManager, LuaValue value, int depth, int indent, boolean hasTooltip, CallbackInfoReturnable<Component> cir) {
+        if (FiguraLuaPrinterDuck.skipUserdataStuff) {
+            cir.setReturnValue(getPrintText(typeManager, value, hasTooltip, true));
+        }
     }
 }

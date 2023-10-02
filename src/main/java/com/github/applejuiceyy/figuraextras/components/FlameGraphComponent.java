@@ -12,11 +12,10 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Tuple;
 import org.joml.Matrix4f;
-
-import java.util.Collections;
 
 public class FlameGraphComponent extends BaseComponent {
 
@@ -42,7 +41,7 @@ public class FlameGraphComponent extends BaseComponent {
 
         stack.translate(x, y, 0);
 
-        populate(stack.last().pose(), bufferBuilder, frame, selectedFrame, 0, 0, 1);
+        populate(stack.last().pose(), bufferBuilder, mouseX - x, mouseY - y, frame, selectedFrame, 0, 0, 1);
 
         BufferUploader.drawWithShader(bufferBuilder.end());
 
@@ -57,15 +56,27 @@ public class FlameGraphComponent extends BaseComponent {
         return (int) Mth.map(in, viewStart, viewEnd, 0, width);
     }
 
-    private void populate(Matrix4f stack, BufferBuilder bufferBuilder, FlameGraph.Frame frame, FlameGraph.Frame selectedFrame, int offset, int y, int pos) {
+    int getColor(int pos) {
+        return ((0xaa / pos) << 16) + (Math.min(0xff, Math.max(0x55 / pos, pos * 5)) << 8) + Math.min(0xff, Math.max(0x22 / pos, pos * 2));
+    }
+
+    private void populate(Matrix4f stack, BufferBuilder bufferBuilder, int mouseX, int mouseY, FlameGraph.Frame frame, FlameGraph.Frame selectedFrame, int offset, int y, int pos) {
         int startOffset = toView(offset);
         int endOffset = toView(offset + frame.getInstructions());
-        int nonAlpha = ((0xaa / pos) << 16) + ((0x55 / pos) << 8) + 0x22 / pos;
+        int nonAlpha = getColor(pos);
         bufferBuilder.vertex(stack, startOffset, y, 0).color(0xff000000 + nonAlpha).endVertex();
         bufferBuilder.vertex(stack, startOffset, y + 20, 0).color(0xff000000 + nonAlpha).endVertex();
         bufferBuilder.vertex(stack, endOffset, y + 20, 0).color(0xff000000 + nonAlpha).endVertex();
         bufferBuilder.vertex(stack, endOffset, y, 0).color(0xff000000 + nonAlpha).endVertex();
         int selectionColor = selectedFrame == frame ? 0xffffffff : 0xff000000;
+
+        int startRegionEnd = Math.min(startOffset + 5, (startOffset + endOffset) / 2);
+        if (selectedFrame == frame && mouseX < startRegionEnd) {
+            bufferBuilder.vertex(stack, startOffset, y, 0).color(0xffaaaaff).endVertex();
+            bufferBuilder.vertex(stack, startOffset, y + 20, 0).color(0xffaaaaff).endVertex();
+            bufferBuilder.vertex(stack, startRegionEnd, y + 20, 0).color(0xffaaaaff).endVertex();
+            bufferBuilder.vertex(stack, startRegionEnd, y, 0).color(0xffaaaaff).endVertex();
+        }
 
         if (endOffset - startOffset > 3) {
             bufferBuilder.vertex(stack, startOffset, y, 0).color(selectionColor).endVertex();
@@ -89,7 +100,7 @@ public class FlameGraphComponent extends BaseComponent {
             bufferBuilder.vertex(stack, endOffset, y + 19, 0).color(selectionColor).endVertex();
 
             if (frame.type == LuaDuck.CallType.TAIL) {
-                int previous = ((0xaa / (pos - 1)) << 16) + ((0x55 / (pos - 1)) << 8) + 0x22 / (pos - 1);
+                int previous = getColor(pos - 1);
 
                 bufferBuilder.vertex(stack, startOffset - 1, y + 4, 0).color(selectionColor).endVertex();
                 bufferBuilder.vertex(stack, startOffset - 1, y + 16, 0).color(selectionColor).endVertex();
@@ -152,10 +163,30 @@ public class FlameGraphComponent extends BaseComponent {
         for (FlameGraph.Child child : frame.getChildren()) {
             int instructions = child.getInstructions();
             if (child instanceof FlameGraph.Frame f) {
-                populate(stack, bufferBuilder, f, selectedFrame, offset, y + 20, i++);
+                populate(stack, bufferBuilder, mouseX, mouseY, f, selectedFrame, offset, y + 20, i++);
             }
             offset += instructions;
         }
+    }
+
+    private String figureOutFrameName(FlameGraph.Frame frame) {
+        if (frame.possibleName != null) {
+            return "function " + frame.possibleName;
+        }
+        if (frame.boundClosure != null) {
+            return "function " + frame.boundClosure.name();
+        }
+        return "[JAVA]";
+    }
+
+    private String figureOutSmallFrameName(FlameGraph.Frame frame) {
+        if (frame.possibleName != null) {
+            return frame.possibleName;
+        }
+        if (frame.boundClosure != null) {
+            return frame.boundClosure.name();
+        }
+        return "[JAVA]";
     }
 
     private void renderOthers(OwoUIDrawContext context, FlameGraph.Frame frame, int offset, int y) {
@@ -168,14 +199,17 @@ public class FlameGraphComponent extends BaseComponent {
             end = width;
         }
         Font font = Minecraft.getInstance().font;
-        Component component = Component.literal((frame.boundClosure == null ? "[JAVA]" : frame.boundClosure.name()) + " (" + frame.getInstructions() + " instructions)");
+        Component component = Component.literal(figureOutFrameName(frame) + " (" + frame.getInstructions() + " instructions)");
 
         if (end - start <= font.width(component)) {
-            component = Component.literal(frame.boundClosure == null ? "[JAVA]" : frame.boundClosure.name());
+            component = Component.literal(figureOutFrameName(frame));
             if (end - start <= font.width(component)) {
-                component = Component.literal("...");
-                if (end - start <= font.width(component) + 4) {
-                    return;
+                component = Component.literal(figureOutSmallFrameName(frame));
+                if (end - start <= font.width(component)) {
+                    component = Component.literal("...");
+                    if (end - start <= font.width(component) + 4) {
+                        return;
+                    }
                 }
             }
         }
@@ -227,12 +261,20 @@ public class FlameGraphComponent extends BaseComponent {
                 }
 
                 if (component == null) {
-                    if (frame.type == LuaDuck.CallType.TAIL) {
-                        int x = toView(thing.getB());
-                        if (mouseX < x + 5) {
-                            component = Component.literal("Function was called on a tail return");
+                    int x = toView(thing.getB());
+                    int xn = toView(thing.getA().getInstructions() + thing.getB());
+                    if (mouseX < Math.min(x + 5, (x + xn) / 2)) {
+                        MutableComponent c;
+                        component = c = Component.empty();
+
+                        if (frame.type == LuaDuck.CallType.TAIL) {
+                            c.append("Function was called on a tail return\n\n");
+                        }
+                        if (frame.argumentComponent != null) {
+                            c.append(frame.argumentComponent);
                         }
                     }
+
                 }
 
                 if (component == null) {
@@ -245,12 +287,12 @@ public class FlameGraphComponent extends BaseComponent {
                 }
 
                 if (component == null) {
-                    component = Component.literal((frame.boundClosure == null ? "[JAVA]" : frame.boundClosure.name()) + " (" + frame.getInstructions() + " instructions)");
+                    component = Component.literal(figureOutFrameName(frame) + " (" + frame.getInstructions() + " instructions)");
                 }
 
-
-                context.drawTooltip(Minecraft.getInstance().font, mouseX + x, mouseY + y,
-                        Collections.singletonList(ClientTooltipComponent.create(component.getVisualOrderText()))
+                Font font = Minecraft.getInstance().font;
+                context.drawTooltip(font, mouseX + x, mouseY + y,
+                        font.split(component, 500).stream().map(ClientTooltipComponent::create).toList()
                 );
             }
         }
