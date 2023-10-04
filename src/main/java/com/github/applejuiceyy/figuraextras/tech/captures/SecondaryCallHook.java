@@ -12,7 +12,7 @@ public interface SecondaryCallHook {
 
     void lineAdvanced();
 
-    void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack);
+    void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int instruction, int pc);
 
     void end();
 

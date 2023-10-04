@@ -8,6 +8,7 @@ import com.github.applejuiceyy.figuraextras.tech.captures.ActiveOpportunity;
 import com.github.applejuiceyy.figuraextras.tech.captures.CaptureOpportunity;
 import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
 import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
+import com.github.applejuiceyy.figuraextras.util.Differential;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.github.applejuiceyy.figuraextras.views.views.capture.FlameGraphView;
 import io.wispforest.owo.ui.container.Containers;
@@ -17,33 +18,31 @@ import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.ChatFormatting;
 import org.luaj.vm2.Globals;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class CaptureView implements InfoViews.View {
     InfoViews.Context context;
-    HashMap<Object, Instance> knownCaptures = new HashMap<>();
-
+    Differential<Map.Entry<Object, CaptureOpportunity>, Object, Instance> differential;
     FlowLayout root = Containers.verticalFlow(Sizing.content(), Sizing.fill(100));
 
     public CaptureView(InfoViews.Context context) {
         this.context = context;
+        differential = new Differential<>(
+                () -> ((LuaRuntimeAccess) context.getAvatar().luaRuntime).figuraExtrass$getNoticedPotentialCaptures().entrySet().iterator(),
+                Map.Entry::getValue,
+                o -> {
+                    Instance i = new Instance(o.getValue());
+                    root.child(i.root);
+                    return i;
+                },
+                o -> {
+                }
+        );
     }
 
     @Override
     public void tick() {
-        HashMap<Object, CaptureOpportunity> captures
-                = ((LuaRuntimeAccess) context.getAvatar().luaRuntime).figuraExtrass$getNoticedPotentialCaptures();
 
-        for (Map.Entry<Object, CaptureOpportunity> entry : captures.entrySet()) {
-            if (!knownCaptures.containsKey(entry.getKey())) {
-                Instance instance = new Instance(entry.getValue());
-                root.child(instance.root);
-                knownCaptures.put(entry.getKey(), instance);
-            }
-
-            knownCaptures.get(entry.getKey()).update();
-        }
     }
 
     @Override
@@ -53,12 +52,12 @@ public class CaptureView implements InfoViews.View {
 
     @Override
     public void render() {
-
+        differential.update(Instance::update);
     }
 
     @Override
     public void dispose() {
-
+        differential.dispose();
     }
 
     class Instance {
@@ -70,9 +69,10 @@ public class CaptureView implements InfoViews.View {
             root = new SmallButtonComponent(net.minecraft.network.chat.Component.empty());
             root.mouseDown().subscribe((x, y, d) -> {
                 Globals globals = ((LuaRuntimeAccessor) context.getAvatar().luaRuntime).getUserGlobals();
-                ((GlobalsAccess) globals).figuraExtrass$setCurrentlySearchingForCapture(new ActiveOpportunity<SecondaryCallHook>(value, new FlameGraph(context.getAvatar().luaRuntime.typeManager, frame -> {
-                    context.setView(context -> new FlameGraphView(context, frame));
-                })));
+                ((GlobalsAccess) globals).figuraExtrass$setCurrentlySearchingForCapture(
+                        new ActiveOpportunity<SecondaryCallHook>(value, new FlameGraph(context.getAvatar().luaRuntime.typeManager, frame -> {
+                            context.setView(context -> new FlameGraphView(context, frame));
+                        })));
                 return true;
             });
         }

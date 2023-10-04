@@ -4,9 +4,11 @@ import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import io.netty.util.collection.IntObjectHashMap;
 import io.wispforest.owo.ui.base.BaseComponent;
 import io.wispforest.owo.ui.core.CursorStyle;
 import io.wispforest.owo.ui.core.OwoUIDrawContext;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
@@ -15,9 +17,39 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Tuple;
+import org.joml.AxisAngle4d;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Random;
+import org.luaj.vm2.Lua;
+import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
+
+import java.lang.reflect.Field;
 
 public class FlameGraphComponent extends BaseComponent {
+    private final static IntObjectHashMap<String> opName = new IntObjectHashMap<>();
+    private final static Int2IntOpenHashMap opToColor = new Int2IntOpenHashMap();
+
+    static {
+        Class<?> c = Lua.class;
+        for (Field field : c.getFields()) {
+            if (!field.isAnnotationPresent(MixinMerged.class) && field.getName().startsWith("OP_")) {
+                field.setAccessible(true);
+                int value;
+                try {
+                    value = (int) field.get(null);
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+                opName.put(value, field.getName());
+                Random random = new Random(value);
+                int red = random.nextInt(0xff + 1);
+                int green = random.nextInt(0xff + 1);
+                int blue = random.nextInt(0xff + 1);
+                opToColor.put(value, (red << 16) + (green << 8) + blue);
+            }
+        }
+    }
 
     private final FlameGraph.Frame frame;
     public int viewStart;
@@ -164,6 +196,46 @@ public class FlameGraphComponent extends BaseComponent {
             int instructions = child.getInstructions();
             if (child instanceof FlameGraph.Frame f) {
                 populate(stack, bufferBuilder, mouseX, mouseY, f, selectedFrame, offset, y + 20, i++);
+            } else if (child instanceof FlameGraph.Space space) {
+                int prev = toView(offset);
+                int end = toView(offset + space.getInstructions());
+                if (space.instructions.size() > 0 && ((end - prev) / space.getInstructions()) > 1) {
+                    int previousLine = space.lines.getInt(0);
+                    int previousLineViewPos = prev;
+                    boolean lineViewIsWhite = false;
+
+                    for (int i1 = 0; i1 < space.instructions.size(); i1++) {
+                        int current = toView(offset + i1 + 1);
+                        int currentLine = space.lines.getInt(i1);
+                        int op = space.instructions.getInt(i1);
+                        int height = current - prev > 10 ? Minecraft.getInstance().font.width(opName.getOrDefault(op, "OP " + op)) + 8 : current - prev;
+
+                        if (previousLine != currentLine) {
+                            int currentLineViewPos = toView(offset + i1);
+                            int color = lineViewIsWhite ? 0xffffffff : 0xff000000;
+                            bufferBuilder.vertex(stack, previousLineViewPos, y + 20, 0).color(color).endVertex();
+                            bufferBuilder.vertex(stack, previousLineViewPos, y + 20 + Math.min(10, height), 0).color(color).endVertex();
+                            bufferBuilder.vertex(stack, currentLineViewPos, y + 20 + Math.min(10, height), 0).color(color).endVertex();
+                            bufferBuilder.vertex(stack, currentLineViewPos, y + 20, 0).color(color).endVertex();
+                            lineViewIsWhite = !lineViewIsWhite;
+                            previousLine = currentLine;
+                            previousLineViewPos = currentLineViewPos;
+                        }
+                        if (current > prev) {
+                            bufferBuilder.vertex(stack, prev, y + 20, 0).color(0xff000000 + opToColor.getOrDefault(op, 0xffffffff)).endVertex();
+                            bufferBuilder.vertex(stack, prev, y + 20 + height + 3, 0).color(0xff000000 + opToColor.getOrDefault(op, 0xffffffff)).endVertex();
+                            bufferBuilder.vertex(stack, current, y + 20 + height + 2, 0).color(0xff000000 + opToColor.getOrDefault(op, 0xffffffff)).endVertex();
+                            bufferBuilder.vertex(stack, current, y + 20, 0).color(0xff000000 + opToColor.getOrDefault(op, 0xffffffff)).endVertex();
+                        }
+                        prev = current;
+                    }
+                    int color = lineViewIsWhite ? 0xffffffff : 0xff000000;
+                    int height = Math.min(end - toView(offset + space.getInstructions() - 1), 10);
+                    bufferBuilder.vertex(stack, previousLineViewPos, y + 20, 0).color(color).endVertex();
+                    bufferBuilder.vertex(stack, previousLineViewPos, y + 20 + height, 0).color(color).endVertex();
+                    bufferBuilder.vertex(stack, end, y + 20 + height, 0).color(color).endVertex();
+                    bufferBuilder.vertex(stack, end, y + 20, 0).color(color).endVertex();
+                }
             }
             offset += instructions;
         }
@@ -226,6 +298,34 @@ public class FlameGraphComponent extends BaseComponent {
             int instructions = child.getInstructions();
             if (viewStart < offset + instructions && child instanceof FlameGraph.Frame f) {
                 renderOthers(context, f, offset, y + 20);
+            } else if (child instanceof FlameGraph.Space space) {
+                int prev = toView(offset);
+                int prevLine = -1;
+
+                for (int i1 = 0; i1 < space.instructions.size(); i1++) {
+                    int current = toView(offset + i1 + 1);
+                    int currentLine = space.lines.getInt(i1);
+                    if (prevLine != currentLine) {
+                        Component component1 = Component.literal(String.valueOf(currentLine));
+                        if (current - prev > font.width(component1)) {
+                            context.drawString(font, component1, prev + 2, y + 21, 0xffaaaaaa);
+                        }
+                        prevLine = currentLine;
+                    }
+                    if (current - prev > 10) {
+                        int op = space.instructions.getInt(i1);
+                        PoseStack stack = context.pose();
+                        stack.pushPose();
+
+                        stack.translate((float) (current + prev) / 2, y + 20, 0);
+                        stack.rotateAround(new Quaternionf(new AxisAngle4d(Math.PI / 2, 0, 0, 1)), 0, 0, 0);
+
+                        context.drawString(font, Component.literal(opName.getOrDefault(op, "OP " + op)), 10, -9 / 2, 0xffaaaaaa);
+
+                        stack.popPose();
+                    }
+                    prev = current;
+                }
             }
             offset += instructions;
             if (offset > viewEnd) {

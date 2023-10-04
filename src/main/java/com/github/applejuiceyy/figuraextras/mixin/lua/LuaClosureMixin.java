@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(value = LuaClosure.class, remap = false)
 public class LuaClosureMixin {
@@ -42,13 +43,17 @@ public class LuaClosureMixin {
         }
     }
 
-    @Inject(method = "execute([Lorg/luaj/vm2/LuaValue;Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "FIELD", target = "Lorg/luaj/vm2/LuaClosure;globals:Lorg/luaj/vm2/Globals;", ordinal = 3))
-    void e(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir) {
+    @Inject(
+            method = "execute([Lorg/luaj/vm2/LuaValue;Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;",
+            at = @At(value = "FIELD", target = "Lorg/luaj/vm2/LuaClosure;globals:Lorg/luaj/vm2/Globals;", ordinal = 3),
+            locals = LocalCapture.CAPTURE_FAILHARD
+    )
+    void e(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir, int pc, int top, Varargs v, int[] code, LuaValue[] k, UpValue[] openups) {
         if (globals != null) {
             GlobalsAccess globalsAccess = ((GlobalsAccess) globals);
             SecondaryCallHook capture = globalsAccess.figuraExtrass$getCurrentCapture();
             if (capture != null) {
-                capture.instruction((LuaClosure) (Object) this, varargs, stack);
+                capture.instruction((LuaClosure) (Object) this, varargs, stack, code[pc], pc);
             }
         }
     }

@@ -4,6 +4,7 @@ import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.github.applejuiceyy.figuraextras.mixin.figura.printer.FiguraLuaPrinterAccessor;
 import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import org.figuramc.figura.lua.LuaTypeManager;
@@ -21,7 +22,8 @@ public class FlameGraph implements SecondaryCallHook {
     private final Consumer<Frame> after;
     private final LuaTypeManager manager;
     private Frame currentFrame = new Frame(null, LuaDuck.CallType.NORMAL, null, null, null);
-    private int instructions = 0;
+    private IntArrayList instructions = new IntArrayList();
+    private IntArrayList lines = new IntArrayList();
 
     public FlameGraph(LuaTypeManager manager, Consumer<Frame> after) {
         this.after = after;
@@ -105,8 +107,9 @@ public class FlameGraph implements SecondaryCallHook {
     }
 
     @Override
-    public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack) {
-        instructions++;
+    public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int i, int pc) {
+        lines.add(luaClosure.p.lineinfo[pc]);
+        instructions.add(i & 0x3f);
     }
 
     @Override
@@ -116,13 +119,13 @@ public class FlameGraph implements SecondaryCallHook {
 
     @Override
     public void marker(String name) {
-        int instruction = currentFrame.getInstructions() + instructions;
+        int instruction = currentFrame.getInstructions() + instructions.size();
         currentFrame.markers.add(new Marker(name, instruction));
     }
 
     @Override
     public void region(String regionName) {
-        int instruction = currentFrame.getInstructions() + instructions;
+        int instruction = currentFrame.getInstructions() + instructions.size();
         if (currentFrame.currentlyConstructingRegion != null) {
             int start = currentFrame.currentlyConstructingRegion.instruction;
             currentFrame.regions.add(
@@ -140,10 +143,11 @@ public class FlameGraph implements SecondaryCallHook {
     }
 
     private void flushInstructions() {
-        if (instructions > 0) {
-            Space space = new Space(instructions);
+        if (instructions.size() > 0) {
+            Space space = new Space(instructions, lines);
             currentFrame.children.add(space);
-            instructions = 0;
+            instructions = new IntArrayList();
+            lines = new IntArrayList();
             currentFrame.invalidateCachedInstructions();
         }
     }
@@ -154,15 +158,17 @@ public class FlameGraph implements SecondaryCallHook {
 
     public static class Space extends Child {
 
-        private final int instructions;
+        public final IntArrayList instructions;
+        public final IntArrayList lines;
 
-        Space(int instructions) {
+        Space(IntArrayList instructions, IntArrayList lines) {
             this.instructions = instructions;
+            this.lines = lines;
         }
 
         @Override
         public int getInstructions() {
-            return instructions;
+            return instructions.size();
         }
     }
 
