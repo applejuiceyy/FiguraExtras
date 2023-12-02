@@ -300,31 +300,66 @@ public class FlameGraphComponent extends BaseComponent {
                 renderOthers(context, f, offset, y + 20);
             } else if (child instanceof FlameGraph.Space space) {
                 int prev = toView(offset);
-                int prevLine = -1;
+                int ee = toView(offset + space.getInstructions());
+                int prevLine = prev;
+                int prevLineInstruction = space.lines.getInt(0);
 
-                for (int i1 = 0; i1 < space.instructions.size(); i1++) {
-                    int current = toView(offset + i1 + 1);
-                    int currentLine = space.lines.getInt(i1);
-                    if (prevLine != currentLine) {
-                        Component component1 = Component.literal(String.valueOf(currentLine));
-                        if (current - prev > font.width(component1)) {
-                            context.drawString(font, component1, prev + 2, y + 21, 0xffaaaaaa);
+                if (((ee - prev) / space.getInstructions()) > 1) {
+                    for (int i1 = 0; i1 < space.instructions.size(); i1++) {
+                        int current = toView(offset + i1 + 1);
+                        int currentLine = space.lines.getInt(i1);
+                        if (prevLineInstruction != currentLine) {
+                            Component component1 = Component.literal("line " + prevLineInstruction);
+                            if (prev - prevLine < font.width(component1) + 4) {
+                                component1 = Component.literal(String.valueOf(prevLineInstruction));
+                                if (prev - prevLine < font.width(component1) + 4) {
+                                    component1 = null;
+                                }
+                            }
+                            if (component1 != null) {
+                                PoseStack pos = context.pose();
+                                pos.pushPose();
+                                pos.translate(prevLine + 2, y + 21, 0);
+                                float e = Math.min(current - prev, 10) / 10f;
+                                pos.scale(e, e, e);
+                                context.drawString(font, component1, 0, 0, 0xffaaaaaa);
+                                pos.popPose();
+                            }
+                            prevLine = prev;
+                            prevLineInstruction = currentLine;
                         }
-                        prevLine = currentLine;
+                        if (current - prev > 10) {
+                            int op = space.instructions.getInt(i1);
+                            PoseStack stack = context.pose();
+                            stack.pushPose();
+
+                            stack.translate((float) (current + prev) / 2, y + 20, 0);
+                            stack.rotateAround(new Quaternionf(new AxisAngle4d(Math.PI / 2, 0, 0, 1)), 0, 0, 0);
+
+                            context.drawString(font, Component.literal(opName.getOrDefault(op, "OP " + op)), 10, -9 / 2, 0xffaaaaaa);
+
+                            stack.popPose();
+                        }
+                        prev = current;
                     }
-                    if (current - prev > 10) {
-                        int op = space.instructions.getInt(i1);
-                        PoseStack stack = context.pose();
-                        stack.pushPose();
 
-                        stack.translate((float) (current + prev) / 2, y + 20, 0);
-                        stack.rotateAround(new Quaternionf(new AxisAngle4d(Math.PI / 2, 0, 0, 1)), 0, 0, 0);
-
-                        context.drawString(font, Component.literal(opName.getOrDefault(op, "OP " + op)), 10, -9 / 2, 0xffaaaaaa);
-
-                        stack.popPose();
+                    int currentLine = prevLineInstruction;
+                    Component component1 = Component.literal("line " + currentLine);
+                    if (prev - prevLine < font.width(component1) + 4) {
+                        component1 = Component.literal(String.valueOf(currentLine));
+                        if (prev - prevLine < font.width(component1) + 4) {
+                            component1 = null;
+                        }
                     }
-                    prev = current;
+                    if (component1 != null) {
+                        PoseStack pos = context.pose();
+                        pos.pushPose();
+                        pos.translate(prevLine + 2, y + 21, 0);
+                        float e = Math.min(ee - toView(offset + space.getInstructions() - 1), 10) / 10f;
+                        pos.scale(e, e, e);
+                        context.drawString(font, component1, 0, 0, 0xffaaaaaa);
+                        pos.popPose();
+                    }
                 }
             }
             offset += instructions;
