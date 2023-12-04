@@ -14,7 +14,7 @@ public class FiguraExtras implements ClientModInitializer {
 
     private static final ConfigType.Category category = new ConfigType.Category("FiguraExtras");
     public static ConfigType.StringConfig progName =  new ConfigType.StringConfig("prog_name", category, "Visual Studio Code");
-    public static ConfigType.StringConfig progCmd = new ConfigType.StringConfig("prog_cmd", category, "code $folder");
+    public static ConfigType.StringConfig progCmd = new ConfigType.StringConfig("prog_cmd", category, "code \"$folder\"");
 
     static {
         category.name = Component.literal("FiguraExtras");
