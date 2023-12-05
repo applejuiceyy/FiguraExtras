@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "figura.AvatarMixin",
+    "figura.ConfigManagerMixin",
     "figura.InstructionsMixin",
     "figura.LuaRuntimeAccessor",
     "figura.LuaRuntimeMixin",
