@@ -8,6 +8,7 @@ import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
+import org.figuramc.figura.utils.TextUtils;
 
 public class SmallButtonComponent extends BaseComponent implements Blocker {
     private Component text;
@@ -22,7 +23,7 @@ public class SmallButtonComponent extends BaseComponent implements Blocker {
     }
 
     public SmallButtonComponent(Component text, int color) {
-        this.text = text;
+        this.text = TextUtils.trim(text);
         this.color = color;
         cursorStyle(CursorStyle.HAND);
     }
@@ -31,7 +32,7 @@ public class SmallButtonComponent extends BaseComponent implements Blocker {
     public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
         context.fill(x, y, x + width, y + height, 0, color);
         Font font = Minecraft.getInstance().font;
-        context.drawString(font, text, x + width / 2 - font.width(text) / 2, y + height / 2 - font.wordWrapHeight(text, 999) / 2, 0xffffffff);
+        context.drawWordWrap(font, text, x + width / 2 - font.width(text) / 2, y + height / 2 - font.wordWrapHeight(text, width) / 2, width, 0xffffffff);
     }
 
     @Override
@@ -56,7 +57,7 @@ public class SmallButtonComponent extends BaseComponent implements Blocker {
     }
 
     public void setText(Component text) {
-        this.text = text;
+        this.text = TextUtils.trim(text);
         notifyParentIfMounted();
     }
 }

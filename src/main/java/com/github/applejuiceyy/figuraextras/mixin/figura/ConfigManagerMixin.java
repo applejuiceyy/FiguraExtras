@@ -14,10 +14,11 @@ public class ConfigManagerMixin {
             method = "init",
             at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/config/Configs;init()V", shift = At.Shift.AFTER)
     )
-    static void a(CallbackInfo ci) {
+    private static void a(CallbackInfo ci) {
         noop(FiguraExtras.class);
     }
 
     @Unique
-    static void noop(Object ignore) {}
+    private static void noop(Object ignore) {
+    }
 }

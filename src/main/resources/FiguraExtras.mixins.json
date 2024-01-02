@@ -6,6 +6,7 @@
   "mixins": [
     "figura.AvatarMixin",
     "figura.ConfigManagerMixin",
+    "figura.ImmediateAvatarRendererAccessor",
     "figura.InstructionsMixin",
     "figura.LuaRuntimeAccessor",
     "figura.LuaRuntimeMixin",

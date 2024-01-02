@@ -2,6 +2,7 @@ package com.github.applejuiceyy.figuraextras.tech.trees.lua;
 
 import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
 import com.github.applejuiceyy.figuraextras.mixin.figura.printer.FiguraLuaPrinterAccessor;
+import com.github.applejuiceyy.figuraextras.screen.Hover;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectInterpreter;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
@@ -72,6 +73,8 @@ public class LuaValueInterpreter implements ObjectInterpreter<LuaValue> {
             objectViewChanger.accept(freeRoamUpdater, identity);
             return true;
         });
+
+        Hover.elementHoverObject(button, () -> hash(updater.get()));
 
         Observers.Observer<Component> observer = referenceConsumer.accept(updater.derive(value -> {
             if (value.istable() || value.isfunction() || value.isuserdata()) {

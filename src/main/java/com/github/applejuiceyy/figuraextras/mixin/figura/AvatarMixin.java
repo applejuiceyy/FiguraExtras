@@ -73,17 +73,17 @@ public class AvatarMixin implements AvatarAccess {
     Expander<DummyExpander.Dummy> modelRoot = new Expander<>(
             modelRootObserver,
             Registration.from(registration -> {
-                // Avatar avatar = (Avatar)(Object) this;
-                // registration.addExpander(new LuaClosureExpander());
-                // registration.addExpander(new LuaTableExpander(avatar));
-                // registration.addExpander(new UserdataExpander());
+                Avatar avatar = (Avatar) (Object) this;
+                registration.addExpander(new LuaClosureExpander());
+                registration.addExpander(new LuaTableExpander(avatar));
+                registration.addExpander(new UserdataExpander());
                 // registration.addExpander(new ObjectScraperExpander(avatar));
                 registration.addExpander(new ModelPartExpander());
                 registration.addExpander(new ModelPartRenderTaskExpander());
                 registration.addExpander(new DummyExpander());
                 registration.addInterpreter(new ModelPartInterpreter());
                 registration.addInterpreter(new RenderTaskInterpreter());
-                // registration.addInterpreter(new LuaValueInterpreter(avatar));
+                registration.addInterpreter(new LuaValueInterpreter(avatar));
             }),
             modelRootUpdater.getSource());
     @Unique

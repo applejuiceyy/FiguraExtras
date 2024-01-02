@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.lua.LuaWhitelist;
+import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 
 import java.lang.reflect.Field;
@@ -105,6 +106,9 @@ public class ObjectScraperExpander implements ObjectExpander<Object, String, Lua
     }
 
     public LuaValue wrap(Object object) {
+        if (object instanceof LuaError) {
+            return LuaValue.valueOf(((LuaError) object).getMessage());
+        }
         try {
             return avatar.luaRuntime.typeManager.javaToLua(object).arg1();
         } catch (Exception e) {
