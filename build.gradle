@@ -19,6 +19,14 @@ repositories {
     }
 }
 
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (it.requested.module.name == "luaj-core" || it.requested.module.name == "luaj-jse") {
+            it.useVersion "3.0.8-figura"
+        }
+    }
+}
+
 dependencies {
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"

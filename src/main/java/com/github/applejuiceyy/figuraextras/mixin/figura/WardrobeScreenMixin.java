@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
+import com.github.applejuiceyy.figuraextras.ducks.AvatarListAccess;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -8,10 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import org.figuramc.figura.gui.screens.AbstractPanelScreen;
 import org.figuramc.figura.gui.screens.WardrobeScreen;
-import org.figuramc.figura.gui.widgets.Button;
-import org.figuramc.figura.gui.widgets.EntityPreview;
-import org.figuramc.figura.gui.widgets.Label;
-import org.figuramc.figura.gui.widgets.StatusWidget;
+import org.figuramc.figura.gui.widgets.*;
 import org.figuramc.figura.gui.widgets.lists.AvatarList;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -44,6 +42,11 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
                 null,
                 o -> FiguraExtras.windows.add(new DetachedWindow())
         );
+
+        SearchBar searchBar = ((AvatarListAccess) avatarList).figuraExtrass$getSearchBar();
+        setFocused(avatarList);
+        avatarList.setFocused(searchBar);
+        searchBar.setFocused(searchBar.getField());
 
         addRenderableWidget(newButton);
     }

@@ -27,6 +27,7 @@
     "SoundBufferAccessor",
     "SoundBufferMixin",
     "SoundEngineMixin",
+    "figura.AvatarListMixin",
     "figura.AvatarWidgetAccessor",
     "figura.AvatarWidgetMixin",
     "figura.BlockStateAPIMixin",
