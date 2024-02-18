@@ -20,6 +20,7 @@ import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.mojang.blaze3d.audio.OggAudioStream;
 import com.mojang.blaze3d.audio.SoundBuffer;
 import net.minecraft.network.chat.Component;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.lua.FiguraLuaRuntime;
 import org.figuramc.figura.model.rendering.AvatarRenderer;
@@ -35,10 +36,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
-@Mixin(Avatar.class)
+@Mixin(value = Avatar.class, remap = false)
 public class AvatarMixin implements AvatarAccess {
     @Shadow
     public FiguraLuaRuntime luaRuntime;
@@ -47,6 +52,8 @@ public class AvatarMixin implements AvatarAccess {
 
     @Unique
     Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> chatRedirector = Event.biConsumer();
+    @Unique
+    Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> networkEvent = Event.triConsumer();
     @Unique
     Event<Runnable> objectRootUpdater = Event.runnable();
     @Unique
@@ -130,5 +137,10 @@ public class AvatarMixin implements AvatarAccess {
     @Override
     public Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect() {
         return chatRedirector;
+    }
+
+    @Override
+    public Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtrass$getNetworkLogger() {
+        return networkEvent;
     }
 }

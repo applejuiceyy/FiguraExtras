@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.function.BiConsumer;
 
-@Mixin(targets = "org.figuramc.figura.lua.FiguraLuaPrinter$2")
+@Mixin(targets = "org.figuramc.figura.lua.FiguraLuaPrinter$2", remap = false)
 class FiguraLuaPrinterLambda2Mixin {
     @Shadow
     @Final

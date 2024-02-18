@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
 
-@Mixin(FiguraTexture.class)
+@Mixin(value = FiguraTexture.class, remap = false)
 public abstract class FiguraTextureMixin implements FiguraTextureAccess {
     @Shadow
     @Final

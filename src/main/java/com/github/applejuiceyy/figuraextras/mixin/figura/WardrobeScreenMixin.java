@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-@Mixin(WardrobeScreen.class)
+@Mixin(value = WardrobeScreen.class, remap = false)
 public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
     private WardrobeScreenMixin(Screen parentScreen, Component title) {
         super(parentScreen, title);

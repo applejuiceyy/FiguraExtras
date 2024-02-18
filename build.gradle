@@ -1,3 +1,6 @@
+// NOT BUILDING: will be fixed when the official maven gets pre-5
+// you would need to build it locally following some other steps
+
 plugins {
     id 'fabric-loom' version '1.2-SNAPSHOT'
     id 'maven-publish'
@@ -7,10 +10,13 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
+
     maven { url = "https://maven.quiltmc.org/repository/release/" }
     maven { url 'https://jitpack.io' }
     maven { url 'https://maven.wispforest.io' }
-    maven { url "https://maven.figuramc.org/releases" }
+
+    mavenLocal();
+    // maven { url "https://maven.figuramc.org/releases" }
 
 
     maven {
@@ -32,9 +38,6 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
     mappings loom.layered {
-        if (project.figura == "0.1.2") {
-            mappings(file("mappings/mappings.jar"))
-        }
         mappings("org.quiltmc:quilt-mappings:${project.minecraft_version}+build.1:intermediary-v2")
         officialMojangMappings()
     }
@@ -47,7 +50,7 @@ dependencies {
 
     compileOnly("com.github.FiguraMC.LuaJ:luaj-core:3.0.6-figura")
     compileOnly("com.github.FiguraMC.LuaJ:luaj-jse:3.0.6-figura")
-    compileOnly("org.java-websocket:Java-WebSocket:1.5.4")
+    implementation("com.neovisionaries:nv-websocket-client:2.14")
 }
 
 processResources {

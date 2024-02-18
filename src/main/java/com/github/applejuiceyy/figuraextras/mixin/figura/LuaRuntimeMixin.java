@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.HashMap;
 
-@Mixin(FiguraLuaRuntime.class)
+@Mixin(value = FiguraLuaRuntime.class, remap = false)
 public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     @Shadow
     public abstract void setGlobal(String name, Object obj);

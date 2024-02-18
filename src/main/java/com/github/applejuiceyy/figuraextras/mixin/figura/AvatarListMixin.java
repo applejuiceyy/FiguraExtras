@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 
-@Mixin(AvatarList.class)
+@Mixin(value = AvatarList.class, remap = false)
 public class AvatarListMixin implements AvatarListAccess {
     @Unique
     SearchBar searchBar;

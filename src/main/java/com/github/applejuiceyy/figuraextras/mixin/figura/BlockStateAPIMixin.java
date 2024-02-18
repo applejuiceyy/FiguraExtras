@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.Unique;
 
 import java.util.*;
 
-@Mixin(BlockStateAPI.class)
+@Mixin(value = BlockStateAPI.class, remap = false)
 public class BlockStateAPIMixin {
     @Shadow
     @Final

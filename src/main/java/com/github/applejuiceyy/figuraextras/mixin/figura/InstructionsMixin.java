@@ -4,6 +4,7 @@ import com.github.applejuiceyy.figuraextras.ducks.InstructionsAccess;
 import org.figuramc.figura.avatar.Avatar;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -11,15 +12,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.ArrayList;
 import java.util.function.IntConsumer;
 
-@Mixin(Avatar.Instructions.class)
+@Mixin(value = Avatar.Instructions.class, remap = false)
 public abstract class InstructionsMixin implements InstructionsAccess {
     @Shadow
     public abstract int getTotal();
 
+    @Unique
     ArrayList<IntConsumer> hooks = new ArrayList<>();
 
     @Override
-    public Runnable addHook(IntConsumer result) {
+    public Runnable figuraExtrass$addHook(IntConsumer result) {
         hooks.add(result);
         return () -> hooks.remove(result);
     }

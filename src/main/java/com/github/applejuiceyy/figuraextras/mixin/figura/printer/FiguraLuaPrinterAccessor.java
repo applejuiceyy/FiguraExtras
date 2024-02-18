@@ -8,7 +8,7 @@ import org.luaj.vm2.LuaValue;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(FiguraLuaPrinter.class)
+@Mixin(value = FiguraLuaPrinter.class, remap = false)
 public interface FiguraLuaPrinterAccessor {
     @Invoker
     static MutableComponent invokeGetPrintText(LuaTypeManager typeManager, LuaValue value, boolean hasTooltip, boolean quoteStrings) {

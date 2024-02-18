@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ConfigManager.class)
+@Mixin(value = ConfigManager.class, remap = false)
 public class ConfigManagerMixin {
     @Inject(
             method = "init",

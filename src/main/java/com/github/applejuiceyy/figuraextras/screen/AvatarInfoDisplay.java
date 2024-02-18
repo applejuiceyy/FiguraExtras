@@ -3,6 +3,7 @@ package com.github.applejuiceyy.figuraextras.screen;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.github.applejuiceyy.figuraextras.views.views.*;
+import com.github.applejuiceyy.figuraextras.views.views.http.NetworkView;
 import io.wispforest.owo.ui.base.BaseUIModelScreen;
 import io.wispforest.owo.ui.component.DropdownComponent;
 import io.wispforest.owo.ui.container.FlowLayout;
@@ -10,6 +11,8 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import org.figuramc.figura.config.Configs;
+import org.figuramc.figura.permissions.Permissions;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -62,6 +65,8 @@ public class AvatarInfoDisplay {
 
         addView(Component.literal("Output"), ChatLikeView::new);
 
+        addView(Component.literal("Network"), InfoViews.onlyIf(avatar -> Configs.ALLOW_NETWORKING.value && avatar.permissions.get(Permissions.NETWORKING) >= 1, NetworkView::new, Component.literal("Networking is disabled")));
+
         dropdownComponent.divider();
 
         addView(Component.literal("Capture"), InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, CaptureView::new, Component.literal("Script not detected")));
@@ -76,12 +81,12 @@ public class AvatarInfoDisplay {
         });
     }
 
-    public void addView(Component text, Function<InfoViews.Context, InfoViews.View> v) {
-        Function<InfoViews.Context, InfoViews.View> actual = wrap(v);
+    public void addView(Component text, Function<InfoViews.Context, ? extends InfoViews.View> v) {
+        Function<InfoViews.Context, ? extends InfoViews.View> actual = wrap(v);
         dropdownComponent.button(text, o -> switchToView(actual.apply(context)));
     }
 
-    private Function<InfoViews.Context, InfoViews.View> wrap(Function<InfoViews.Context, InfoViews.View> v) {
+    private Function<InfoViews.Context, ? extends InfoViews.View> wrap(Function<InfoViews.Context, ? extends InfoViews.View> v) {
         return InfoViews.onlyIf(
                 avatar -> Minecraft.getInstance().level != null,
                 InfoViews.onlyIf(

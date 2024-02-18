@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import java.util.function.BiConsumer;
 
 
-@Mixin(FiguraLuaPrinter.class)
+@Mixin(value = FiguraLuaPrinter.class, remap = false)
 public abstract class FiguraLuaPrinterMixin {
 
     @Shadow

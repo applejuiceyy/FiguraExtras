@@ -1,18 +1,13 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
-import com.github.applejuiceyy.figuraextras.render.rendertasks.EntityTask;
 import com.github.applejuiceyy.figuraextras.screen.Hover;
 import net.minecraft.client.renderer.LightTexture;
-import org.figuramc.figura.avatar.Avatar;
-import org.figuramc.figura.lua.LuaNotNil;
-import org.figuramc.figura.lua.LuaWhitelist;
 import org.figuramc.figura.model.FiguraModelPart;
 import org.figuramc.figura.model.PartCustomization;
 import org.figuramc.figura.model.rendering.ImmediateAvatarRenderer;
 import org.figuramc.figura.model.rendering.Vertex;
 import org.figuramc.figura.model.rendering.texture.FiguraTextureSet;
 import org.figuramc.figura.model.rendering.texture.RenderTypes;
-import org.figuramc.figura.model.rendertasks.RenderTask;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -23,14 +18,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.List;
 import java.util.Map;
 
-@Mixin(FiguraModelPart.class)
+@Mixin(value = FiguraModelPart.class, remap = false)
 public abstract class ModelPartMixin {
-    @Shadow
-    @Final
-    private Avatar owner;
-
-    @Shadow
-    public Map<String, RenderTask> renderTasks;
 
     @Shadow
     public List<Integer> facesByTexture;
@@ -44,13 +33,6 @@ public abstract class ModelPartMixin {
 
     @Shadow
     public abstract FiguraModelPart secondaryTexture(String type, Object x);
-
-    @LuaWhitelist
-    public EntityTask newEntity(@LuaNotNil String name) {
-        EntityTask task = new EntityTask(name, owner, (FiguraModelPart) (Object) this);
-        renderTasks.put(name, task);
-        return task;
-    }
 
     @Inject(
             method = "pushVerticesImmediate",
