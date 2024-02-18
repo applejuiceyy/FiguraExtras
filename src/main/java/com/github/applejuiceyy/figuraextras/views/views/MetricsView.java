@@ -22,7 +22,7 @@ public class MetricsView implements InfoViews.View {
         chart = (InstructionChartComponent) new InstructionChartComponent()
                 .sizing(Sizing.fill(100), Sizing.fill(100));
         root.child(chart);
-        this.unsub = ((InstructionsAccess) instructions).addHook(chart::consumeEntry);
+        this.unsub = ((InstructionsAccess) instructions).figuraExtrass$addHook(chart::consumeEntry);
     }
 
     @Override
