@@ -31,7 +31,8 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
                     target = "Lorg/figuramc/figura/gui/screens/WardrobeScreen;addRenderableWidget(Lnet/minecraft/client/gui/components/events/GuiEventListener;)Lnet/minecraft/client/gui/components/events/GuiEventListener;",
                     ordinal = 9
             ),
-            locals = LocalCapture.CAPTURE_FAILHARD
+            locals = LocalCapture.CAPTURE_FAILHARD,
+            remap = true
     )
     void c(CallbackInfo ci, Minecraft minecraft, int middle, int panels, int modelBgSize, AvatarList avatarList, int entitySize, int entityX, int entityY, EntityPreview entity, int buttX, int buttY, StatusWidget statusWidget, MutableComponent versionText, int versionStatus, boolean oldVersion, Label version, int rightSide, Button avatarSettings, Button sounds, Button keybinds) {
         Button newButton = new Button(

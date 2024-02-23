@@ -4,6 +4,7 @@
 plugins {
     id 'fabric-loom' version '1.2-SNAPSHOT'
     id 'maven-publish'
+    id 'io.github.juuxel.loom-vineflower' version '1.11.0'
 }
 
 version = project.mod_version

@@ -78,7 +78,7 @@ public abstract class FiguraLuaPrinterMixin {
         }
     }
 
-    @Inject(method = "sendPingMessage", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;empty()Lnet/minecraft/network/chat/MutableComponent;"))
+    @Inject(method = "sendPingMessage", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;empty()Lnet/minecraft/network/chat/MutableComponent;", remap = true))
     private static void soMuchCheeseOhMyGod(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci) {
         Configs.LOG_PINGS.value = switchLogPingsBack;
     }
