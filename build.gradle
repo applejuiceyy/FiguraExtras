@@ -16,21 +16,12 @@ repositories {
     maven { url 'https://jitpack.io' }
     maven { url 'https://maven.wispforest.io' }
 
-    mavenLocal();
-    // maven { url "https://maven.figuramc.org/releases" }
+    maven { url "https://maven.figuramc.org/releases" }
 
 
     maven {
         name = "Modrinth"
         url = "https://api.modrinth.com/maven"
-    }
-}
-
-configurations.configureEach {
-    resolutionStrategy.eachDependency {
-        if (it.requested.module.name == "luaj-core" || it.requested.module.name == "luaj-jse") {
-            it.useVersion "3.0.8-figura"
-        }
     }
 }
 
@@ -49,9 +40,9 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     include "io.wispforest:owo-sentinel:0.11.1+1.20"
 
-    compileOnly("com.github.FiguraMC.LuaJ:luaj-core:3.0.6-figura")
-    compileOnly("com.github.FiguraMC.LuaJ:luaj-jse:3.0.6-figura")
-    implementation("com.neovisionaries:nv-websocket-client:2.14")
+    compileOnly("com.github.FiguraMC.LuaJ:luaj-core:3.0.8-figura")
+    compileOnly("com.github.FiguraMC.LuaJ:luaj-jse:3.0.8-figura")
+    compileOnly("com.neovisionaries:nv-websocket-client:2.14")
 }
 
 processResources {
