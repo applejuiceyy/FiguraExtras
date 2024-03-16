@@ -168,7 +168,7 @@ public class LuaValueInterpreter implements ObjectInterpreter<LuaValue> {
         MutableComponent text = FiguraLuaPrinterAccessor.invokeGetPrintText(avatar.luaRuntime.typeManager, obj, false, quote);
 
         if (text == null) {
-            return Component.empty();
+            return Element.empty();
         }
         if (obj.istable() && !obj.get("name").isnil()) {
             text.append(" (Named ").append(toComponent(obj.get("name"), true)).append(")");

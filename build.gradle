@@ -11,7 +11,6 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
-
     maven { url = "https://maven.quiltmc.org/repository/release/" }
     maven { url 'https://jitpack.io' }
     maven { url 'https://maven.wispforest.io' }
@@ -40,9 +39,9 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     include "io.wispforest:owo-sentinel:0.11.1+1.20"
 
-    compileOnly("com.github.FiguraMC.LuaJ:luaj-core:3.0.8-figura")
-    compileOnly("com.github.FiguraMC.LuaJ:luaj-jse:3.0.8-figura")
-    compileOnly("com.neovisionaries:nv-websocket-client:2.14")
+    implementation("com.github.FiguraMC.LuaJ:luaj-core:3.0.8-figura")
+    implementation("com.github.FiguraMC.LuaJ:luaj-jse:3.0.8-figura")
+    implementation("com.neovisionaries:nv-websocket-client:2.14")
 }
 
 processResources {

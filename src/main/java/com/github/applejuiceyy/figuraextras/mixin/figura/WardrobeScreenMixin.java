@@ -43,6 +43,17 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
                 null,
                 o -> FiguraExtras.windows.add(new DetachedWindow())
         );
+        /*
+        Button testButton = new Button(
+                statusWidget.getX() - 32,
+                statusWidget.getY(),
+                14, 14,
+                Component.literal("V"),
+                null,
+                o -> Minecraft.getInstance().setScreen(new TestScreen(Component.empty()))
+        );
+                addRenderableWidget(testButton);
+                */
 
         SearchBar searchBar = ((AvatarListAccess) avatarList).figuraExtrass$getSearchBar();
         setFocused(avatarList);
@@ -50,5 +61,6 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
         searchBar.setFocused(searchBar.getField());
 
         addRenderableWidget(newButton);
+
     }
 }

@@ -87,5 +87,21 @@ public class Util {
         void set(T value);
 
         T get();
+
+        static <V> SetterGetter<V> value(V initial) {
+            return new SetterGetter<>() {
+                V v = initial;
+
+                @Override
+                public void set(V value) {
+                    v = value;
+                }
+
+                @Override
+                public V get() {
+                    return v;
+                }
+            };
+        }
     }
 }

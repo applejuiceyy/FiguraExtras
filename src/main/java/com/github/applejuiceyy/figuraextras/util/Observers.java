@@ -7,10 +7,7 @@ import org.luaj.vm2.LuaValue;
 
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.*;
 
 public class Observers {
     private Observers() {
@@ -149,6 +146,19 @@ public class Observers {
             });
         }
 
+        public UnSubscriber observe(Runnable value) {
+            return observe(v -> {
+                value.run();
+                return false;
+            });
+        }
+
+        public UnSubscriber observe(BooleanSupplier value) {
+            return observe(v -> {
+                return value.getAsBoolean();
+            });
+        }
+
         public ConditionalObservation<VALUE> conditionalObservation(Consumer<VALUE> value) {
             return conditionalObservation(v -> {
                 value.accept(v);
@@ -158,6 +168,19 @@ public class Observers {
 
         public ConditionalObservation<VALUE> conditionalObservation(Predicate<VALUE> value) {
             return new ConditionalObservation<>(this, value);
+        }
+
+        public ConditionalObservation<VALUE> conditionalObservation(Runnable value) {
+            return conditionalObservation(v -> {
+                value.run();
+                return false;
+            });
+        }
+
+        public ConditionalObservation<VALUE> conditionalObservation(BooleanSupplier value) {
+            return conditionalObservation(v -> {
+                return value.getAsBoolean();
+            });
         }
 
         private void startListening() {

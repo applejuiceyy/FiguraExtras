@@ -43,10 +43,8 @@
     "gui.CommandSuggestionsMixin",
     "gui.SuggestionListMixin",
     "gui.owolib.BlurProgramAccessor",
-    "gui.owolib.ButtonComponentMixin",
     "lua.DeadSlotMixin",
     "lua.TableMixin",
-    "render.AbstractWidgetMixin",
     "window.VirtualScreenMixin",
     "window.WindowMixin"
   ],
