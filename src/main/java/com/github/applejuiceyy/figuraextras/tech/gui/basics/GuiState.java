@@ -1,9 +1,7 @@
 package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 
-import com.github.applejuiceyy.figuraextras.tech.gui.stack.Stacks;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -18,14 +16,16 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class GuiState implements Renderable, GuiEventListener, LayoutElement, NarratableEntry {
 
@@ -172,53 +172,31 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                 bounding = right.get();
                 setClippingBox(bounding.clippingBox);
 
-                RenderTarget self = null;
-                if (bounding.getSurface().usesSelfRender()) {
-                    Stacks.RENDER_TARGETS.push();
-                    bounding.render(graphics, mouseX, mouseY, delta);
-                    self = Stacks.RENDER_TARGETS.pop(false);
-                }
+                Runnable self = () -> bounding.render(graphics, mouseX, mouseY, delta);
 
                 bounding.getSurface().render(bounding, graphics, mouseX, mouseY, delta, null, self);
                 graphics.pose().translate(0, 0, 0.01);
 
-                if (bounding.getSurface().usesSelfRender()) {
-                    Stacks.RENDER_TARGETS.reclaim(self);
-                } else {
-                    bounding.render(graphics, mouseX, mouseY, delta);
+                if (!bounding.getSurface().usesSelfRender()) {
+                    self.run();
                     graphics.pose().translate(0, 0, 0.01);
                 }
             } else if (left.isPresent()) {
                 ElementOrder.Inner inner = left.get();
                 bounding = inner.owner();
                 setClippingBox(bounding.clippingBox);
-                RenderTarget children = null;
-                RenderTarget self = null;
-                if (bounding.getSurface().usesChildren()) {
-                    Stacks.RENDER_TARGETS.push();
-                    renderElements(inner.children(), graphics, mouseX, mouseY, delta);
-                    children = Stacks.RENDER_TARGETS.pop(false);
-                }
-
-                if (bounding.getSurface().usesSelfRender()) {
-                    Stacks.RENDER_TARGETS.push();
-                    bounding.render(graphics, mouseX, mouseY, delta);
-                    self = Stacks.RENDER_TARGETS.pop(false);
-                }
+                Runnable children = () -> renderElements(inner.children(), graphics, mouseX, mouseY, delta);
+                Runnable self = () -> bounding.render(graphics, mouseX, mouseY, delta);
 
                 bounding.getSurface().render(bounding, graphics, mouseX, mouseY, delta, children, self);
 
-                if (bounding.getSurface().usesChildren()) {
-                    Stacks.RENDER_TARGETS.reclaim(children);
-                } else {
-                    renderElements(inner.children(), graphics, mouseX, mouseY, delta);
+                if (!bounding.getSurface().usesSelfRender()) {
+                    self.run();
                     graphics.pose().translate(0, 0, 0.01);
                 }
 
-                if (bounding.getSurface().usesSelfRender()) {
-                    Stacks.RENDER_TARGETS.reclaim(self);
-                } else {
-                    bounding.render(graphics, mouseX, mouseY, delta);
+                if (!bounding.getSurface().usesChildren()) {
+                    children.run();
                     graphics.pose().translate(0, 0, 0.01);
                 }
             } else {
@@ -242,8 +220,9 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         }
     }
 
-    private <V extends DefaultCancellableEvent> void doSweepEvent(Iterable<Element> elements, Function<Element, Event<Consumer<V>>> eventFetcher, Event<Consumer<V>> rootEvent, BiFunction<Element, V, Boolean> defaultBehaviour, V event) {
-        rootEvent.getSink().run(e -> e.accept(event));
+    private <V extends DefaultCancellableEvent> void doSweepEvent(Iterable<Element> elements, Function<Element, Event<Consumer<V>>> eventFetcher, @Nullable Event<Consumer<V>> rootEvent, BiConsumer<Element, V> defaultBehaviour, Predicate<Element> terminator, V event) {
+        if (rootEvent != null)
+            rootEvent.getSink().run(e -> e.accept(event));
 
         if (!event.isPropagating()) {
             return;
@@ -258,25 +237,39 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         }
         if (!event.cancellingDefault()) {
             for (Element element : elements) {
-                if (defaultBehaviour.apply(element, event)) {
+                defaultBehaviour.accept(element, event);
+                if (terminator.test(element)) {
                     return;
                 }
             }
         }
     }
 
+    public <T extends DefaultCancellableEvent> List<Element> fire(Element element, Function<Element, Event<Consumer<T>>> eventGetter, Event<Consumer<T>> rootEvent, BiConsumer<Element, T> defaultBehaviour, Predicate<Element> terminator, T event) {
+        List<Element> path = new ArrayList<>();
+        root.collectPath(element, path::add);
+        doSweepEvent(path, eventGetter, rootEvent, defaultBehaviour, terminator, event);
+        return path;
+    }
+
     // endregion
     // region events
 
-    private <T extends DefaultCancellableEvent.MousePositionEvent> @Nullable List<Element> defaultMouseOverEvent(double mouseX, double mouseY, Function<Element, Event<Consumer<T>>> eventGetter, Event<Consumer<T>> rootEvent, BiFunction<Element, T, Boolean> defaultBehaviour, T event) {
+    private Element findHovered(double mouseX, double mouseY) {
         for (Element element : elementOrder) {
             if (element.intersects(mouseX, mouseY)
-                    && (element.clippingBox == null || element.clippingBox.intersects(mouseX, mouseY))) {
-                List<Element> path = new ArrayList<>();
-                root.collectPath(element, path::add);
-                doSweepEvent(path, eventGetter, rootEvent, defaultBehaviour, event);
-                return path;
+                    && (element.clippingBox == null || element.clippingBox.intersects(mouseX, mouseY))
+                    && element.hoveringMouseHitTest(mouseX, mouseY)) {
+                return element;
             }
+        }
+        return null;
+    }
+
+    private <T extends DefaultCancellableEvent.MousePositionEvent> @Nullable List<Element> defaultMouseOverEvent(double mouseX, double mouseY, Function<Element, Event<Consumer<T>>> eventGetter, Event<Consumer<T>> rootEvent, BiConsumer<Element, T> defaultBehaviour, Predicate<Element> terminator, T event) {
+        Element hovered = findHovered(mouseX, mouseY);
+        if (hovered != null) {
+            return fire(hovered, eventGetter, rootEvent, defaultBehaviour, terminator, event);
         }
         return null;
     }
@@ -304,7 +297,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         for (; activeHovering >= 0; activeHovering--) {
             Element element = path.get(activeHovering);
             element.hoveringWithin.set(false);
-            if (element.hitTest(mouseX, mouseY)) {
+            if (element.blocksMouseActivation()) {
                 element.activeHovering.set(true);
                 activeHovering--;
                 break;
@@ -323,8 +316,8 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         List<Element> path = defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseMove, mouseMove, Element::defaultMouseMoveBehaviour,
-                new DefaultCancellableEvent.MousePositionEvent(mouseX, mouseY)
-        );
+                Element::blocksMouseActivation,
+                new DefaultCancellableEvent.MousePositionEvent(mouseX, mouseY));
 
         if (mouseDownStack == null) {
             doHovering(path, mouseX, mouseY);
@@ -333,14 +326,17 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        mouseDownStack = defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseDown, mouseDown, Element::defaultMouseDownBehaviour, new DefaultCancellableEvent.MousePositionButtonEvent(mouseX, mouseY, button));
-        if (mouseDownStack == null) {
-            return false;
+        DefaultCancellableEvent.MousePositionButtonEvent event = new DefaultCancellableEvent.MousePositionButtonEvent(mouseX, mouseY, button);
+        mouseDownStack = defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseDown, mouseDown, Element::defaultMouseDownBehaviour, Element::blocksMouseActivation, event);
+        if (event.cancellingDefault() || mouseDownStack == null) {
+            return mouseDownStack != null;
         }
-        for (Element element : mouseDownStack) {
-            element.active.set(true);
+        for (int i = 0; i < mouseDownStack.size(); i++) {
+            Element element = mouseDownStack.get(i);
+            if (element.blocksMouseActivation()) {
+                doSweepEvent(mouseDownStack.subList(0, i), e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent());
+            }
         }
-
         return true;
     }
 
@@ -348,11 +344,8 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (mouseDownStack != null) {
             doSweepEvent(mouseDownStack, e -> e.mouseUp, mouseUp,
-                    Element::defaultMouseUpBehaviour,
+                    Element::defaultMouseUpBehaviour, Element::blocksMouseActivation,
                     new DefaultCancellableEvent.MousePositionButtonEvent(mouseX, mouseY, button));
-            for (Element element : mouseDownStack) {
-                element.active.set(false);
-            }
 
             List<Element> path = new ArrayList<>();
             for (Element element : elementOrder) {
@@ -373,7 +366,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (mouseDownStack != null) {
             doSweepEvent(mouseDownStack, e -> e.mouseDragged, mouseDragged,
-                    Element::defaultMouseDraggedBehaviour,
+                    Element::defaultMouseDraggedBehaviour, Element::blocksMouseActivation,
                     new DefaultCancellableEvent.MousePositionButtonDeltaEvent(mouseX, mouseY, button, deltaX, deltaY));
             return true;
         }
@@ -383,28 +376,27 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         return defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseScrolled, mouseScrolled, Element::defaultMouseScrolledBehaviour,
-                new DefaultCancellableEvent.MousePositionAmountEvent(mouseX, mouseY, amount)
-        ) != null;
+                Element::blocksMouseActivation,
+                new DefaultCancellableEvent.MousePositionAmountEvent(mouseX, mouseY, amount)) != null;
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (getFocused() == null) return false;
-        List<Element> path = new ArrayList<>();
-        root.collectPath(getFocused(), path::add);
-        doSweepEvent(path, e -> e.keyPressed, keyPressed,
-                Element::defaultKeyPressedBehaviour,
+        List<Element> focusedPath = fire(getFocused(), e -> e.keyPressed, keyPressed,
+                Element::defaultKeyPressedBehaviour, e -> true,
                 new DefaultCancellableEvent.KeyEvent(keyCode, scanCode, modifiers));
+        if (keyCode == GLFW.GLFW_KEY_ENTER) {
+            doSweepEvent(focusedPath, e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent());
+        }
         return true;
     }
 
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
         if (getFocused() == null) return false;
-        List<Element> path = new ArrayList<>();
-        root.collectPath(getFocused(), path::add);
-        doSweepEvent(path, e -> e.keyReleased, keyReleased,
-                Element::defaultKeyReleasedBehaviour,
+        fire(getFocused(), e -> e.keyReleased, keyReleased,
+                Element::defaultKeyReleasedBehaviour, e -> true,
                 new DefaultCancellableEvent.KeyEvent(keyCode, scanCode, modifiers));
         return true;
     }
@@ -412,10 +404,8 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     @Override
     public boolean charTyped(char chr, int modifiers) {
         if (getFocused() == null) return false;
-        List<Element> path = new ArrayList<>();
-        root.collectPath(getFocused(), path::add);
-        doSweepEvent(path, e -> e.charTyped, charTyped,
-                Element::defaultCharTypedBehaviour,
+        fire(getFocused(), e -> e.charTyped, charTyped,
+                Element::defaultCharTypedBehaviour, e -> true,
                 new DefaultCancellableEvent.CharEvent(chr, modifiers));
         return true;
     }

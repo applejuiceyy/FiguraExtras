@@ -22,7 +22,8 @@ abstract public class Element implements Rectangle {
     public final Observers.WritableObserver<Boolean> activeHovering = Observers.of(false);
     public final Observers.WritableObserver<Boolean> hoveringWithin = Observers.of(false);
     public final Observers.WritableObserver<Boolean> focused = Observers.of(false);
-    public final Observers.WritableObserver<Boolean> active = Observers.of(false);
+    public final Event<Consumer<DefaultCancellableEvent>> activation = Event.consumer();
+
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseDown = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseUp = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionEvent>> mouseMove = Event.consumer();
@@ -47,40 +48,48 @@ abstract public class Element implements Rectangle {
 
     }
 
-    public boolean hitTest(double mouseX, double mouseY) {
+    public boolean blocksMouseActivation() {
         return false;
     }
 
-    protected boolean defaultMouseDownBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
-        return false;
+    public boolean hoveringMouseHitTest(double mouseX, double mouseY) {
+        return true;
     }
 
-    protected boolean defaultMouseUpBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
-        return false;
+    protected void defaultActivationBehaviour(DefaultCancellableEvent event) {
+
     }
 
-    protected boolean defaultMouseMoveBehaviour(DefaultCancellableEvent.MousePositionEvent event) {
-        return false;
+    protected void defaultMouseDownBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
+
     }
 
-    protected boolean defaultMouseDraggedBehaviour(DefaultCancellableEvent.MousePositionButtonDeltaEvent event) {
-        return false;
+    protected void defaultMouseUpBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
+
     }
 
-    protected boolean defaultMouseScrolledBehaviour(DefaultCancellableEvent.MousePositionAmountEvent event) {
-        return false;
+    protected void defaultMouseMoveBehaviour(DefaultCancellableEvent.MousePositionEvent event) {
+
     }
 
-    protected boolean defaultKeyPressedBehaviour(DefaultCancellableEvent.KeyEvent event) {
-        return false;
+    protected void defaultMouseDraggedBehaviour(DefaultCancellableEvent.MousePositionButtonDeltaEvent event) {
+
     }
 
-    protected boolean defaultKeyReleasedBehaviour(DefaultCancellableEvent.KeyEvent event) {
-        return false;
+    protected void defaultMouseScrolledBehaviour(DefaultCancellableEvent.MousePositionAmountEvent event) {
+
     }
 
-    protected boolean defaultCharTypedBehaviour(DefaultCancellableEvent.CharEvent event) {
-        return false;
+    protected void defaultKeyPressedBehaviour(DefaultCancellableEvent.KeyEvent event) {
+
+    }
+
+    protected void defaultKeyReleasedBehaviour(DefaultCancellableEvent.KeyEvent event) {
+
+    }
+
+    protected void defaultCharTypedBehaviour(DefaultCancellableEvent.CharEvent event) {
+
     }
 
     public void renderSelfDebug(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
@@ -105,9 +114,6 @@ abstract public class Element implements Rectangle {
         }
         if (isFocused()) {
             text.append("focused ");
-        }
-        if (active.get()) {
-            text.append("active ");
         }
         graphics.fill(getX(), getY() + getHeight(), getX() + Minecraft.getInstance().font.width(text), getY() + 9 + getHeight(), 0xffffffff);
         graphics.drawString(Minecraft.getInstance().font, text, getX(), getY() + getHeight(), 0xff000000, false);

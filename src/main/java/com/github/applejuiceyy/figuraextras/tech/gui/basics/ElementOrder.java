@@ -58,11 +58,13 @@ public class ElementOrder implements Iterable<Element> {
             for (Element child : parentElement.getElements()) {
                 ParentElement.Settings settings = parentElement.getSettings(child);
 
-                if (settings.isolatePriority() || parentElement.getSurface().usesChildren()) {
-                    List<Node> list = reorder(child);
-                    isolationContext.add(new Node(settings.getPriority(), Either.left(new Inner(list, parentElement))));
-                } else {
-                    reorder(child, isolationContext);
+                if (!settings.isInvisible()) {
+                    if (settings.isolatePriority() || parentElement.getSurface().usesChildren()) {
+                        List<Node> list = reorder(child);
+                        isolationContext.add(new Node(settings.getPriority(), Either.left(new Inner(list, parentElement))));
+                    } else {
+                        reorder(child, isolationContext);
+                    }
                 }
 
                 isolationContext.add(new Node(settings.getPriority(), Either.right(child)));

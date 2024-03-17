@@ -50,26 +50,19 @@ public class Scrollbar extends Element implements NumberRangeAlike {
     }
 
     @Override
-    protected boolean defaultMouseDraggedBehaviour(DefaultCancellableEvent.MousePositionButtonDeltaEvent event) {
+    protected void defaultMouseDraggedBehaviour(DefaultCancellableEvent.MousePositionButtonDeltaEvent event) {
         if (enabled) {
             float pos = (float) ((getMousePos(event) - dragPos) / (horizontal ? getWidth() : getHeight()) * size + previousPos);
             pos = pos < 0 ? 0 : pos;
             pos = Math.min(pos, size - thumbSize);
             this.pos.set(pos);
         }
-        return true;
     }
 
     @Override
-    protected boolean defaultMouseDownBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
+    protected void defaultMouseDownBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
         dragPos = getMousePos(event);
         previousPos = this.pos.get();
-        return true;
-    }
-
-    @Override
-    protected boolean defaultMouseUpBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
-        return true;
     }
 
     @Override
@@ -83,7 +76,7 @@ public class Scrollbar extends Element implements NumberRangeAlike {
     }
 
     @Override
-    public boolean hitTest(double mouseX, double mouseY) {
+    public boolean blocksMouseActivation() {
         return true;
     }
 

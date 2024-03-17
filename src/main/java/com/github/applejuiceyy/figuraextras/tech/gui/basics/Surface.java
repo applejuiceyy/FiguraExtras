@@ -3,19 +3,19 @@ package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 import com.github.applejuiceyy.figuraextras.ducks.RenderTargetAccess;
 import com.github.applejuiceyy.figuraextras.tech.gui.stack.Stacks;
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public interface Surface {
     Surface EMPTY = new Surface() {
         @Override
-        public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable RenderTarget children, @Nullable RenderTarget self) {
+        public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self) {
 
         }
 
@@ -30,11 +30,12 @@ public interface Surface {
         }
     };
 
-    static Surface simple(BiConsumer<Rectangle, GuiGraphics> renderer) {
+    static Surface simple(BoundsStackRenderer renderer) {
         return new Surface() {
             @Override
-            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable RenderTarget children, @Nullable RenderTarget self) {
-                renderer.accept(element.getInnerSpace(), graphics);
+            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self) {
+                Rectangle inner = element.getInnerSpace();
+                renderer.render(graphics.pose(), inner.getX(), inner.getY(), inner.getWidth(), inner.getHeight());
             }
 
             @Override
@@ -49,10 +50,10 @@ public interface Surface {
         };
     }
 
-    static Surface simple(ElementRenderer renderer) {
+    static Surface simple(AdvancedElementRenderer renderer) {
         return new Surface() {
             @Override
-            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable RenderTarget children, @Nullable RenderTarget self) {
+            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self) {
                 renderer.render(element, graphics, mouseX, mouseY, delta);
             }
 
@@ -71,7 +72,7 @@ public interface Surface {
     static Surface text(Supplier<Component> componentSupplier) {
         return new Surface() {
             @Override
-            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable RenderTarget children, @Nullable RenderTarget self) {
+            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self) {
                 graphics.drawString(Minecraft.getInstance().font, componentSupplier.get(), element.getX(), element.getY(), 0xffffff, false);
             }
 
@@ -87,7 +88,7 @@ public interface Surface {
         };
     }
 
-    void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable RenderTarget children, @Nullable RenderTarget self);
+    void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self);
 
     boolean usesChildren();
 
@@ -97,7 +98,7 @@ public interface Surface {
         Surface self = this;
         return new Surface() {
             @Override
-            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, RenderTarget children, @Nullable RenderTarget self_) {
+            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self_) {
                 Stacks.RENDER_TARGETS.push();
                 mask.render(null, graphics, mouseX, mouseY, delta, children, self_);
                 RenderTarget rendered = Stacks.RENDER_TARGETS.pop(false);
@@ -121,8 +122,17 @@ public interface Surface {
     }
 
     @FunctionalInterface
-    interface ElementRenderer {
+    interface AdvancedElementRenderer {
         void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta);
+    }
+
+    @FunctionalInterface
+    interface BoundsStackRenderer {
+        void render(PoseStack stack, float x, float y, float width, float height);
+
+        default void render(GuiGraphics graphics, float x, float y, float width, float height) {
+            render(graphics.pose(), x, y, width, height);
+        }
     }
 
     class Lending<T> implements AutoCloseable {

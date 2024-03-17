@@ -1,12 +1,17 @@
 package com.github.applejuiceyy.figuraextras.tech.gui;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Rectangle;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
-public class NinePatch {
+public class NinePatch implements Surface {
 
     private final boolean tiling;
     private final ResourceLocation resourceLocation;
@@ -110,5 +115,21 @@ public class NinePatch {
         builder.vertex(matrix, x1, y2, z).uv(u1, v2).endVertex();
         builder.vertex(matrix, x2, y2, z).uv(u2, v2).endVertex();
         builder.vertex(matrix, x2, y1, z).uv(u2, v1).endVertex();
+    }
+
+    @Override
+    public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self) {
+        Rectangle rectangle = element.getInnerSpace();
+        render(graphics.pose(), rectangle.getX(), rectangle.getY(), rectangle.getWidth(), rectangle.getHeight());
+    }
+
+    @Override
+    public boolean usesChildren() {
+        return false;
+    }
+
+    @Override
+    public boolean usesSelfRender() {
+        return false;
     }
 }
