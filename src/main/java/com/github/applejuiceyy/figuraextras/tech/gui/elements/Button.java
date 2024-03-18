@@ -27,7 +27,11 @@ public class Button extends Grid {
     }
 
     public static Button minimal() {
-        return new Button(0, 0, 0, 0, Surface.solid(0xff111111), Surface.solid(0x000000), Surface.solid(0xff444444));
+        return minimal(0);
+    }
+
+    public static Button minimal(int margin) {
+        return new Button(margin, margin, margin, margin, Surface.solid(0xff111111), Surface.solid(0x000000), Surface.solid(0xff444444));
     }
 
     public static Button vanilla() {

@@ -38,7 +38,7 @@ public class TestScreen extends Screen {
                 .content()
                 .content();
 
-        Button selectAvatarButton = (Button) Button.vanilla().addAnd("Select avatar");
+        Button selectAvatarButton = (Button) Button.minimal(2).addAnd("Select avatar");
         left.add(selectAvatarButton);
 
         Grid centerer = new Grid();
@@ -54,7 +54,7 @@ public class TestScreen extends Screen {
 
         centerer.add("No Avatar Selected").setRow(1).setColumn(1);
 
-        Button guiScaleButton = (Button) Button.vanilla().addAnd("Gui Scale");
+        Button guiScaleButton = (Button) Button.minimal(2).addAnd("Gui Scale: Auto");
         top.add(guiScaleButton).setColumn(2);
 
         Grid bottom = new Grid();
@@ -81,10 +81,10 @@ public class TestScreen extends Screen {
                 .percentage(1)
                 .fixed(2)
                 .cols()
-                .fixed(2)
+                .fixed(4)
                 .content()
                 .content()
-                .fixed(2);
+                .fixed(4);
 
         Flow flow = new Flow();
         flowRoot.add(flow).setColumn(1).setRow(1);
