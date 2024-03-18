@@ -40,7 +40,8 @@ public class Label extends Element {
         return Minecraft.getInstance().font
                 .split(text, Integer.MAX_VALUE)
                 .stream()
-                .map(o -> Minecraft.getInstance().font.width(o)).max(Comparator.comparingInt(e -> e))
+                .map(o -> Minecraft.getInstance().font.width(o))
+                .max(Comparator.comparingInt(e -> e))
                 .orElseThrow();
     }
 

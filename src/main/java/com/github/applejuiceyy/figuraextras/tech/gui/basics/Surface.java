@@ -3,13 +3,11 @@ package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 import com.github.applejuiceyy.figuraextras.ducks.RenderTargetAccess;
 import com.github.applejuiceyy.figuraextras.tech.gui.stack.Stacks;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public interface Surface {
@@ -30,12 +28,14 @@ public interface Surface {
         }
     };
 
-    static Surface simple(BoundsStackRenderer renderer) {
+    static Surface contextBackground() {
         return new Surface() {
             @Override
             public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self) {
-                Rectangle inner = element.getInnerSpace();
-                renderer.render(graphics.pose(), inner.getX(), inner.getY(), inner.getWidth(), inner.getHeight());
+                Rectangle rectangle = element.getInnerSpace();
+                graphics.fill(rectangle.getX(), rectangle.getY(), rectangle.getX() + rectangle.getWidth(), rectangle.getY() + rectangle.getHeight(), 0xff444444);
+                graphics.fill(rectangle.getX() + 1, rectangle.getY() + 1, rectangle.getX() + rectangle.getWidth() - 1, rectangle.getY() + rectangle.getHeight() - 1, 0xff000000);
+                graphics.fill(rectangle.getX() + 2, rectangle.getY() + 2, rectangle.getX() + rectangle.getWidth() - 2, rectangle.getY() + rectangle.getHeight() - 2, 0xff111111);
             }
 
             @Override
@@ -50,11 +50,12 @@ public interface Surface {
         };
     }
 
-    static Surface simple(AdvancedElementRenderer renderer) {
+    static Surface solid(int color) {
         return new Surface() {
             @Override
             public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self) {
-                renderer.render(element, graphics, mouseX, mouseY, delta);
+                Rectangle rectangle = element.getInnerSpace();
+                graphics.fill(rectangle.getX(), rectangle.getY(), rectangle.getX() + rectangle.getWidth(), rectangle.getY() + rectangle.getHeight(), color);
             }
 
             @Override
@@ -121,36 +122,24 @@ public interface Surface {
         };
     }
 
-    @FunctionalInterface
-    interface AdvancedElementRenderer {
-        void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta);
-    }
+    default Surface and(Surface other) {
+        Surface self = this;
+        return new Surface() {
+            @Override
+            public void render(Element element, GuiGraphics graphics, int mouseX, int mouseY, float delta, @Nullable Runnable children, @Nullable Runnable self_) {
+                self.render(element, graphics, mouseX, mouseY, delta, children, self_);
+                other.render(element, graphics, mouseX, mouseY, delta, children, self_);
+            }
 
-    @FunctionalInterface
-    interface BoundsStackRenderer {
-        void render(PoseStack stack, float x, float y, float width, float height);
+            @Override
+            public boolean usesChildren() {
+                return self.usesChildren() || other.usesChildren();
+            }
 
-        default void render(GuiGraphics graphics, float x, float y, float width, float height) {
-            render(graphics.pose(), x, y, width, height);
-        }
-    }
-
-    class Lending<T> implements AutoCloseable {
-        private final T thing;
-        private final Consumer<T> closer;
-
-        private Lending(T thing, Consumer<T> closer) {
-            this.thing = thing;
-            this.closer = closer;
-        }
-
-        public static <T> Lending<T> lend(T thing, Consumer<T> closing) {
-            return new Lending<>(thing, closing);
-        }
-
-        @Override
-        public void close() {
-            closer.accept(thing);
-        }
+            @Override
+            public boolean usesSelfRender() {
+                return self.usesSelfRender() || other.usesSelfRender();
+            }
+        };
     }
 }

@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class Grid extends ParentElement<Grid.GridSettings> {
@@ -118,7 +119,7 @@ public class Grid extends ParentElement<Grid.GridSettings> {
             graphics.pose().pushPose();
             graphics.pose().translate(v, -6 - textw, 0);
             graphics.pose().scale(0.5f, 0.5f, 0);
-            graphics.drawString(Minecraft.getInstance().font, toRender, 0, 0, 0xff5555ff);
+            graphics.drawString(Minecraft.getInstance().font, toRender, 0, 0, 0xff5555ff, false);
             graphics.pose().popPose();
             textReach = (int) (v + Minecraft.getInstance().font.width(toRender) * 0.5);
             v += rowSizing;
@@ -299,6 +300,15 @@ public class Grid extends ParentElement<Grid.GridSettings> {
         return super.willCauseReflow(settings) && (columns.get(settings.getColumn()).kind != SpacingKind.FIXED || rows.get(settings.getRow()).kind != SpacingKind.FIXED);
     }
 
+    public RowQuickerSpacingDefinition rows() {
+        return new RowQuickerSpacingDefinition(this);
+    }
+
+    public ColumnQuickerSpacingDefinition cols() {
+        return new ColumnQuickerSpacingDefinition(this);
+    }
+
+
     public Grid addRow(float value, SpacingKind kind) {
         rows.add(new Spacing(kind, value));
         markLayoutDirty();
@@ -313,6 +323,62 @@ public class Grid extends ParentElement<Grid.GridSettings> {
 
     public enum SpacingKind {
         PERCENTAGE, FIXED, CONTENT
+    }
+
+    public static class QuickerSpacingDefinition<T extends QuickerSpacingDefinition<T>> {
+        private final Consumer<Spacing> adder;
+
+        QuickerSpacingDefinition(Consumer<Spacing> adder) {
+            this.adder = adder;
+        }
+
+        private T getThis() {
+            //noinspection unchecked
+            return (T) this;
+        }
+
+        public T fixed(float px) {
+            adder.accept(new Spacing(SpacingKind.FIXED, px));
+            return getThis();
+        }
+
+        public T content() {
+            adder.accept(new Spacing(SpacingKind.CONTENT, 0));
+            return getThis();
+        }
+
+        public T percentage(float percentage) {
+            adder.accept(new Spacing(SpacingKind.PERCENTAGE, percentage));
+            return getThis();
+        }
+    }
+
+    public static class RowQuickerSpacingDefinition extends QuickerSpacingDefinition<RowQuickerSpacingDefinition> {
+
+        private final Grid owner;
+
+        RowQuickerSpacingDefinition(Grid owner) {
+            super(owner.rows::add);
+            this.owner = owner;
+        }
+
+        public ColumnQuickerSpacingDefinition cols() {
+            return new ColumnQuickerSpacingDefinition(owner);
+        }
+    }
+
+    public static class ColumnQuickerSpacingDefinition extends QuickerSpacingDefinition<ColumnQuickerSpacingDefinition> {
+
+        private final Grid owner;
+
+        ColumnQuickerSpacingDefinition(Grid owner) {
+            super(owner.columns::add);
+            this.owner = owner;
+        }
+
+        public RowQuickerSpacingDefinition rows() {
+            return new RowQuickerSpacingDefinition(owner);
+        }
     }
 
     public static class GridSettings extends ParentElement.Settings {

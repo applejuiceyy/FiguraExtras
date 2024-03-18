@@ -46,6 +46,8 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     private boolean thisFocused;
     private boolean priorityDirty = false;
     private boolean clipDirty = false;
+
+    public boolean renderDebug = false;
     private List<Element> currentHoverStack = List.of();
     private List<Element> mouseDownStack = List.of();
 
@@ -99,8 +101,8 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     private void updateClippingBoxes(Element element, @Nullable Rectangle currentBox) {
         if (element.shouldClip()) {
             currentBox = currentBox == null ? element : currentBox.intersection(element);
-            element.clippingBox = currentBox;
         }
+        element.clippingBox = currentBox;
 
         if (element instanceof ParentElement<?> parentElement) {
             for (Element child : parentElement.getElements()) {
@@ -143,19 +145,21 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         pose.pushPose();
         pose.translate(getX(), getY(), 0);
         renderElements(elementOrder.tree, graphics, mouseX, mouseY, delta);
-        /*
-        for (Element element : elementOrder) {
-            if(element.intersects(mouseX, mouseY)
-                    && (element.clippingBox == null || element.clippingBox.intersects(mouseX, mouseY))) {
-                element.renderSelfDebug(graphics, mouseX, mouseY, delta);
-                if(element instanceof ParentElement<?> parentElement) {
-                    pose.translate(-parentElement.xView.get(), -parentElement.yView.get(), 0);
-                    parentElement.renderLayoutDebug(graphics, mouseX, mouseY, delta);
-                }
+        setClippingBox(null);
+        if (renderDebug) {
+            for (Element element : elementOrder) {
+                if (element.intersects(mouseX, mouseY)
+                        && (element.clippingBox == null || element.clippingBox.intersects(mouseX, mouseY))) {
+                    element.renderSelfDebug(graphics, mouseX, mouseY, delta);
+                    if (element instanceof ParentElement<?> parentElement) {
+                        pose.translate(-parentElement.xView.get(), -parentElement.yView.get(), 0);
+                        parentElement.renderLayoutDebug(graphics, mouseX, mouseY, delta);
+                    }
 
-                break;
+                    break;
+                }
             }
-        }*/
+        }
         pose.popPose();
     }
 
@@ -334,7 +338,8 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         for (int i = 0; i < mouseDownStack.size(); i++) {
             Element element = mouseDownStack.get(i);
             if (element.blocksMouseActivation()) {
-                doSweepEvent(mouseDownStack.subList(0, i), e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent());
+                doSweepEvent(mouseDownStack.subList(i, mouseDownStack.size()), e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent());
+                break;
             }
         }
         return true;
@@ -382,6 +387,10 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_LEFT_ALT) {
+            renderDebug = !renderDebug;
+            return true;
+        }
         if (getFocused() == null) return false;
         List<Element> focusedPath = fire(getFocused(), e -> e.keyPressed, keyPressed,
                 Element::defaultKeyPressedBehaviour, e -> true,
@@ -389,6 +398,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         if (keyCode == GLFW.GLFW_KEY_ENTER) {
             doSweepEvent(focusedPath, e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent());
         }
+
         return true;
     }
 

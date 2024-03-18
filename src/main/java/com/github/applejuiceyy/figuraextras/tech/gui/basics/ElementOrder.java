@@ -2,6 +2,7 @@ package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 
 import com.mojang.datafixers.util.Either;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
@@ -28,10 +29,12 @@ public class ElementOrder implements Iterable<Element> {
     }
 
     public void update(Element root) {
-        List<Node> list = reorder(root);
-        list.add(new Node(-9999, Either.right(root)));
-        tree = list;
-        order = list.stream().flatMap(new Function<Node, Stream<Element>>() {
+        List<Node> nodes = new ArrayList<>();
+        reorder(null, root, nodes);
+        nodes.add(new Node(-9999, Either.right(root)));
+        nodes.sort(Comparator.comparingInt(Node::priority).reversed());
+        tree = nodes;
+        order = nodes.stream().flatMap(new Function<Node, Stream<Element>>() {
             @Override
             public Stream<Element> apply(Node node) {
                 if (node.node.right().isPresent()) {
@@ -46,29 +49,30 @@ public class ElementOrder implements Iterable<Element> {
         Collections.reverse(reverseOrder);
     }
 
-    private List<Node> reorder(Element element) {
-        List<Node> e = new ArrayList<>();
-        reorder(element, e);
-        e.sort(Comparator.comparingInt(Node::priority).reversed());
-        return e;
-    }
-
-    private void reorder(Element element, List<Node> isolationContext) {
+    private void reorder(@Nullable ParentElement.Settings settings, Element element, List<Node> isolationContext) {
+        if (settings != null && settings.isInvisible()) return;
+        boolean addSelf = element.getSurface().usesChildren();
         if (element instanceof ParentElement<?> parentElement) {
-            for (Element child : parentElement.getElements()) {
-                ParentElement.Settings settings = parentElement.getSettings(child);
-
-                if (!settings.isInvisible()) {
-                    if (settings.isolatePriority() || parentElement.getSurface().usesChildren()) {
-                        List<Node> list = reorder(child);
-                        isolationContext.add(new Node(settings.getPriority(), Either.left(new Inner(list, parentElement))));
-                    } else {
-                        reorder(child, isolationContext);
-                    }
+            if (addSelf) {
+                List<Node> list = new ArrayList<>();
+                for (Element child : parentElement.getElements()) {
+                    if (parentElement.getSettings(child).isInvisible()) continue;
+                    reorder(parentElement.getSettings(child), child, list);
                 }
+                list.sort(Comparator.comparingInt(Node::priority).reversed());
+                isolationContext.add(new Node(settings == null ? 0 : settings.getPriority(), Either.left(new Inner(list, parentElement))));
+            } else {
 
-                isolationContext.add(new Node(settings.getPriority(), Either.right(child)));
+                for (Element child : parentElement.getElements()) {
+                    if (parentElement.getSettings(child).isInvisible()) continue;
+                    ParentElement.Settings s = parentElement.getSettings(child);
+                    reorder(s, child, isolationContext);
+                }
             }
+        }
+
+        if (!addSelf) {
+            isolationContext.add(new Node(settings == null ? 0 : settings.getPriority(), Either.right(element)));
         }
     }
 

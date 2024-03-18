@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.screen;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.GuiState;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
@@ -18,43 +19,114 @@ public class TestScreen extends Screen {
 
         Grid root = new Grid();
 
-        root.addRow(1, Grid.SpacingKind.CONTENT)
-                .addColumn(1, Grid.SpacingKind.CONTENT)
-                .addColumn(1, Grid.SpacingKind.CONTENT);
+        root.addRow(0, Grid.SpacingKind.CONTENT);
+        root.addRow(1, Grid.SpacingKind.PERCENTAGE);
+        root.addColumn(1, Grid.SpacingKind.PERCENTAGE);
 
-        Button button = new Button();
-        root.add(button).setColumn(0).setRow(0);
+        Grid top = new Grid();
+        root.add(top).setColumn(0).setRow(0);
+
+        top.setSurface(Surface.solid(0xff111111));
+        top.rows().content().cols().content().percentage(1).content();
+
+        Grid left = new Grid();
+        top.add(left);
+        left
+                .rows()
+                .content()
+                .cols()
+                .content()
+                .content();
+
+        Button selectAvatarButton = (Button) Button.vanilla().addAnd("Select avatar");
+        left.add(selectAvatarButton);
+
+        Grid centerer = new Grid();
+        left.add(centerer).setColumn(1);
+        centerer
+                .rows()
+                .percentage(1)
+                .content()
+                .percentage(1)
+                .cols()
+                .fixed(10)
+                .content();
+
+        centerer.add("No Avatar Selected").setRow(1).setColumn(1);
+
+        Button guiScaleButton = (Button) Button.vanilla().addAnd("Gui Scale");
+        top.add(guiScaleButton).setColumn(2);
+
+        Grid bottom = new Grid();
+        root.add(bottom).setColumn(0).setRow(1);
+        bottom.rows()
+                .percentage(1)
+                .cols()
+                .content()
+                .percentage(1);
+        bottom.setSurface(Surface.solid(0xff050505));
+
+        Grid flowRootRoot = new Grid();
+        bottom.add(flowRootRoot);
+        flowRootRoot.rows()
+                .content()
+                .percentage(1)
+                .cols()
+                .content();
+
+        Grid flowRoot = new Grid();
+        flowRootRoot.add(flowRoot);
+        flowRoot.rows()
+                .fixed(2)
+                .percentage(1)
+                .fixed(2)
+                .cols()
+                .fixed(2)
+                .content()
+                .content()
+                .fixed(2);
 
         Flow flow = new Flow();
-        flow.add("Long Text");
-        flow.add("So many text oh my god");
-        flow.add(new Button().addAnd("random button why not"));
-        flow.add("big scrollbar");
-        Scrollbar scrolle = new Scrollbar();
-        flow.add(scrolle).setOptimalWidth(false).setWidth(10);
-        flow.add("Engaging lorem ipsum");
-        flow.add("""
+        flowRoot.add(flow).setColumn(1).setRow(1);
 
+        flow.add(Button.minimal().addAnd("Object View"));
+        flow.add(Button.minimal().addAnd("Model View"));
+        flow.add(generateSeparator());
+        flow.add(Button.minimal().addAnd("Tick Instructions"));
+        flow.add(Button.minimal().addAnd("Render Instructions"));
+        flow.add(generateSeparator());
+        flow.add(Button.minimal().addAnd("Loaded Textures"));
+        flow.add(Button.minimal().addAnd("Loaded Sounds"));
+        flow.add(generateSeparator());
+        flow.add(Button.minimal().addAnd("Output"));
+        flow.add(Button.minimal().addAnd("Network"));
+        flow.add(generateSeparator());
+        flow.add(Button.minimal().addAnd("Capture"));
+        flow.add(generateSeparator());
+        flow.add(Button.minimal().addAnd("Download Avatar"));
 
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc volutpat libero nec nisl molestie, at dignissim nisl commodo. Quisque eget rhoncus dui, vel aliquam nisl. Quisque laoreet nibh urna, sed hendrerit libero egestas tempus. Sed nec magna in ex aliquet maximus nec at urna. Duis convallis lacinia mattis. Vivamus vel augue ac ante posuere condimentum in in ante. Donec venenatis scelerisque leo, et pretium ex feugiat vel. Pellentesque congue condimentum diam, suscipit lobortis mi bibendum in. Nunc vitae enim felis.
+        Scrollbar scrollbar = new Scrollbar();
+        flowRoot.add(scrollbar).setColumn(2).setRow(1).setOptimalWidth(false).setWidth(5);
 
-                Donec fermentum mollis arcu nec finibus. Ut velit enim, consectetur ac mauris vitae, posuere eleifend neque. Nullam gravida neque et nulla fringilla, vitae cursus elit venenatis. Phasellus faucibus semper odio. Phasellus ullamcorper dui in libero accumsan, nec pharetra urna rutrum. Nunc sit amet ipsum ullamcorper, lacinia nisi non, viverra sapien. Nunc feugiat ligula vel elit imperdiet congue. Morbi non rhoncus ligula. Donec at gravida justo. Ut et nunc eleifend, consequat leo luctus, elementum mauris. Pellentesque sit amet iaculis justo, id sollicitudin risus. Aenean eu erat vitae elit vestibulum gravida. Pellentesque ut arcu dolor. In leo ex, malesuada vehicula eros vitae, fringilla malesuada dolor. Proin ut orci in purus finibus convallis tempor nec nisl.
+        Elements.makeVerticalContainerScrollable(flow, scrollbar, true);
 
-                Nam vel consectetur sem. Nulla feugiat lectus id ex consectetur, et vehicula urna bibendum. Pellentesque porttitor elit sit amet sapien auctor bibendum. Nam commodo euismod laoreet. Aliquam tincidunt, risus at lobortis pretium, lectus dolor vestibulum lectus, at placerat mauris ipsum et tortor. Vivamus pretium risus id sem cursus, vel blandit elit posuere. Integer non commodo leo, a semper orci. Vestibulum laoreet imperdiet mauris ac condimentum. Nulla sed condimentum sapien. Nullam congue nibh sem, eu mollis nisi faucibus dictum. Vestibulum ac dolor mi. Duis luctus commodo commodo. Nam leo turpis, aliquet ut fringilla eu, pellentesque eget magna.
-
-                Nunc ultricies sagittis mattis. Donec dictum eros ac lectus placerat congue. Mauris bibendum justo quis ipsum accumsan lobortis. Nunc et lectus arcu. Nunc facilisis turpis vel erat venenatis cursus. Integer dictum magna nibh, ac iaculis mauris blandit non. Vestibulum et tempus felis. Mauris eu libero eu augue posuere aliquet vel vitae diam. Curabitur ac nisi eu enim vehicula pulvinar quis et sapien. Ut sit amet nisl purus. Praesent sollicitudin varius augue. Proin ut odio congue, fermentum felis vitae, scelerisque purus. Aenean pretium ultricies sapien, nec laoreet leo malesuada id. Vestibulum rutrum sapien sapien, sed rutrum ante volutpat et.
-
-                Nam mollis dignissim enim vitae rutrum. Interdum et malesuada fames ac ante ipsum primis in faucibus. Cras dignissim tellus a finibus consectetur. Integer aliquet, tortor nec volutpat cursus, nisi ex finibus diam, et porta tellus ligula sit amet tellus. Duis ut posuere urna, ac dapibus nunc. Phasellus molestie turpis et odio egestas aliquam. Pellentesque magna lorem, hendrerit id odio non, ultricies molestie lacus. Maecenas id felis massa. Maecenas venenatis eleifend porttitor. Duis in justo ex. Nullam scelerisque turpis semper arcu lobortis mattis. Vivamus quam metus, ultricies sit amet massa vitae, dignissim congue nulla.\s""");
-        flow.add(new Button().addAnd("Donate 1000€"));
-        button.add(flow);
-
-        Scrollbar scroll = new Scrollbar();
-        root.add(scroll).setColumn(1).setRow(0);
-
-        Elements.makeContainerScrollable(button, scrolle, null);
-        Elements.makeContainerScrollable(button, scroll, null);
+        flowRoot.setSurface(Surface.contextBackground());
 
         awWrapper = root.getState();
+    }
+
+    private Grid generateSeparator() {
+        Grid grid = new Grid();
+        grid.rows()
+                .fixed(2)
+                .fixed(1)
+                .fixed(2)
+                .cols()
+                .percentage(1)
+                .percentage(8)
+                .percentage(1);
+        grid.add(new Grid().setSurface(Surface.solid(0xff444444))).setRow(1).setColumn(1);
+        return grid;
     }
 
     @Override

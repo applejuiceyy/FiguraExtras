@@ -2,6 +2,7 @@ package com.github.applejuiceyy.figuraextras.mixin.figura;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarListAccess;
+import com.github.applejuiceyy.figuraextras.screen.TestScreen;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -12,6 +13,7 @@ import org.figuramc.figura.gui.screens.WardrobeScreen;
 import org.figuramc.figura.gui.widgets.*;
 import org.figuramc.figura.gui.widgets.lists.AvatarList;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,6 +21,9 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(value = WardrobeScreen.class, remap = false)
 public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
+    @Shadow
+    public abstract void tick();
+
     private WardrobeScreenMixin(Screen parentScreen, Component title) {
         super(parentScreen, title);
     }
@@ -43,7 +48,7 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
                 null,
                 o -> FiguraExtras.windows.add(new DetachedWindow())
         );
-        /*
+
         Button testButton = new Button(
                 statusWidget.getX() - 32,
                 statusWidget.getY(),
@@ -52,8 +57,7 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
                 null,
                 o -> Minecraft.getInstance().setScreen(new TestScreen(Component.empty()))
         );
-                addRenderableWidget(testButton);
-                */
+
 
         SearchBar searchBar = ((AvatarListAccess) avatarList).figuraExtrass$getSearchBar();
         setFocused(avatarList);
@@ -61,6 +65,6 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
         searchBar.setFocused(searchBar.getField());
 
         addRenderableWidget(newButton);
-
+        addRenderableWidget(testButton);
     }
 }

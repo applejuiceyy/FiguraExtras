@@ -66,6 +66,11 @@ public class Scrollbar extends Element implements NumberRangeAlike {
     }
 
     @Override
+    protected void defaultMouseScrolledBehaviour(DefaultCancellableEvent.MousePositionAmountEvent event) {
+        pos.set(Math.min(Math.max(0, (float) (pos.get() - event.amount * 10)), getMax()));
+    }
+
+    @Override
     public int getOptimalWidth() {
         return 15;
     }

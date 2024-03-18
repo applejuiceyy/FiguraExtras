@@ -3,7 +3,6 @@ package com.github.applejuiceyy.figuraextras.tech.gui.elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.NinePatch;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Rectangle;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import net.minecraft.client.Minecraft;
@@ -20,41 +19,50 @@ public class Button extends Grid {
     private Surface active = new NinePatch(true, new ResourceLocation("textures/gui/widgets.png"), 0, 86 / 256f, 200 / 256f, 20 / 256f, 200, 20, 4, 4, 4, 4);
     ;
 
-    public Surface getNormal() {
+    public Button(int left, int right, int top, int bottom, Surface normal, Surface disabled, Surface active) {
+        Elements.addMarginsToGrid(this, left, right, top, bottom);
+        this.normal = normal;
+        this.disabled = disabled;
+        this.active = active;
+    }
+
+    public static Button minimal() {
+        return new Button(0, 0, 0, 0, Surface.solid(0xff111111), Surface.solid(0x000000), Surface.solid(0xff444444));
+    }
+
+    public static Button vanilla() {
+        return new Button(10, 10, 5, 5,
+                new NinePatch(true, new ResourceLocation("textures/gui/widgets.png"), 0, 66 / 256f, 200 / 256f, 20 / 256f, 200, 20, 4, 4, 4, 4),
+                new NinePatch(true, new ResourceLocation("textures/gui/widgets.png"), 0, 46 / 256f, 200 / 256f, 20 / 256f, 200, 20, 4, 4, 4, 4),
+                new NinePatch(true, new ResourceLocation("textures/gui/widgets.png"), 0, 86 / 256f, 200 / 256f, 20 / 256f, 200, 20, 4, 4, 4, 4)
+        );
+    }
+
+    public Surface getNormalTexture() {
         return normal;
     }
 
-    public Button setNormal(Surface normal) {
+    public Button setNormalTexture(Surface normal) {
         this.normal = normal;
         return this;
     }
 
-    public Surface getDisabled() {
+    public Surface getDisabledTexture() {
         return disabled;
     }
 
-    public Button setDisabled(Surface disabled) {
+    public Button setDisabledTexture(Surface disabled) {
         this.disabled = disabled;
         return this;
     }
 
-    public Surface getActive() {
+    public Surface getActiveTexture() {
         return active;
     }
 
-    public Button setActive(Surface active) {
+    public Button setActiveTexture(Surface active) {
         this.active = active;
         return this;
-    }
-
-
-    public Button() {
-        addRow(6, Grid.SpacingKind.FIXED);
-        addRow(0, Grid.SpacingKind.CONTENT);
-        addRow(6, Grid.SpacingKind.FIXED);
-        addColumn(10, Grid.SpacingKind.FIXED);
-        addColumn(0, Grid.SpacingKind.CONTENT);
-        addColumn(10, Grid.SpacingKind.FIXED);
     }
 
     @Override
@@ -66,7 +74,7 @@ public class Button extends Grid {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         // TODO: differentiate normal surfaces and background surfaces that have access to children and self renders
         // or maybe just make here also compatible
-        Rectangle size = getInnerSpace();
+
         if (activeHovering.get()) {
             active.render(this, graphics, mouseX, mouseY, delta, null, null);
         } else {

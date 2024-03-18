@@ -52,6 +52,13 @@ abstract public class Element implements Rectangle {
         return false;
     }
 
+    /***
+     this function is only relevant if blocksMouseActivation returns true
+     */
+    public boolean canActivate() {
+        return true;
+    }
+
     public boolean hoveringMouseHitTest(double mouseX, double mouseY) {
         return true;
     }
@@ -198,6 +205,7 @@ abstract public class Element implements Rectangle {
     public void setClipping(boolean clip) {
         this.clip = clip;
         getState().markClipDirty();
+        getState().markPriorityDirty();
     }
 
     public <T extends DefaultCancellableEvent> boolean doSweepingEvent(Function<Element, Event<Consumer<T>>> eventGetter, T event, Function<Iterable<Element>, Element> forwarder) {

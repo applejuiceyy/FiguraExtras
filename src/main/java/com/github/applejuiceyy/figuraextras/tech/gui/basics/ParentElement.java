@@ -202,7 +202,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         return this;
     }
 
-    public Settings add(String text) {
+    public S add(String text) {
         return add(new Label(Component.literal(text)));
     }
 
@@ -296,7 +296,6 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         private boolean doLayout = true;
         private boolean invisible = false;
         private int priority = 0;
-        private boolean isolatePriority = false;
         private boolean optimalWidth = true;
         private boolean optimalHeight = true;
         private int width = 0;
@@ -354,15 +353,6 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
 
         public void setPriority(int priority) {
             this.priority = priority;
-            markPriorityDirty();
-        }
-
-        public boolean isolatePriority() {
-            return isolatePriority;
-        }
-
-        public void setIsolatePriority(boolean isolatePriority) {
-            this.isolatePriority = isolatePriority;
             markPriorityDirty();
         }
 
