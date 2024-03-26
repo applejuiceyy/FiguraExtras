@@ -1,14 +1,14 @@
 package com.github.applejuiceyy.figuraextras.tech.gui.elements;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.SetText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 
 import java.util.Comparator;
 
-public class Label extends Element {
+public class Label extends Element implements SetText {
 
     private Component text;
 
@@ -16,7 +16,7 @@ public class Label extends Element {
         this(Component.empty());
     }
 
-    public Label(MutableComponent component) {
+    public Label(Component component) {
         text = component;
     }
 
@@ -25,28 +25,41 @@ public class Label extends Element {
         graphics.drawWordWrap(Minecraft.getInstance().font, text, getX(), getY(), getWidth(), 0xffffff);
     }
 
+    @Override
+    protected boolean renders() {
+        return true;
+    }
+
     Component getText() {
         return text;
     }
 
     public Label setText(Component text) {
         this.text = text;
-        markLayoutDirty();
+        optimalSizeChanged();
         return this;
     }
 
     @Override
-    public int getOptimalWidth() {
+    public int computeOptimalWidth() {
+        return optimalWidthOf(text);
+    }
+
+    private int optimalWidthOf(Component text) {
         return Minecraft.getInstance().font
                 .split(text, Integer.MAX_VALUE)
                 .stream()
                 .map(o -> Minecraft.getInstance().font.width(o))
                 .max(Comparator.comparingInt(e -> e))
-                .orElseThrow();
+                .orElse(0);
     }
 
     @Override
-    public int getOptimalHeight(int width) {
+    public int computeOptimalHeight(int width) {
+        return optimalHeightOf(text, width);
+    }
+
+    private int optimalHeightOf(Component text, int width) {
         return Minecraft.getInstance().font.wordWrapHeight(text, width);
     }
 }

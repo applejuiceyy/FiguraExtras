@@ -1,8 +1,13 @@
 package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 
+import java.util.Collections;
+import java.util.List;
+
 public class DefaultCancellableEvent {
     boolean propagating = true;
     boolean cancelDefault = false;
+
+    List<Element> propagationPath;
 
     public void cancelPropagation() {
         propagating = false;
@@ -18,6 +23,14 @@ public class DefaultCancellableEvent {
 
     public void cancelDefault() {
         cancelDefault = true;
+    }
+
+    public List<Element> getPropagationPath() {
+        return Collections.unmodifiableList(propagationPath);
+    }
+
+    void setPropagationPath(List<Element> elements) {
+        propagationPath = elements;
     }
 
     public static class KeyEvent extends DefaultCancellableEvent {

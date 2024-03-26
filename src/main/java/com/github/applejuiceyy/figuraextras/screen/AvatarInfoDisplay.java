@@ -1,89 +1,113 @@
 package com.github.applejuiceyy.figuraextras.screen;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
-import com.github.applejuiceyy.figuraextras.views.views.*;
-import com.github.applejuiceyy.figuraextras.views.views.http.NetworkView;
-import io.wispforest.owo.ui.base.BaseUIModelScreen;
-import io.wispforest.owo.ui.component.DropdownComponent;
-import io.wispforest.owo.ui.container.FlowLayout;
-import net.minecraft.Util;
+import com.github.applejuiceyy.figuraextras.views.views.ModelView;
+import com.github.applejuiceyy.figuraextras.views.views.ObjectView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import org.figuramc.figura.config.Configs;
-import org.figuramc.figura.permissions.Permissions;
+import org.jetbrains.annotations.Nullable;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.function.Function;
 
 public class AvatarInfoDisplay {
-    public final FlowLayout root;
+    public final Grid root;
     private final InfoViews.Context context;
-    private InfoViews.View view = null;
-    DropdownComponent dropdownComponent;
-    FlowLayout mountingPoint;
 
-    AvatarInfoDisplay(InfoViews.Context context) {
+    private @Nullable InfoViews.View view = null;
+
+    public AvatarInfoDisplay(InfoViews.Context context) {
         this.context = context;
-        BaseUIModelScreen.DataSource source = BaseUIModelScreen.DataSource.asset(
-                new ResourceLocation("figuraextras", "avatar_debug_screen")
-        );
 
-        root = source.get().createAdapterWithoutScreen(0, 0, 0, 0, FlowLayout.class).rootComponent;
+        root = new Grid();
+        root.rows()
+                .percentage(1)
+                .cols()
+                .content()
+                .percentage(1);
 
-        dropdownComponent = root.childById(DropdownComponent.class, "view-modes");
-        mountingPoint = root.childById(FlowLayout.class, "view-mounting-point");
+        Grid flowRootRoot = new Grid();
+        root.add(flowRootRoot);
+        flowRootRoot.rows()
+                .content()
+                .percentage(1)
+                .cols()
+                .content();
 
+        Grid flowRoot = new Grid();
+        flowRootRoot.add(flowRoot);
+        flowRoot.rows()
+                .fixed(2)
+                .percentage(1)
+                .fixed(2)
+                .cols()
+                .fixed(4)
+                .content()
+                .content()
+                .fixed(4);
 
-        addView(Component.literal("Object View"),
-                InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, ObjectView::new, Component.literal("Script not detected"))
-        );
+        Flow flow = new Flow();
+        flowRoot.add(flow).setColumn(1).setRow(1);
 
-        addView(Component.literal("Model View"),
-                InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, ModelView::new, Component.literal("Script not detected"))
-        );
+        flow.add(hook(Button.minimal().addAnd("Object View"), ensureScript(ObjectView::new)));
+        flow.add(hook(Button.minimal().addAnd("Model View"), ensureScript(ModelView::new)));
+        flow.add(Elements.separator());
+        flow.add(Button.minimal().addAnd("Tick Instructions"));
+        flow.add(Button.minimal().addAnd("Render Instructions"));
+        flow.add(Elements.separator());
+        flow.add(Button.minimal().addAnd("Loaded Textures"));
+        flow.add(Button.minimal().addAnd("Loaded Sounds"));
+        flow.add(Elements.separator());
+        flow.add(Button.minimal().addAnd("Output"));
+        flow.add(Button.minimal().addAnd("Network"));
+        flow.add(Elements.separator());
+        flow.add(Button.minimal().addAnd("Capture"));
+        flow.add(Elements.separator());
+        flow.add(Button.minimal().addAnd("Download Avatar"));
 
-        dropdownComponent.divider();
+        Scrollbar scrollbar = new Scrollbar();
+        flowRoot.add(scrollbar).setColumn(2).setRow(1).setOptimalWidth(false).setWidth(5);
 
-        addView(Component.literal("Tick Instructions"),
-                InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, c -> new MetricsView(context, c.getAvatar().tick), Component.literal("Script not detected"))
-        );
+        Elements.makeVerticalContainerScrollable(flow, scrollbar, true);
 
-        addView(Component.literal("Render Instructions"),
-                InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, c -> new MetricsView(context, c.getAvatar().render), Component.literal("Script not detected"))
-        );
-
-        dropdownComponent.divider();
-
-        addView(Component.literal("Loaded textures"), TextureView::new);
-
-        addView(Component.literal("Loaded sounds"), SoundView::new);
-
-        dropdownComponent.divider();
-
-        addView(Component.literal("Output"), ChatLikeView::new);
-
-        addView(Component.literal("Network"), InfoViews.onlyIf(avatar -> Configs.ALLOW_NETWORKING.value && avatar.permissions.get(Permissions.NETWORKING) >= 1, NetworkView::new, Component.literal("Networking is disabled")));
-
-        dropdownComponent.divider();
-
-        addView(Component.literal("Capture"), InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, CaptureView::new, Component.literal("Script not detected")));
-
-        dropdownComponent.divider();
-
-        dropdownComponent.button(Component.literal("Download Avatar"), ignored -> {
-            try {
-                Util.getPlatform().openUri(new URI("https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
-            } catch (URISyntaxException ignored1) {
-            }
-        });
+        flowRoot.setSurface(Surface.contextBackground());
     }
 
-    public void addView(Component text, Function<InfoViews.Context, ? extends InfoViews.View> v) {
-        Function<InfoViews.Context, ? extends InfoViews.View> actual = wrap(v);
-        dropdownComponent.button(text, o -> switchToView(actual.apply(context)));
+    private Function<InfoViews.Context, ? extends InfoViews.View> ensureScript(Function<InfoViews.Context, ? extends InfoViews.View> what) {
+        return InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, what, Component.literal("Script not detected"));
+    }
+
+    private Element hook(Element button, Runnable toRun) {
+        button.activation.subscribe(event -> toRun.run());
+        return button;
+    }
+
+    private Element hook(Element button, Function<InfoViews.Context, ? extends InfoViews.View> view) {
+        Function<InfoViews.Context, ? extends InfoViews.View> actual = wrap(view);
+        return hook(button, () -> switchToView(actual));
+    }
+
+    private void switchToView(Function<InfoViews.Context, ? extends InfoViews.View> apply) {
+        InfoViews.View built = apply.apply(context);
+        if (view != null) {
+            view.dispose();
+            root.remove(built.getRoot());
+        }
+
+        view = built;
+
+        root.add(built.getRoot()).setColumn(1);
+    }
+
+    public void setView(Function<InfoViews.Context, InfoViews.View> view) {
+        switchToView(wrap(view));
     }
 
     private Function<InfoViews.Context, ? extends InfoViews.View> wrap(Function<InfoViews.Context, ? extends InfoViews.View> v) {
@@ -96,17 +120,6 @@ public class AvatarInfoDisplay {
                 ),
                 Component.literal("World not loaded")
         );
-    }
-
-    private void switchToView(InfoViews.View apply) {
-        if (view != null) {
-            view.dispose();
-            view.getRoot().remove();
-        }
-
-        view = apply;
-
-        mountingPoint.child(view.getRoot());
     }
 
     public void tick() {
@@ -122,10 +135,8 @@ public class AvatarInfoDisplay {
     }
 
     public void dispose() {
-        view.dispose();
-    }
-
-    public void setView(Function<InfoViews.Context, InfoViews.View> view) {
-        switchToView(wrap(view).apply(context));
+        if (view != null) {
+            view.dispose();
+        }
     }
 }

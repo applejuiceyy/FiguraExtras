@@ -1,13 +1,13 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.lua;
 
-import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
 import com.github.applejuiceyy.figuraextras.mixin.figura.printer.FiguraLuaPrinterAccessor;
 import com.github.applejuiceyy.figuraextras.screen.Hover;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectInterpreter;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
-import io.wispforest.owo.ui.container.FlowLayout;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatar.Avatar;
@@ -30,19 +30,20 @@ public class LuaValueInterpreter implements ObjectInterpreter<LuaValue> {
     }
 
     @Override
-    public void populateHeader(FlowLayout root, Observers.Observer<LuaValue> updater,
+    public void populateHeader(Grid root, Observers.Observer<LuaValue> updater,
                                Observers.Observer<Optional<LuaValue>> freeRoamUpdater,
-                               ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover) {
+                               ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover, Event<Runnable>.Source ticker) {
         populateHeader(root, updater, freeRoamUpdater, objectViewChanger, popper, referenceConsumer, true);
     }
 
-    public void populateHeader(FlowLayout root, Observers.Observer<LuaValue> updater,
+    public void populateHeader(Grid root, Observers.Observer<LuaValue> updater,
                                Observers.Observer<Optional<LuaValue>> freeRoamUpdater,
                                ViewChanger objectViewChanger, PopperConsumer popper,
                                CyclicReferenceConsumer referenceConsumer, boolean quoteStrings) {
-        SmallButtonComponent value = new SmallButtonComponent(Component.empty(), 0x00000000);
+        root.rows().percentage(1).cols().percentage(1);
+        Button value = Button.minimal();
         arrangeFor(value, updater, freeRoamUpdater, objectViewChanger, popper, referenceConsumer, Function.identity(), quoteStrings);
-        SmallButtonComponent metatable = new SmallButtonComponent(Component.empty(), 0x00000000);
+        Button metatable = Button.minimal();
         arrangeFor(metatable,
                 updater.derive(thing -> thing.getmetatable() == null ? LuaValue.NIL : thing.getmetatable()),
                 freeRoamUpdater.derive(o -> o.map(thing -> thing.getmetatable() == null ? LuaValue.NIL : thing.getmetatable())),
@@ -51,17 +52,17 @@ public class LuaValueInterpreter implements ObjectInterpreter<LuaValue> {
                 quoteStrings
         );
 
-        root.child(value);
+        root.add(value);
 
         updater.observe(v -> {
-            root.removeChild(metatable);
+            root.remove(metatable);
             if (v.type() == LuaValue.TTABLE && v.getmetatable() != null) {
-                root.child(metatable);
+                root.add(metatable);
             }
         });
     }
 
-    void arrangeFor(SmallButtonComponent button,
+    void arrangeFor(Button button,
                     Observers.Observer<LuaValue> updater,
                     Observers.Observer<Optional<LuaValue>> freeRoamUpdater,
                     ViewChanger objectViewChanger, PopperConsumer popper,
@@ -69,10 +70,7 @@ public class LuaValueInterpreter implements ObjectInterpreter<LuaValue> {
         popper.accept(button, freeRoamUpdater.derive(v -> v.map(p -> FiguraLuaPrinterAccessor.invokeGetPrintText(avatar.luaRuntime.typeManager, p, false, quoteStrings))
                 .orElse(Component.literal("Not Found").withStyle(ChatFormatting.RED))));
         Object identity = new Object();
-        button.mouseDown().subscribe((x, y, d) -> {
-            objectViewChanger.accept(freeRoamUpdater, identity);
-            return true;
-        });
+        button.activation.subscribe(event -> objectViewChanger.accept(freeRoamUpdater, identity));
 
         Hover.elementHoverObject(button, () -> hash(updater.get()));
 

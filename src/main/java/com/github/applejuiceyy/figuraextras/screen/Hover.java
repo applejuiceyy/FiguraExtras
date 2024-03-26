@@ -1,8 +1,9 @@
 package com.github.applejuiceyy.figuraextras.screen;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import io.wispforest.owo.ui.core.Component;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Hover {
@@ -18,15 +19,20 @@ public class Hover {
         };
     }
 
-    public static void elementHoverObject(Component component, Supplier<Object> object) {
-        Runnable[] canceller = new Runnable[1];
+    public static void elementHoverObject(Element element, Supplier<Object> object) {
+        element.activeHovering.observe(new Consumer<>() {
+            Runnable toRun = null;
 
-        component.mouseEnter().subscribe(() -> canceller[0] = setHovering(object.get()));
-
-        component.mouseLeave().subscribe(() -> {
-            if (canceller[0] == null) return;
-            canceller[0].run();
-            canceller[0] = null;
+            @Override
+            public void accept(Boolean bool) {
+                if (bool) {
+                    toRun = setHovering(object.get());
+                } else {
+                    if (toRun == null) return;
+                    toRun.run();
+                    toRun = null;
+                }
+            }
         });
     }
 }

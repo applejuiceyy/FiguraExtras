@@ -51,7 +51,8 @@ public class ElementOrder implements Iterable<Element> {
 
     private void reorder(@Nullable ParentElement.Settings settings, Element element, List<Node> isolationContext) {
         if (settings != null && settings.isInvisible()) return;
-        boolean addSelf = element.getSurface().usesChildren();
+        int index = settings == null ? 0 : settings.getPriority().orElse(0);
+        boolean addSelf = element.getSurface().usesChildren() || settings != null && settings.getPriority().isPresent();
         if (element instanceof ParentElement<?> parentElement) {
             if (addSelf) {
                 List<Node> list = new ArrayList<>();
@@ -60,7 +61,7 @@ public class ElementOrder implements Iterable<Element> {
                     reorder(parentElement.getSettings(child), child, list);
                 }
                 list.sort(Comparator.comparingInt(Node::priority).reversed());
-                isolationContext.add(new Node(settings == null ? 0 : settings.getPriority(), Either.left(new Inner(list, parentElement))));
+                isolationContext.add(new Node(index, Either.left(new Inner(list, parentElement))));
             } else {
 
                 for (Element child : parentElement.getElements()) {
@@ -72,7 +73,7 @@ public class ElementOrder implements Iterable<Element> {
         }
 
         if (!addSelf) {
-            isolationContext.add(new Node(settings == null ? 0 : settings.getPriority(), Either.right(element)));
+            isolationContext.add(new Node(index, Either.right(element)));
         }
     }
 

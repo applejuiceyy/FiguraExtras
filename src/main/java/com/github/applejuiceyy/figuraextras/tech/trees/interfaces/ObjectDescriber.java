@@ -1,21 +1,21 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.interfaces;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import io.wispforest.owo.ui.base.BaseComponent;
-import io.wispforest.owo.ui.container.FlowLayout;
 import net.minecraft.network.chat.Component;
 
 import java.util.Optional;
 
 public interface ObjectDescriber<IN, VALUE> {
     void populateHeader(
-            FlowLayout root, Observers.Observer<VALUE> updater,
+            Grid root, Observers.Observer<VALUE> updater,
             Observers.Observer<Optional<VALUE>> freeRoamUpdater,
             ViewChanger objectViewChanger, PopperConsumer popper,
             CyclicReferenceConsumer referenceConsumer,
-            Event<Runnable>.Source remover
-    );
+            Event<Runnable>.Source remover,
+            Event<Runnable>.Source ticker);
 
     Class<IN> getObjectClass();
 
@@ -24,7 +24,7 @@ public interface ObjectDescriber<IN, VALUE> {
     }
 
     interface PopperConsumer {
-        void accept(BaseComponent component, Observers.Observer<Component> value);
+        void accept(Element element, Observers.Observer<Component> value);
     }
 
     interface ViewChanger {

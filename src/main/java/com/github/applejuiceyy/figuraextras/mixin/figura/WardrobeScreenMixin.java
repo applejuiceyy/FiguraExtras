@@ -2,7 +2,6 @@ package com.github.applejuiceyy.figuraextras.mixin.figura;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarListAccess;
-import com.github.applejuiceyy.figuraextras.screen.TestScreen;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -49,15 +48,6 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
                 o -> FiguraExtras.windows.add(new DetachedWindow())
         );
 
-        Button testButton = new Button(
-                statusWidget.getX() - 32,
-                statusWidget.getY(),
-                14, 14,
-                Component.literal("V"),
-                null,
-                o -> Minecraft.getInstance().setScreen(new TestScreen(Component.empty()))
-        );
-
 
         SearchBar searchBar = ((AvatarListAccess) avatarList).figuraExtrass$getSearchBar();
         setFocused(avatarList);
@@ -65,6 +55,5 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
         searchBar.setFocused(searchBar.getField());
 
         addRenderableWidget(newButton);
-        addRenderableWidget(testButton);
     }
 }

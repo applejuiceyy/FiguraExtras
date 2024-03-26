@@ -1,10 +1,10 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.modelpart;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
-import io.wispforest.owo.ui.container.FlowLayout;
 import net.minecraft.util.Tuple;
 import org.figuramc.figura.model.FiguraModelPart;
 import org.figuramc.figura.model.rendertasks.RenderTask;
@@ -14,7 +14,7 @@ import java.util.Optional;
 
 public class ModelPartRenderTaskExpander implements ObjectExpander<FiguraModelPart, String, RenderTask> {
     @Override
-    public void populateHeader(FlowLayout root, Observers.Observer<Tuple<String, RenderTask>> updater, Observers.Observer<Optional<Tuple<String, RenderTask>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover) {
+    public void populateHeader(Grid root, Observers.Observer<Tuple<String, RenderTask>> updater, Observers.Observer<Optional<Tuple<String, RenderTask>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover, Event<Runnable>.Source ticker) {
 
     }
 

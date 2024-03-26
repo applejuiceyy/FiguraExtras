@@ -1,21 +1,18 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.ui;
 
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.ContentPopOut;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.ReferenceStore;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectDescriber;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.Sizing;
-import io.wispforest.owo.ui.core.VerticalAlignment;
 import net.minecraft.util.Tuple;
 
 import java.util.Optional;
 
 
 public class DescriptionUI<V> {
-    FlowLayout contentNomenclature = null;
+    Grid contentNomenclature = null;
 
     Event<Runnable> remover = Event.runnable();
 
@@ -28,10 +25,10 @@ public class DescriptionUI<V> {
 
     public DescriptionUI(
             Observers.Observer<Optional<Tuple<ObjectDescriber<?, V>, V>>> observer,
-            FlowLayout place,
+            Grid place,
             ContentPopOut contentPopOut,
             ReferenceStore referenceStore,
-            ObjectDescriber.ViewChanger viewChanger) {
+            ObjectDescriber.ViewChanger viewChanger, Event<Runnable>.Source updater) {
         Observers.WritableObserver<V> key = Observers.of(observer.get().orElseThrow().getB());
 
         sub = observer.observe(value -> {
@@ -42,14 +39,13 @@ public class DescriptionUI<V> {
 
             if (currentDescriber != value.get().getA()) {
                 if (contentNomenclature != null) {
-                    place.removeChild(contentNomenclature);
+                    place.remove(contentNomenclature);
                 }
                 if (referenceCreator != null) {
                     referenceCreator.dispose();
                 }
-                contentNomenclature = Containers.horizontalFlow(Sizing.content(), Sizing.content());
-                contentNomenclature.verticalAlignment(VerticalAlignment.CENTER);
-                place.child(contentNomenclature);
+                contentNomenclature = new Grid();
+                place.add(contentNomenclature);
                 remover.getSink().run(Runnable::run);
                 remover = Event.runnable();
 
@@ -63,7 +59,9 @@ public class DescriptionUI<V> {
                         viewChanger,
                         contentPopOut::createPopOut,
                         referenceCreator = referenceStore.referenceCreator(),
-                        remover.getSource());
+                        remover.getSource(),
+                        updater
+                );
             } else {
                 key.set(value.get().getB());
             }

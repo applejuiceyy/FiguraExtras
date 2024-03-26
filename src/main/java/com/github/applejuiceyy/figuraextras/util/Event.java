@@ -8,7 +8,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class Event<T> {
+public class Event<T> implements SourceLike<T>, SinkLike<T> {
+    private final Source source = new Source();
+    private final Sink sink = new Sink();
     Function<List<T>, T> dispatcher;
 
     ArrayList<T> subscribers = new ArrayList<>();
@@ -33,11 +35,11 @@ public class Event<T> {
     }
 
     public Event<T>.Source getSource() {
-        return new Source();
+        return source;
     }
 
     public Event<T>.Sink getSink() {
-        return new Sink();
+        return sink;
     }
 
     public static <T, U, V> Event<TriConsumer<T, U, V>> triConsumer() {
@@ -56,18 +58,36 @@ public class Event<T> {
         return new Event<>(v -> () -> v.forEach(Runnable::run));
     }
 
-    public class Source {
+    @Override
+    public void run(Consumer<T> running) {
+        getSink().run(running);
+    }
+
+    @Override
+    public Runnable subscribe(T subscriber) {
+        return getSource().subscribe(subscriber);
+    }
+
+    @Override
+    public void unsubscribe(T subscriber) {
+        getSource().unsubscribe(subscriber);
+    }
+
+    public class Source implements SourceLike<T> {
+        @Override
         public Runnable subscribe(T subscriber) {
             doWhenAppropriate(() -> subscribers.add(subscriber));
-            return () -> subscribers.remove(subscriber);
+            return () -> doWhenAppropriate(() -> subscribers.remove(subscriber));
         }
 
+        @Override
         public void unsubscribe(T subscriber) {
             doWhenAppropriate(() -> subscribers.remove(subscriber));
         }
     }
 
-    public class Sink {
+    public class Sink implements SinkLike<T> {
+        @Override
         public void run(Consumer<T> running) {
             if (subscribers.size() > 0) {
                 isFiring = true;

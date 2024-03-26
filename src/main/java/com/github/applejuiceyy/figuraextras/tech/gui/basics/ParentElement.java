@@ -1,15 +1,15 @@
 package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.ReadableRectangle;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
+import org.jetbrains.annotations.Contract;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -20,42 +20,47 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     public final Observers.WritableObserver<Integer> yViewSize = Observers.of(0);
     public final Observers.WritableObserver<Integer> xViewSize = Observers.of(0);
     private final HashMap<Element, S> settings = new HashMap<>();
-    protected boolean needReposition = false;
-    protected boolean needReflowLayout = false;
-    protected List<Element> needReflowDetached = new ArrayList<>();
+    private boolean needReposition = false;
+    private boolean needReflowLayout = false;
+    private List<Element> needReflowDetached = new ArrayList<>();
     boolean constrainX = true, constrainY = true;
     int previousX, previousY;
     int previousXView, previousYView;
 
     {
         xView.observe(x -> {
-            this.getState().addChildrenReprocessingTask(this);
+            this.getState().childReprocessor.enqueue(this);
+            ;
             needReposition = true;
             previousX -= previousXView - x;
             previousXView = x;
         });
         yView.observe(y -> {
-            this.getState().addChildrenReprocessingTask(this);
+            this.getState().childReprocessor.enqueue(this);
+            ;
             needReposition = true;
             previousY -= previousYView - y;
             previousYView = y;
         });
         width.observe(() -> {
-            this.getState().addChildrenReprocessingTask(this);
+            this.getState().childReprocessor.enqueue(this);
+            ;
             needReflowLayout = true;
         });
         xViewSize.observe(() -> {
             xView.set(Math.max(0, Math.min(xView.get(), xViewSize.get() - getWidth())));
         });
         height.observe(() -> {
-            this.getState().addChildrenReprocessingTask(this);
+            this.getState().childReprocessor.enqueue(this);
+            ;
             needReflowLayout = true;
         });
         yViewSize.observe(() -> {
             yView.set(Math.max(0, Math.min(yView.get(), yViewSize.get() - getHeight())));
         });
         x.merge(y).observe(() -> {
-            this.getState().addChildrenReprocessingTask(this);
+            this.getState().childReprocessor.enqueue(this);
+            ;
             needReposition = true;
         });
     }
@@ -66,7 +71,9 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
 
     public ParentElement<S> setConstrainX(boolean constrainX) {
         this.constrainX = constrainX;
-        this.getState().addChildrenReprocessingTask(this);
+        boundingChanged();
+        this.getState().childReprocessor.enqueue(this);
+        ;
         needReflowLayout = true;
         return this;
     }
@@ -77,7 +84,9 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
 
     public ParentElement<S> setConstrainY(boolean constrainY) {
         this.constrainY = constrainY;
-        this.getState().addChildrenReprocessingTask(this);
+        boundingChanged();
+        this.getState().childReprocessor.enqueue(this);
+        ;
         needReflowLayout = true;
         return this;
     }
@@ -136,7 +145,32 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         needReflowDetached.clear();
         previousX = getX();
         previousY = getY();
-        getState().removeChildrenReprocessingTask(this);
+    }
+
+    protected void childrenChanged() {
+        if (settings.isEmpty()) return;
+        optimalSizeChanged();
+        getState().childReprocessor.enqueue(this);
+        needReflowLayout = true;
+    }
+
+    public void childOptimalSizeChanged(Element element) {
+        assert hasElement(element);
+        if (willCauseReflow(element)) {
+            childrenChanged();
+        }
+    }
+
+    protected void boundingChanged() {
+        if (settings.isEmpty()) return;
+        getState().childReprocessor.enqueue(this);
+        needReflowLayout = true;
+    }
+
+    @Override
+    protected void markRenderingThisAndChildrenDirty(Consumer<ReadableRectangle> sectionConsumer, Processor<Element> processor) {
+        super.markRenderingThisAndChildrenDirty(sectionConsumer, processor);
+        getElements().forEach(e -> e.enqueueDirtySection(processor, false, true));
     }
 
     public S getSettings(Element element) {
@@ -179,10 +213,26 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         return false;
     }
 
+    public Consumer<Element> adder(Consumer<S> settings) {
+        return new Consumer<>() {
+            Element el = null;
+
+            @Override
+            public void accept(Element element) {
+                if (el != null) {
+                    remove(el);
+                }
+                settings.accept(add(element));
+                el = element;
+            }
+        };
+    }
+
     public S add(Element element) {
         if (element.getParent() != null) {
             element.getParent().remove(element);
         }
+        getState().integrateState(element.getState());
         element.setState(getState());
         element.setDepth(getDepth() + 1);
         element.setParent(this);
@@ -190,10 +240,11 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         S[] s = (S[]) new Settings[]{null};
         s[0] = constructSettings(() -> this.willCauseReflow(s[0]), () -> needReflowDetached.add(element));
         markPriorityDirty();
-        markLayoutDirty();
         needReflowLayout = true;
         getState().markClipDirty();
         settings.put(element, s[0]);
+        element.enqueueDirtySection(false, true);
+        childrenChanged();
         return s[0];
     }
 
@@ -203,19 +254,21 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     }
 
     public S add(String text) {
-        return add(new Label(Component.literal(text)));
+        return add(Component.literal(text));
+    }
+
+    public S add(Component component) {
+        return add(new Label(component));
+    }
+
+    public ParentElement<S> addAnd(Component component) {
+        add(component);
+        return this;
     }
 
     public ParentElement<S> addAnd(String text) {
         add(text);
         return this;
-    }
-
-    @Override
-    protected void markLayoutDirty() {
-        super.markLayoutDirty();
-        this.getState().addChildrenReprocessingTask(this);
-        needReflowLayout = true;
     }
 
     protected void markPriorityDirty() {
@@ -226,10 +279,17 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         if (element.getParent() != this) {
             return;
         }
+        if (element.hasRendered) {
+            element.enqueueDirtySection(false, true);
+        } else {
+            element.dequeueDirtySection();
+        }
+
         element.setState(null);
         element.setParent(null);
         element.setDepth(0);
         markPriorityDirty();
+        childrenChanged();
         settings.remove(element);
     }
 
@@ -256,6 +316,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         }
     }
 
+
     abstract protected S constructSettings(BooleanSupplier willCauseReflow, Runnable reflowDetached);
 
     /***
@@ -268,10 +329,6 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
      * implementation should update xViewSize and yViewSize before setting elements
      */
     abstract public void positionElements(Iterable<Tuple<Element, S>> elements);
-
-    abstract public int getOptimalWidth();
-
-    abstract public int getOptimalHeight(int width);
 
     public void renderLayoutDebug(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
     }
@@ -295,6 +352,8 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         private final Runnable reflowDetached;
         private boolean doLayout = true;
         private boolean invisible = false;
+
+        private boolean customPriority = false;
         private int priority = 0;
         private boolean optimalWidth = true;
         private boolean optimalHeight = true;
@@ -320,7 +379,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             boolean layout = doLayout;
             runnable.run();
             if (prev || willCauseReflow.getAsBoolean() || !doLayout) {
-                owner.markLayoutDirty();
+                owner.childrenChanged();
                 if (layout || doLayout) {
                     owner.needReflowLayout = true;
                 }
@@ -334,8 +393,9 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             return doLayout;
         }
 
-        public void setDoLayout(boolean doLayout) {
+        public Settings setDoLayout(boolean doLayout) {
             mayDirtLayout(() -> this.doLayout = doLayout);
+            return this;
         }
 
         public boolean isInvisible() {
@@ -347,13 +407,23 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             markPriorityDirty();
         }
 
-        public int getPriority() {
-            return priority;
+        public OptionalInt getPriority() {
+            return customPriority ? OptionalInt.of(priority) : OptionalInt.empty();
         }
 
-        public void setPriority(int priority) {
-            this.priority = priority;
+        @Contract("!null->fail")
+        public Settings setPriority(Object n) {
+            if (n != null) throw new NullPointerException("Not null");
+            customPriority = false;
             markPriorityDirty();
+            return this;
+        }
+
+        public Settings setPriority(int priority) {
+            this.priority = priority;
+            customPriority = true;
+            markPriorityDirty();
+            return this;
         }
 
         public boolean isOptimalWidth() {

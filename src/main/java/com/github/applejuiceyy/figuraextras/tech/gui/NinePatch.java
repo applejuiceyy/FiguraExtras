@@ -1,8 +1,8 @@
 package com.github.applejuiceyy.figuraextras.tech.gui;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Rectangle;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.gui.GuiGraphics;

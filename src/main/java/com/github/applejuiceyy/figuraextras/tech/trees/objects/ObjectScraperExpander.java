@@ -1,11 +1,10 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.objects;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.container.FlowLayout;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 import org.figuramc.figura.avatar.Avatar;
@@ -101,8 +100,9 @@ public class ObjectScraperExpander implements ObjectExpander<Object, String, Lua
 
 
     @Override
-    public void populateHeader(FlowLayout root, Observers.Observer<Tuple<String, LuaValue>> updater, Observers.Observer<Optional<Tuple<String, LuaValue>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover) {
-        root.child(Components.label(Component.literal(updater.get().getA())));
+    public void populateHeader(Grid root, Observers.Observer<Tuple<String, LuaValue>> updater, Observers.Observer<Optional<Tuple<String, LuaValue>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover, Event<Runnable>.Source ticker) {
+        root.rows().percentage(1).cols().percentage(1);
+        root.add(Component.literal(updater.get().getA()));
     }
 
     public LuaValue wrap(Object object) {

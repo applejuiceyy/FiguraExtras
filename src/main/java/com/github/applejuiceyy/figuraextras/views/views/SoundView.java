@@ -1,24 +1,23 @@
 package com.github.applejuiceyy.figuraextras.views.views;
 
-import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
 import com.github.applejuiceyy.figuraextras.components.SoundComponent;
 import com.github.applejuiceyy.figuraextras.ducks.SoundBufferAccess;
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
 import com.github.applejuiceyy.figuraextras.mixin.SoundBufferAccessor;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.mojang.blaze3d.audio.Channel;
 import com.mojang.blaze3d.audio.Library;
 import com.mojang.blaze3d.audio.OggAudioStream;
 import com.mojang.blaze3d.audio.SoundBuffer;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.component.LabelComponent;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.container.ScrollContainer;
-import io.wispforest.owo.ui.core.Component;
-import io.wispforest.owo.ui.core.Insets;
-import io.wispforest.owo.ui.core.Sizing;
-import io.wispforest.owo.ui.core.Surface;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.sounds.ChannelAccess;
 import net.minecraft.nbt.CompoundTag;
@@ -33,8 +32,8 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 public class SoundView implements InfoViews.View {
-    private final FlowLayout layout;
-    private final ScrollContainer<FlowLayout> scrollable;
+    private final Flow layout;
+    private final Grid root;
     private final InfoViews.Context context;
 
     private final HashMap<SoundBuffer, Instance> textures = new HashMap<>();
@@ -42,8 +41,16 @@ public class SoundView implements InfoViews.View {
     public SoundView(InfoViews.Context context) {
         this.context = context;
 
-        layout = Containers.verticalFlow(Sizing.fill(100), Sizing.content());
-        scrollable = Containers.verticalScroll(Sizing.fill(100), Sizing.fill(100), layout);
+        root = new Grid();
+        root.rows()
+                .content()
+                .cols()
+                .content()
+                .content();
+
+        layout = new Flow();
+        Scrollbar scrollbar = new Scrollbar();
+        Elements.makeVerticalContainerScrollable(layout, scrollbar, true);
     }
 
     @Override
@@ -52,7 +59,7 @@ public class SoundView implements InfoViews.View {
         for (Map.Entry<String, SoundBuffer> texture : context.getAvatar().customSounds.entrySet()) {
             if (!textures.containsKey(texture.getValue())) {
                 Instance inst = new Instance(texture.getKey(), texture.getValue(), context);
-                layout.child(inst.root);
+                layout.add(inst.root);
                 textures.put(texture.getValue(), inst);
                 seen.add(texture.getValue());
             }
@@ -71,8 +78,8 @@ public class SoundView implements InfoViews.View {
     }
 
     @Override
-    public Component getRoot() {
-        return scrollable;
+    public Element getRoot() {
+        return root;
     }
 
     @Override
@@ -93,10 +100,11 @@ public class SoundView implements InfoViews.View {
     static class Instance {
         private final InfoViews.Context context;
         private final SoundBuffer sound;
-        public FlowLayout root;
+        private final Label label;
+        public Flow root;
         SoundComponent soundComponent;
         public long millisPlay = 0;
-        SmallButtonComponent button;
+        ParentElement<Grid.GridSettings> button;
 
         ChannelAccess.ChannelHandle handle = null;
         private final MutableComponent stopComponent = net.minecraft.network.chat.Component.literal("Stop");
@@ -105,13 +113,11 @@ public class SoundView implements InfoViews.View {
         public Instance(String name, SoundBuffer sound, InfoViews.Context context) {
             this.context = context;
             this.sound = sound;
-            root = Containers.verticalFlow(Sizing.fill(100), Sizing.content());
-            root.surface(Surface.TOOLTIP);
-            root.padding(Insets.of(5));
+            root = new Flow();
 
-            LabelComponent label = Components.label(net.minecraft.network.chat.Component.literal(name));
+            root.setSurface(Surface.contextBackground());
 
-            root.child(label);
+            root.add(name);
 
             StringBuilder info = new StringBuilder();
             int channels;
@@ -134,7 +140,7 @@ public class SoundView implements InfoViews.View {
             info.append(" seconds");
 
 
-            root.child(Components.label(net.minecraft.network.chat.Component.literal("   (" + info + ")").withStyle(ChatFormatting.GRAY)));
+            root.add(net.minecraft.network.chat.Component.literal("   (" + info + ")").withStyle(ChatFormatting.GRAY));
 
             ByteBuffer possibleBB = searchForByteBuffer(sound, name);
 
@@ -143,15 +149,12 @@ public class SoundView implements InfoViews.View {
                         possibleBB,
                         ((SoundBufferAccessor) sound).getAudioFormat()
                 );
-                soundComponent.sizing(Sizing.fill(100), Sizing.fill(20));
-                root.child(soundComponent);
+                root.add(soundComponent);
             }
 
-
-            button = new SmallButtonComponent();
-            button.setColor(0x00000000);
-            button.setText(playComponent);
-            button.mouseDown().subscribe((x, y, d) -> {
+            this.label = new Label();
+            button = Button.minimal().addAnd(label);
+            button.activation.subscribe(event -> {
                 if (handle != null && !handle.isStopped()) {
                     if (soundComponent != null) {
                         long millisSince = System.currentTimeMillis() - millisPlay;
@@ -159,7 +162,7 @@ public class SoundView implements InfoViews.View {
                         soundComponent.sampleEnding = (int) (perSecond * ((SoundBufferAccessor) sound).getAudioFormat().getSampleRate());
                     }
                     handle.execute(Channel::stop);
-                    return true;
+                    return;
                 }
                 millisPlay = System.currentTimeMillis();
                 if (soundComponent != null) {
@@ -176,10 +179,9 @@ public class SoundView implements InfoViews.View {
                     channel.setRelative(true);
                     channel.play();
                 });
-                return true;
             });
 
-            root.child(button);
+            root.add(button);
         }
 
         public ByteBuffer searchForByteBuffer(SoundBuffer sound, String key) {
@@ -217,9 +219,9 @@ public class SoundView implements InfoViews.View {
 
         public void tick() {
             if (handle == null || handle.isStopped()) {
-                button.setText(playComponent);
+                label.setText(playComponent);
             } else {
-                button.setText(stopComponent);
+                label.setText(stopComponent);
             }
         }
 
@@ -228,7 +230,6 @@ public class SoundView implements InfoViews.View {
                 long millisSince = System.currentTimeMillis() - millisPlay;
                 float perSecond = millisSince / 1000f;
                 soundComponent.sampleOffset = (int) (perSecond * ((SoundBufferAccessor) sound).getAudioFormat().getSampleRate());
-
             }
         }
     }

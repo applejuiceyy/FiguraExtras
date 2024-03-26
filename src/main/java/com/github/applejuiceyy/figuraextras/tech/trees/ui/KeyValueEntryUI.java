@@ -1,6 +1,10 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.ui;
 
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.ContentPopOut;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Entry;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.ReferenceStore;
@@ -8,15 +12,10 @@ import com.github.applejuiceyy.figuraextras.tech.trees.core.Registration;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectInterpreter;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.Insets;
-import io.wispforest.owo.ui.core.Sizing;
-import io.wispforest.owo.ui.core.Surface;
-import io.wispforest.owo.ui.core.VerticalAlignment;
 import net.minecraft.util.Tuple;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class KeyValueEntryUI<K, V> {
     private final Registration registration;
@@ -30,11 +29,11 @@ public class KeyValueEntryUI<K, V> {
 
     private Object expanderIdentity = null;
 
-    FlowLayout root = Containers.verticalFlow(Sizing.content(), Sizing.content());
-    FlowLayout nomenclature = Containers.horizontalFlow(Sizing.fill(100), Sizing.content());
-    FlowLayout keyNomenclature = Containers.horizontalFlow(Sizing.content(), Sizing.content());
-    FlowLayout valueNomenclature = Containers.verticalFlow(Sizing.content(), Sizing.content());
-    FlowLayout children = Containers.verticalFlow(Sizing.content(), Sizing.content());
+    Flow root = new Flow();
+    Grid nomenclature = new Grid();
+    Grid keyNomenclature = new Grid();
+    Grid valueNomenclature = new Grid();
+    Flow children = new Flow();
 
     public KeyValueEntryUI(Entry<?, K, V> observer, ContentPopOut contentPopOut, ReferenceStore referenceStore, Registration registration, Event<Runnable>.Source updater) {
         this.registration = registration;
@@ -42,25 +41,32 @@ public class KeyValueEntryUI<K, V> {
         this.referenceStore = referenceStore;
         this.updater = updater;
 
-        root.child(nomenclature);
-        root.child(children);
-        children.padding(Insets.left(20));
-        nomenclature.verticalAlignment(VerticalAlignment.CENTER);
-        keyNomenclature.verticalAlignment(VerticalAlignment.CENTER);
-        valueNomenclature.verticalAlignment(VerticalAlignment.CENTER);
-        nomenclature.child(keyNomenclature);
-        nomenclature.child(valueNomenclature);
-        nomenclature.padding(Insets.of(1));
+        nomenclature
+                .rows()
+                .content()
+                .cols()
+                .content()
+                .content();
 
-        nomenclature.mouseEnter().subscribe(() -> nomenclature.surface(Surface.flat(0x11ffffff)));
-        nomenclature.mouseLeave().subscribe(() -> nomenclature.surface(Surface.BLANK));
+        keyNomenclature.rows().percentage(1).cols().percentage(1);
+        valueNomenclature.rows().percentage(1).cols().percentage(1);
+
+        root.add(nomenclature);
+        root.add(Elements.margin(children, 10, 0, 0, 0));
+        nomenclature.add(keyNomenclature);
+        nomenclature.add(valueNomenclature).setColumn(1);
+
+        nomenclature.hoveringWithin.observe(
+                (Consumer<Boolean>) bool -> nomenclature.setSurface(bool ? Surface.solid(0x11ffffff) : Surface.EMPTY)
+        );
 
         keyDescription = new DescriptionUI<>(
                 observer.value().derive(value -> value.map(kvTuple -> new Tuple<>(observer.responsible(), kvTuple))),
                 keyNomenclature,
                 contentPopOut,
                 referenceStore,
-                this::switchTo
+                this::switchTo,
+                updater
         );
 
         valueDescription = new DescriptionUI<>(
@@ -68,13 +74,14 @@ public class KeyValueEntryUI<K, V> {
                 valueNomenclature,
                 contentPopOut,
                 referenceStore,
-                this::switchTo
+                this::switchTo,
+                updater
         );
     }
 
     private <O> void switchTo(Observers.Observer<Optional<O>> value, Object identity) {
         if (currentEntry != null) {
-            children.removeChild(currentEntry.childrenLayout);
+            children.remove(currentEntry.childrenLayout);
             currentEntry.dispose();
         }
         if (identity == expanderIdentity) {
@@ -90,7 +97,7 @@ public class KeyValueEntryUI<K, V> {
                 registration
         );
 
-        children.child(currentEntry.childrenLayout);
+        children.add(currentEntry.childrenLayout);
     }
 
     <O> ObjectInterpreter<O> findInterpreter(O cls) {

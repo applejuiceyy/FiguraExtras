@@ -1,9 +1,9 @@
 package com.github.applejuiceyy.figuraextras.components;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
-import io.wispforest.owo.ui.base.BaseComponent;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
@@ -11,7 +11,7 @@ import org.joml.Matrix4f;
 import javax.sound.sampled.AudioFormat;
 import java.nio.ByteBuffer;
 
-public class SoundComponent extends BaseComponent {
+public class SoundComponent extends Element {
     private final ByteBuffer buffer;
     private final AudioFormat format;
     public int sampleOffset = 0;
@@ -23,8 +23,8 @@ public class SoundComponent extends BaseComponent {
     }
 
     @Override
-    public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
-        int current = x + width;
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+        int current = x.get() + width.get();
 
         Matrix4f matrix4f = context.pose().last().pose();
         RenderSystem.setShader(GameRenderer::getRendertypeGuiShader);
@@ -40,20 +40,30 @@ public class SoundComponent extends BaseComponent {
             if (currentSample <= sampleEnding) {
                 previous = fetchValues(currentSample - 10);
             }
-            float nSample = Mth.map(sample.first, Short.MIN_VALUE, Short.MAX_VALUE, y, y + height);
-            float npSample = Mth.map(previous.first, Short.MIN_VALUE, Short.MAX_VALUE, y, y + height);
+            float nSample = Mth.map(sample.first, Short.MIN_VALUE, Short.MAX_VALUE, y.get(), y.get() + height.get());
+            float npSample = Mth.map(previous.first, Short.MIN_VALUE, Short.MAX_VALUE, y.get(), y.get() + height.get());
             float diff = Math.abs(nSample - npSample) / 10;
             bufferBuilder.vertex(matrix4f, current - 1, npSample - 1, 0).color(0xff00ff00).endVertex();
             bufferBuilder.vertex(matrix4f, current - 1, npSample + 1, 0).color(0xff00ff00).endVertex();
             bufferBuilder.vertex(matrix4f, current, nSample + 1, 0).color(0xff00ff00).endVertex();
             bufferBuilder.vertex(matrix4f, current, nSample - 1, 0).color(0xff00ff00).endVertex();
             current -= 1;
-            if (current <= x) {
+            if (current <= x.get()) {
                 break;
             }
         }
 
         BufferUploader.drawWithShader(bufferBuilder.end());
+    }
+
+    @Override
+    public int computeOptimalWidth() {
+        return 0;
+    }
+
+    @Override
+    public int computeOptimalHeight(int width) {
+        return 50;
     }
 
     private int getOffset(int sampleIndex) {

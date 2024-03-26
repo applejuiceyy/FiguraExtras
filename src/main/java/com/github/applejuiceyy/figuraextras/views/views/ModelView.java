@@ -1,6 +1,8 @@
 package com.github.applejuiceyy.figuraextras.views.views;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.ObjectTreeView;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
 import com.github.applejuiceyy.figuraextras.tech.trees.dummy.DummyExpander;
@@ -9,9 +11,6 @@ import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.component.LabelComponent;
-import io.wispforest.owo.ui.container.FlowLayout;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
@@ -32,12 +31,13 @@ public class ModelView extends ObjectTreeView<DummyExpander.Dummy> {
 
     static class ModelPartExpander implements ObjectExpander<FiguraModelPart, String, FiguraModelPart> {
         @Override
-        public void populateHeader(FlowLayout root, Observers.Observer<Tuple<String, FiguraModelPart>> updater, Observers.Observer<Optional<Tuple<String, FiguraModelPart>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover) {
-            LabelComponent label = Components.label(Component.empty());
-            root.child(label);
+        public void populateHeader(Grid root, Observers.Observer<Tuple<String, FiguraModelPart>> updater, Observers.Observer<Optional<Tuple<String, FiguraModelPart>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover, Event<Runnable>.Source ticker) {
+            Label label = new Label();
+            root.rows().percentage(1).cols().percentage(1);
+            root.add(label);
 
             remover.subscribe(updater.observe(value -> {
-                label.text(Component.literal(value.getA() + ": ").withStyle(ChatFormatting.BLUE));
+                label.setText(Component.literal(value.getA() + ": ").withStyle(ChatFormatting.BLUE));
             })::stop);
         }
 

@@ -1,18 +1,13 @@
 package com.github.applejuiceyy.figuraextras.screen.contentpopout;
 
 import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import io.wispforest.owo.ui.base.BaseComponent;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.component.VanillaWidgetComponent;
 import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.Positioning;
-import io.wispforest.owo.ui.core.Sizing;
 import io.wispforest.owo.ui.event.MouseDown;
 import io.wispforest.owo.ui.event.MouseEnter;
 import io.wispforest.owo.ui.event.MouseLeave;
 import io.wispforest.owo.util.EventSource;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -28,14 +23,8 @@ public class ContentPopOut {
         this.host = host;
     }
 
-    public <T extends BaseComponent> PopOutInstance<T> createPopOut(T component, Observers.Observer<Component> value) {
+    public <T extends Element> PopOutInstance<T> createPopOut(T component, Observers.Observer<Component> value) {
         PopOutInstance<T> o = new PopOutInstance<>(component, value);
-        instances.add(o);
-        return o;
-    }
-
-    public <T extends BaseComponent> PopOutInstance<VanillaWidgetComponent> createPopOut(AbstractWidget component, Observers.Observer<Component> value) {
-        PopOutInstance<VanillaWidgetComponent> o = new PopOutInstance<>(Components.wrapVanillaWidget(component), value);
         instances.add(o);
         return o;
     }
@@ -46,7 +35,7 @@ public class ContentPopOut {
         }
     }
 
-    public class PopOutInstance<T extends BaseComponent> {
+    public class PopOutInstance<T extends Element> {
         boolean showingButton = false;
         boolean shouldShowButton = false;
         SmallButtonComponent popper;
@@ -60,8 +49,10 @@ public class ContentPopOut {
 
 
         PopOutInstance(T component, Observers.Observer<Component> value) {
-            this.component = component;
 
+            this.component = component;
+            // TODO
+            /*
             popper = new SmallButtonComponent();
             popper.sizing(Sizing.fixed(10), Sizing.fixed(10));
 
@@ -78,6 +69,8 @@ public class ContentPopOut {
             enterSub2 = popper.mouseEnter().subscribe(() -> shouldShowButton = true);
 
             leaveSub2 = popper.mouseLeave().subscribe(() -> shouldShowButton = false);
+            */
+
         }
 
         public void render() {
@@ -89,9 +82,9 @@ public class ContentPopOut {
                 }
                 showingButton = shouldShowButton;
             }
-            popper.positioning(
+            /*popper.positioning(
                     Positioning.absolute(component.x() - 10, component.y())
-            );
+            );*/
         }
 
         public void remove() {

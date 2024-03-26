@@ -1,12 +1,11 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.modelpart;
 
-import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
-import com.github.applejuiceyy.figuraextras.screen.Hover;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectInterpreter;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.model.FiguraModelPart;
@@ -15,27 +14,26 @@ import java.util.Optional;
 
 public class ModelPartInterpreter implements ObjectInterpreter<FiguraModelPart> {
     @Override
-    public void populateHeader(FlowLayout root, Observers.Observer<FiguraModelPart> updater, Observers.Observer<Optional<FiguraModelPart>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover) {
-        SmallButtonComponent component = new SmallButtonComponent(Component.literal(updater.get().name), 0x00000000) {
-            @Override
-            public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
-                FiguraModelPart current = updater.get();
+    public void populateHeader(Grid root, Observers.Observer<FiguraModelPart> updater, Observers.Observer<Optional<FiguraModelPart>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover, Event<Runnable>.Source ticker) {
+        Button component = Button.minimal();
+        Label label = new Label();
+        component.add(label);
 
-                this.setText(Component.literal(current.name)
-                        .withStyle(current.getVisible() ? ChatFormatting.BLUE : ChatFormatting.GRAY)
-                );
-                super.draw(context, mouseX, mouseY, partialTicks, delta);
-            }
-        };
-        root.child(component);
+        remover.subscribe(
+                ticker.subscribe(() -> {
+                    FiguraModelPart part = updater.get();
+                    label.setText(Component.literal(part.name)
+                            .withStyle(part.getVisible() ? ChatFormatting.BLUE : ChatFormatting.GRAY)
+                    );
+                })
+        );
+        root.rows().content().cols().content();
+        root.add(component);
         Object object = new Object();
 
-        component.mouseDown().subscribe((x, y, d) -> {
-            objectViewChanger.accept(freeRoamUpdater, object);
-            return true;
-        });
+        component.activation.subscribe(event -> objectViewChanger.accept(freeRoamUpdater, object));
 
-        Hover.elementHoverObject(component, updater::get);
+        //Hover.elementHoverObject(component, updater::get);
     }
 
     @Override

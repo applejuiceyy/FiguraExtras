@@ -2,11 +2,12 @@ package com.github.applejuiceyy.figuraextras.views.views.http;
 
 import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import io.wispforest.owo.ui.container.Containers;
 import io.wispforest.owo.ui.container.FlowLayout;
 import io.wispforest.owo.ui.container.ScrollContainer;
-import io.wispforest.owo.ui.core.Component;
 import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -138,8 +139,9 @@ public class NetworkView implements InfoViews.View {
     }
 
     @Override
-    public Component getRoot() {
-        return root;
+    public Element getRoot() {
+        // TODO
+        return new Grid();
     }
 
     @Override

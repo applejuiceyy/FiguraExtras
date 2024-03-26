@@ -1,29 +1,30 @@
 package com.github.applejuiceyy.figuraextras.screen;
 
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.GuiState;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.github.applejuiceyy.figuraextras.window.WindowContext;
 import com.github.applejuiceyy.figuraextras.window.WindowContextReceiver;
-import com.mojang.blaze3d.systems.RenderSystem;
-import io.wispforest.owo.ui.base.BaseUIModelScreen;
 import io.wispforest.owo.ui.component.ButtonComponent;
-import io.wispforest.owo.ui.component.DropdownComponent;
-import io.wispforest.owo.ui.component.LabelComponent;
-import io.wispforest.owo.ui.container.FlowLayout;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Style;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
 import java.util.function.Function;
 
-public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements WindowContextReceiver {
+public class MainInfoScreen extends Screen implements WindowContextReceiver {
     ButtonComponent guiScale;
-    ButtonComponent isolateComponent;
-    LabelComponent currentAvatar;
+    private final GuiState awWrapper;
+    private @Nullable AvatarInfoDisplay info = null;
     WindowContext context;
     AvatarInfoDisplay avatarInfoDisplay = null;
 
@@ -32,72 +33,130 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
     float alpha = 1;
 
     public MainInfoScreen() {
-        super(FlowLayout.class, DataSource.asset(new ResourceLocation("figuraextras", "debug_screen")));
+        super(Component.empty());
+
+        Grid root = new Grid();
+        root.setSurface(Surface.solid(0xff000000));
+
+        root.addRow(0, Grid.SpacingKind.CONTENT);
+        root.addRow(1, Grid.SpacingKind.PERCENTAGE);
+        root.addColumn(1, Grid.SpacingKind.PERCENTAGE);
+
+        Grid top = new Grid();
+        root.add(top).setColumn(0).setRow(0);
+
+        top.setSurface(Surface.solid(0xff111111));
+        top.rows().content().cols().content().percentage(1).content();
+
+        Grid left = new Grid();
+        top.add(left);
+        left
+                .rows()
+                .content()
+                .cols()
+                .content()
+                .content();
+
+        Button selectAvatarButton = (Button) Button.minimal(2).addAnd("Select avatar");
+        selectAvatarButton.mouseDown.subscribe(event -> {
+            event.cancelPropagation();
+            Elements.spawnContextMenu(selectAvatarButton.getState(), event.x, event.y, (flow, culler) -> {
+                boolean empty = true;
+                for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
+                    empty = false;
+                    Component text = Component.literal(loadedAvatar.entityName).append(": ").append(loadedAvatar.name);
+                    Button button = (Button) Button.minimal().addAnd(text);
+                    button.activation.subscribe(r -> {
+                        culler.run();
+                        if (info != null) {
+                            info.dispose();
+                            root.remove(info.root);
+                        }
+                        info = new AvatarInfoDisplay(new InfoViews.Context() {
+                            @Override
+                            public MainInfoScreen getScreen() {
+                                return null;
+                            }
+
+                            @Override
+                            public void setView(Function<InfoViews.Context, InfoViews.View> view) {
+                                info.setView(view);
+                            }
+
+                            @Override
+                            public Avatar getAvatar() {
+                                return loadedAvatar;
+                            }
+
+                            @Override
+                            public ParentElement<?> getRoot() {
+                                return root;
+                            }
+
+                            @Override
+                            public WindowContentPopOutHost getHost() {
+                                return null;
+                            }
+                        });
+                        root.add(info.root).setColumn(0).setRow(1);
+                    });
+                    flow.add(button);
+                }
+                if (empty) {
+                    flow.add(Component.literal("No avatars loaded").setStyle(Style.EMPTY.withColor(0xffaaaaaa)));
+                }
+            });
+        });
+        left.add(selectAvatarButton);
+
+        Grid centerer = new Grid();
+        left.add(centerer).setColumn(1);
+        centerer.rows()
+                .percentage(1)
+                .content()
+                .percentage(1)
+                .cols()
+                .fixed(10)
+                .content();
+
+        centerer.add("No Avatar Selected").setRow(1).setColumn(1);
+
+        Button guiScaleButton = (Button) Button.minimal(2).addAnd("Gui Scale: Auto");
+        top.add(guiScaleButton).setColumn(2);
+
+        awWrapper = root.getState();
+    }
+
+    public void tick() {
+        if (info != null) {
+            info.tick();
+        }
     }
 
     @Override
-    protected void build(FlowLayout rootComponent) {
-        ButtonComponent button = rootComponent.childById(ButtonComponent.class, "avatar-chooser");
-        guiScale = rootComponent.childById(ButtonComponent.class, "toggle-gui-scale");
-        currentAvatar = rootComponent.childById(LabelComponent.class, "current-avatar-name");
-
-        if (button != null) {
-            button.onPress(ignored -> DropdownComponent.openContextMenu(
-                    this, rootComponent, FlowLayout::child, button.x(), button.y() + button.height(),
-                    dropdown -> {
-                        boolean none = true;
-                        for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
-                            none = false;
-                            Component text = Component.literal(loadedAvatar.entityName).append(": ").append(loadedAvatar.name);
-                            dropdown.button(text, drop -> {
-                                if (avatarInfoDisplay != null) {
-                                    avatarInfoDisplay.root.remove();
-                                }
-                                currentAvatar.text(text);
-                                avatarInfoDisplay = new AvatarInfoDisplay(new InfoViews.Context() {
-                                    @Override
-                                    public MainInfoScreen getScreen() {
-                                        return MainInfoScreen.this;
-                                    }
-
-                                    @Override
-                                    public void setView(Function<InfoViews.Context, InfoViews.View> view) {
-                                        avatarInfoDisplay.setView(view);
-                                    }
-
-                                    @Override
-                                    public Avatar getAvatar() {
-                                        return loadedAvatar;
-                                    }
-
-                                    @Override
-                                    public FlowLayout getRoot() {
-                                        return uiAdapter.rootComponent;
-                                    }
-
-                                    @Override
-                                    public WindowContentPopOutHost getHost() {
-                                        return context.getContentPopOutHost();
-                                    }
-                                });
-                                Objects.requireNonNull(rootComponent.childById(FlowLayout.class, "avatar-mounting-point"))
-                                        .child(avatarInfoDisplay.root);
-                                drop.remove();
-                            });
-                        }
-
-                        if (none) {
-                            dropdown.text(Component.literal("No avatars loaded"));
-                        }
-                    }));
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        if (info != null) {
+            info.render();
         }
+        super.render(graphics, mouseX, mouseY, delta);
+    }
 
-        if (guiScale != null) {
-            guiScale.visible = false;
+    public void dispose() {
+        if (info != null) {
+            info.dispose();
         }
-        if (isolateComponent != null) {
-            isolateComponent.visible = false;
-        }
+    }
+
+    @Override
+    protected void init() {
+        addRenderableWidget(awWrapper);
+        awWrapper.setWidth(width);
+        awWrapper.setHeight(height);
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        this.getChildAt(mouseX, mouseY).ifPresent(element -> element.mouseMoved(mouseX, mouseY));
     }
 
     @Override
@@ -119,81 +178,13 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
         }
     }
 
-    private boolean scrapeClassForMouseFocus(Class<?> cls) {
-        try {
-            Class<?> declaringClass = cls.getMethod("onMouseDown", double.class, double.class, int.class).getDeclaringClass();
-            if (testClass(declaringClass)) {
-                return true;
-            }
-            declaringClass = cls.getMethod("onMouseScroll", double.class, double.class, double.class).getDeclaringClass();
-            if (testClass(declaringClass)) {
-                return true;
-            }
-        } catch (NoSuchMethodException e) {
-            return false;
-        }
-
-        return false;
-    }
-
-    private boolean testClass(Class<?> declaringClass) {
-        return declaringClass != io.wispforest.owo.ui.core.Component.class &&
-                declaringClass != io.wispforest.owo.ui.base.BaseComponent.class &&
-                declaringClass != io.wispforest.owo.ui.base.BaseParentComponent.class;
-    }
-
-    @Override
-    public void tick() {
-        if (context == null || !context.isCompletelyOverlaying()) {
-            alpha = Math.min(alpha + 0.05f, 1);
-        } else {
-            alpha = Math.max(alpha - 0.05f, 0);
-        }
-        if (avatarInfoDisplay != null) {
-            avatarInfoDisplay.tick();
-        }
-    }
-
-    @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        RenderSystem.enableBlend();
-        RenderSystem.setShaderColor(64 / 255f, 64 / 255f, 64 / 255f, alpha);
-        context.blit(Screen.BACKGROUND_LOCATION, 0, 0, 0, 0, width, height, 32, 32);
-        RenderSystem.disableBlend();
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-
-        super.render(context, mouseX, mouseY, delta);
-        if (avatarInfoDisplay != null) {
-            avatarInfoDisplay.render();
-        }
-    }
-
     @Override
     public void removed() {
         super.removed();
         if (avatarInfoDisplay != null) {
             avatarInfoDisplay.dispose();
         }
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        return super.mouseReleased(mouseX, mouseY, button);
-    }
-
-    @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dX, double dY) {
-        return super.mouseDragged(mouseX, mouseY, button, dX, dY);
-    }
-
-    @Override
-    protected void init() {
-        super.init();
+        awWrapper.dispose();
     }
 
     @Override
@@ -203,29 +194,6 @@ public class MainInfoScreen extends BaseUIModelScreen<FlowLayout> implements Win
 
     @Override
     public boolean testTransparency(Double x, Double y) {
-        if (alpha > 0.2) {
-            return true;
-        }
-        io.wispforest.owo.ui.core.Component hovered = uiAdapter.rootComponent.childAt(x.intValue(), y.intValue());
-
-        if (hovered == null) {
-            return false;
-        }
-        if (hovered.canFocus(io.wispforest.owo.ui.core.Component.FocusSource.MOUSE_CLICK)) {
-            return true;
-        }
-
-        boolean f = false;
-
-        do {
-            if (hovered instanceof Blocker blocker) {
-                return blocker.shouldBlock(x, y);
-            }
-            if (scrapeClassForMouseFocus(hovered.getClass())) {
-                f = true;
-            }
-        } while ((hovered = hovered.parent()) != null);
-
-        return f;
+        return true;
     }
 }

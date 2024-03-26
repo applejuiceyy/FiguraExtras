@@ -11,8 +11,34 @@ import net.minecraft.resources.ResourceLocation;
 public class Scrollbar extends Element implements NumberRangeAlike {
     public boolean horizontal = false;
     public boolean enabled = true;
-    public float size = 100, thumbSize = 10;
+    private float size = 100, thumbSize = 10;
+
+    {
+        pos.observe(() -> getState().updateDirtySections.enqueue(this));
+    }
+
+    public float getSize() {
+        return size;
+    }
+
+    public Scrollbar setSize(float size) {
+        this.size = size;
+        getState().updateDirtySections.enqueue(this);
+        return this;
+    }
+
+    public float getThumbSize() {
+        return thumbSize;
+    }
+
     public Observers.WritableObserver<Float> pos = Observers.of(0f);
+
+    public Scrollbar setThumbSize(float thumbSize) {
+        this.thumbSize = thumbSize;
+        getState().updateDirtySections.enqueue(this);
+        return this;
+    }
+
     NinePatch thumb = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 0, 0, 5 / 27f, 5 / 15f, 5, 5, 2, 2, 1, 2);
     NinePatch thumbHovered = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 5 / 27f, 0, 5 / 27f, 5 / 15f, 5, 5, 2, 2, 1, 2);
     NinePatch track = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 15 / 27f, 0, 3 / 27f, 3 / 15f, 3, 3, 1, 1, 1, 1);
@@ -45,6 +71,11 @@ public class Scrollbar extends Element implements NumberRangeAlike {
         graphics.pose().popPose();
     }
 
+    @Override
+    protected boolean renders() {
+        return true;
+    }
+
     private double getMousePos(DefaultCancellableEvent.MousePositionEvent event) {
         return horizontal ? event.x - getX() : event.y - getY();
     }
@@ -71,12 +102,12 @@ public class Scrollbar extends Element implements NumberRangeAlike {
     }
 
     @Override
-    public int getOptimalWidth() {
+    public int computeOptimalWidth() {
         return 15;
     }
 
     @Override
-    public int getOptimalHeight(int width) {
+    public int computeOptimalHeight(int width) {
         return 10 + 60 + 10;
     }
 

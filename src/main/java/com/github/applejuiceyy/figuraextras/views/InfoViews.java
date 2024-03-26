@@ -2,10 +2,10 @@ package com.github.applejuiceyy.figuraextras.views;
 
 import com.github.applejuiceyy.figuraextras.screen.MainInfoScreen;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatar.Avatar;
 import org.jetbrains.annotations.Nullable;
@@ -51,7 +51,19 @@ public class InfoViews {
     }
 
     public interface View extends Lifecycle {
-        io.wispforest.owo.ui.core.Component getRoot();
+        Element getRoot();
+    }
+
+    public interface Context {
+        Avatar getAvatar();
+
+        ParentElement<?> getRoot();
+
+        WindowContentPopOutHost getHost();
+
+        MainInfoScreen getScreen();
+
+        void setView(Function<InfoViews.Context, InfoViews.View> view);
     }
 
     private static class ConditionalView<T, V> implements View {
@@ -60,7 +72,12 @@ public class InfoViews {
         private final Function<T, ? extends View> ifTrue;
         private final Function<T, ? extends View> ifFalse;
 
-        private final FlowLayout root = Containers.horizontalFlow(Sizing.fill(100), Sizing.fill(100));
+        private final Grid root = new Grid();
+
+        {
+            root.rows().percentage(1).cols().percentage(1);
+        }
+
         private final Function<T, V> toPredicate;
 
         private boolean current;
@@ -80,11 +97,11 @@ public class InfoViews {
             if (currentView == null || newValue != current) {
                 if (currentView != null) {
                     currentView.dispose();
-                    currentView.getRoot().remove();
+                    root.remove(currentView.getRoot());
                 }
                 Function<T, ? extends View> view = newValue ? ifTrue : ifFalse;
                 currentView = view.apply(pass);
-                root.child(currentView.getRoot());
+                root.add(currentView.getRoot());
                 current = newValue;
             }
         }
@@ -109,20 +126,8 @@ public class InfoViews {
         }
 
         @Override
-        public io.wispforest.owo.ui.core.Component getRoot() {
+        public Element getRoot() {
             return root;
         }
-    }
-
-    public interface Context {
-        Avatar getAvatar();
-
-        FlowLayout getRoot();
-
-        WindowContentPopOutHost getHost();
-
-        MainInfoScreen getScreen();
-
-        void setView(Function<InfoViews.Context, InfoViews.View> view);
     }
 }

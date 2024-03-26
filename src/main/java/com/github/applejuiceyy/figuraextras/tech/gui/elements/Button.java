@@ -3,15 +3,17 @@ package com.github.applejuiceyy.figuraextras.tech.gui.elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.NinePatch;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.SetText;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 
-public class Button extends Grid {
+public class Button extends Grid implements SetText {
     private Surface normal = new NinePatch(true, new ResourceLocation("textures/gui/widgets.png"), 0, 66 / 256f, 200 / 256f, 20 / 256f, 200, 20, 4, 4, 4, 4);
     ;
     private Surface disabled = new NinePatch(true, new ResourceLocation("textures/gui/widgets.png"), 0, 46 / 256f, 200 / 256f, 20 / 256f, 200, 20, 4, 4, 4, 4);
@@ -24,6 +26,12 @@ public class Button extends Grid {
         this.normal = normal;
         this.disabled = disabled;
         this.active = active;
+        activeHovering.observe(() -> this.enqueueDirtySection(false, false));
+    }
+
+    @Override
+    protected boolean renders() {
+        return true;
     }
 
     public static Button minimal() {
@@ -95,5 +103,17 @@ public class Button extends Grid {
     @Override
     public boolean blocksMouseActivation() {
         return true;
+    }
+
+    @Override
+    public Element setText(Component component) {
+        for (Element element : getElements()) {
+            if (element instanceof Label label) {
+                label.setText(component);
+                return this;
+            }
+        }
+        add(component);
+        return this;
     }
 }

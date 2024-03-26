@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 
 import com.github.applejuiceyy.figuraextras.ducks.RenderTargetAccess;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
 import com.github.applejuiceyy.figuraextras.tech.gui.stack.Stacks;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.minecraft.client.Minecraft;

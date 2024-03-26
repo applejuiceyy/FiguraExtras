@@ -24,6 +24,12 @@ public class Flow extends ParentElement<ParentElement.Settings> {
     }
 
     @Override
+    public void remove(Element element) {
+        elementOrder.remove(element);
+        super.remove(element);
+    }
+
+    @Override
     public void positionElements(Iterable<Tuple<Element, Settings>> elements) {
 
         int maxWidth = getWidth();
@@ -76,13 +82,12 @@ public class Flow extends ParentElement<ParentElement.Settings> {
         if (hasElement(element)) {
             elementOrder.remove(element);
             elementOrder.add(pos, element);
-            markLayoutDirty();
-            needReflowLayout = true;
+            childrenChanged();
         }
     }
 
     @Override
-    public int getOptimalWidth() {
+    public int computeOptimalWidth() {
         int maxWidth = getWidth();
         for (Tuple<Element, Settings> tuple : flowElements(true)) {
             Settings settings = tuple.getB();
@@ -94,7 +99,7 @@ public class Flow extends ParentElement<ParentElement.Settings> {
     }
 
     @Override
-    public int getOptimalHeight(int width) {
+    public int computeOptimalHeight(int width) {
         int finalHeight = 0;
         for (Tuple<Element, Settings> tuple : flowElements(true)) {
             Settings settings = tuple.getB();

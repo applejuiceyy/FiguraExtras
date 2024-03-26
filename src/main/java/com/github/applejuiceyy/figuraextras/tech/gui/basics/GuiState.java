@@ -1,10 +1,16 @@
 package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.ImmutableRectangle;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.ReadableRectangle;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
+import com.github.applejuiceyy.figuraextras.tech.gui.stack.Stacks;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.google.common.collect.Lists;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -14,8 +20,10 @@ import net.minecraft.client.gui.layouts.LayoutElement;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.renderer.GameRenderer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -38,14 +46,19 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public final Event<Consumer<DefaultCancellableEvent.KeyEvent>> keyPressed = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.KeyEvent>> keyReleased = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.CharEvent>> charTyped = Event.consumer();
-    private final List<ParentElement<?>> reprocessDirty = new ArrayList<>();
+
+    public final Processor<ParentElement<?>> childReprocessor = new Processor<>((el, p) -> el.positionElements(), Comparator.comparingInt(Element::getDepth), this);
+
+    private final DirtySectionHolder dirtySectionHolder = new DirtySectionHolder();
+    public final Processor<Element> updateDirtySections = new Processor<>((o, processor) -> o.updateDirtySections(dirtySectionHolder, processor), null, this);
+
     private final Element root;
-    private final List<Runnable> afterReflow = new ArrayList<>();
     private final List<Runnable> afterPriority = new ArrayList<>();
     private Element focused;
     private boolean thisFocused;
     private boolean priorityDirty = false;
     private boolean clipDirty = false;
+    private RenderTarget cachedTarget = null;
 
     public boolean renderDebug = false;
     private List<Element> currentHoverStack = List.of();
@@ -65,42 +78,37 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     }
 
     public void work() {
-        do {
-            do {
-                reflow();
-                List<Runnable> copy = new ArrayList<>(afterReflow);
-                afterReflow.clear();
-                copy.forEach(Runnable::run);
-            } while (!afterReflow.isEmpty());
+        Minecraft.getInstance().getProfiler().push("Work GUI");
+        ((ParentElement<?>) root).childrenChanged();
+        while (true) {
+            childReprocessor.runExhaustively();
 
             if (priorityDirty) {
                 elementOrder.update(getRoot());
                 priorityDirty = false;
             }
 
-            List<Runnable> copy = new ArrayList<>(afterPriority);
-            afterPriority.clear();
-            copy.forEach(Runnable::run);
-        } while (priorityDirty || !afterPriority.isEmpty());
+            if (!afterPriority.isEmpty()) {
+                List<Runnable> copy = new ArrayList<>(afterPriority);
+                afterPriority.clear();
+                copy.forEach(Runnable::run);
+            } else {
+                break;
+            }
+        }
 
         if (clipDirty) {
             updateClippingBoxes(root, null);
             clipDirty = false;
         }
+        Minecraft.getInstance().getProfiler().pop();
     }
 
     // region flow
-
-    private void reflow() {
-        reprocessDirty.sort(Comparator.comparing(Element::getDepth));
-        while (!reprocessDirty.isEmpty()) {
-            reprocessDirty.get(0).positionElements();
-        }
-    }
-
-    private void updateClippingBoxes(Element element, @Nullable Rectangle currentBox) {
+    private void updateClippingBoxes(Element element, @Nullable ImmutableRectangle currentBox) {
         if (element.shouldClip()) {
-            currentBox = currentBox == null ? element : currentBox.intersection(element);
+            ReadableRectangle rect = Rectangle.expansiveIntersectionOf(currentBox, element);
+            currentBox = rect != null ? rect.immutable() : null;
         }
         element.clippingBox = currentBox;
 
@@ -110,20 +118,6 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             }
         }
     }
-
-    public void addChildrenReprocessingTask(ParentElement<?> element) {
-        if (!reprocessDirty.contains(element))
-            reprocessDirty.add(element);
-    }
-
-    public void removeChildrenReprocessingTask(ParentElement<?> element) {
-        reprocessDirty.remove(element);
-    }
-
-    public void afterReflow(Runnable runnable) {
-        afterReflow.add(runnable);
-    }
-
     public void afterPriority(Runnable runnable) {
         afterPriority.add(runnable);
     }
@@ -136,16 +130,56 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         clipDirty = true;
     }
 
+
+    protected void integrateState(GuiState state) {
+        childReprocessor.integrate(state.childReprocessor);
+        state.afterPriority.forEach(this::afterPriority);
+    }
+
     // endregion
     // region rendering
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         work();
+        Minecraft.getInstance().getProfiler().push("Collect Dirty Sections");
+        updateDirtySections.runExhaustively();
+        Minecraft.getInstance().getProfiler().pop();
+        Minecraft.getInstance().getProfiler().push("Render");
         PoseStack pose = graphics.pose();
-        pose.pushPose();
-        pose.translate(getX(), getY(), 0);
-        renderElements(elementOrder.tree, graphics, mouseX, mouseY, delta);
-        setClippingBox(null);
+
+        Rectangle toUpdate = null;
+        if (dirtySectionHolder.dirtySection != null) {
+            Rectangle d = dirtySectionHolder.dirtySection.copy();
+            d.setX(dirtySectionHolder.dirtySection.getX() - 1);
+            d.setY(dirtySectionHolder.dirtySection.getY() - 1);
+            d.setWidth(dirtySectionHolder.dirtySection.getWidth() + 2);
+            d.setHeight(dirtySectionHolder.dirtySection.getHeight() + 2);
+            dirtySectionHolder.dirtySection = d.intersection(Rectangle.of(getX(), getY(), getWidth(), getHeight()));
+            assert dirtySectionHolder.dirtySection != null;
+            toUpdate = dirtySectionHolder.dirtySection.copy();
+            int width = (int) (getWidth() * Minecraft.getInstance().getWindow().getGuiScale());
+            int height = (int) (getHeight() * Minecraft.getInstance().getWindow().getGuiScale());
+            if (cachedTarget == null) {
+                cachedTarget = new TextureTarget(width, height, true, Minecraft.ON_OSX);
+            } else if (cachedTarget.width != width || cachedTarget.height != height) {
+                cachedTarget.resize(width, height, Minecraft.ON_OSX);
+            }
+            pose.pushPose();
+            setClippingBox(dirtySectionHolder.dirtySection);
+            cachedTarget.clear(Minecraft.ON_OSX);
+            Stacks.RENDER_TARGETS.push(cachedTarget);
+            pose.translate(-getX(), -getY(), 0);
+            renderElements(elementOrder.tree, graphics, mouseX, mouseY, delta);
+            setClippingBox(null);
+            Stacks.RENDER_TARGETS.pop(false);
+            dirtySectionHolder.dirtySection = null;
+            pose.popPose();
+        }
+
+
+        blitCachedSectionToScreen(graphics);
+
+
         if (renderDebug) {
             for (Element element : elementOrder) {
                 if (element.intersects(mouseX, mouseY)
@@ -155,12 +189,27 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                         pose.translate(-parentElement.xView.get(), -parentElement.yView.get(), 0);
                         parentElement.renderLayoutDebug(graphics, mouseX, mouseY, delta);
                     }
-
                     break;
                 }
             }
+
+            if (toUpdate != null) {
+                graphics.fill(toUpdate.getX(), toUpdate.getY(), toUpdate.getX() + toUpdate.getWidth(), toUpdate.getY() + 1, 0xffff0000);
+                graphics.fill(toUpdate.getX(), toUpdate.getY() + toUpdate.getHeight() - 1, toUpdate.getX() + toUpdate.getWidth(), toUpdate.getY() + toUpdate.getHeight(), 0xffff0000);
+                graphics.fill(toUpdate.getX(), toUpdate.getY() + 1, toUpdate.getX() + 1, toUpdate.getY() + toUpdate.getHeight() - 1, 0xffff0000);
+                graphics.fill(toUpdate.getX() + toUpdate.getWidth() - 1, toUpdate.getY() + 1, toUpdate.getX() + toUpdate.getWidth(), toUpdate.getY() + toUpdate.getHeight() - 1, 0xffff0000);
+            }
+
+            for (ReadableRectangle dirtySection : dirtySectionHolder.allDirtySections) {
+                graphics.fill(dirtySection.getX(), dirtySection.getY(), dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + 1, 0xff00ff00);
+                graphics.fill(dirtySection.getX(), dirtySection.getY() + dirtySection.getHeight() - 1, dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + dirtySection.getHeight(), 0xff00ff00);
+                graphics.fill(dirtySection.getX(), dirtySection.getY() + 1, dirtySection.getX() + 1, dirtySection.getY() + dirtySection.getHeight() - 1, 0xff00ff00);
+                graphics.fill(dirtySection.getX() + dirtySection.getWidth() - 1, dirtySection.getY() + 1, dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + dirtySection.getHeight() - 1, 0xff00ff00);
+            }
         }
+        dirtySectionHolder.allDirtySections.clear();
         pose.popPose();
+        Minecraft.getInstance().getProfiler().pop();
     }
 
     private void renderElements(List<ElementOrder.Node> tree, GuiGraphics graphics, int mouseX, int mouseY, float delta) {
@@ -174,9 +223,17 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
             if (right.isPresent()) {
                 bounding = right.get();
-                setClippingBox(bounding.clippingBox);
+                if (shouldSkipRendering(bounding)) {
+                    continue;
+                }
 
-                Runnable self = () -> bounding.render(graphics, mouseX, mouseY, delta);
+                setClippingBox(Rectangle.expansiveIntersectionOf(dirtySectionHolder.dirtySection, bounding.clippingBox));
+
+                Runnable self = () -> {
+                    Minecraft.getInstance().getProfiler().push("Render " + bounding.getClass().getSimpleName());
+                    bounding.render(graphics, mouseX, mouseY, delta);
+                    Minecraft.getInstance().getProfiler().pop();
+                };
 
                 bounding.getSurface().render(bounding, graphics, mouseX, mouseY, delta, null, self);
                 graphics.pose().translate(0, 0, 0.01);
@@ -185,12 +242,21 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                     self.run();
                     graphics.pose().translate(0, 0, 0.01);
                 }
+
+                bounding.hasRendered = true;
             } else if (left.isPresent()) {
                 ElementOrder.Inner inner = left.get();
                 bounding = inner.owner();
-                setClippingBox(bounding.clippingBox);
+                if (shouldSkipRendering(bounding)) {
+                    continue;
+                }
+                setClippingBox(Rectangle.expansiveIntersectionOf(dirtySectionHolder.dirtySection, bounding.clippingBox));
                 Runnable children = () -> renderElements(inner.children(), graphics, mouseX, mouseY, delta);
-                Runnable self = () -> bounding.render(graphics, mouseX, mouseY, delta);
+                Runnable self = () -> {
+                    Minecraft.getInstance().getProfiler().push("Render " + bounding.getClass().getSimpleName());
+                    bounding.render(graphics, mouseX, mouseY, delta);
+                    Minecraft.getInstance().getProfiler().pop();
+                };
 
                 bounding.getSurface().render(bounding, graphics, mouseX, mouseY, delta, children, self);
 
@@ -203,13 +269,33 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                     children.run();
                     graphics.pose().translate(0, 0, 0.01);
                 }
+
+                bounding.hasRendered = true;
             } else {
                 throw new RuntimeException();
             }
         }
     }
 
-    private void setClippingBox(@Nullable Rectangle rect) {
+    private void blitCachedSectionToScreen(GuiGraphics graphics) {
+        RenderSystem.setShaderTexture(0, cachedTarget.getColorTextureId());
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        Matrix4f matrix4f = graphics.pose().last().pose();
+        BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
+        bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        // inverted the UVs and somehow it worked
+        bufferBuilder.vertex(matrix4f, getX(), getY(), 0).uv(0, 1).endVertex();
+        bufferBuilder.vertex(matrix4f, getX(), getY() + getHeight(), 0).uv(0, 0).endVertex();
+        bufferBuilder.vertex(matrix4f, getX() + getWidth(), getY() + getHeight(), 0).uv(1, 0).endVertex();
+        bufferBuilder.vertex(matrix4f, getX() + getWidth(), getY(), 0).uv(1, 1).endVertex();
+        BufferUploader.drawWithShader(bufferBuilder.end());
+    }
+
+    private boolean shouldSkipRendering(Element bounding) {
+        return Rectangle.restrictiveIntersectionOf(dirtySectionHolder.dirtySection, bounding) == null;
+    }
+
+    private void setClippingBox(@Nullable ReadableRectangle rect) {
         if (rect != null) {
             Window window = Minecraft.getInstance().getWindow();
             int i = window.getHeight();
@@ -224,7 +310,9 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         }
     }
 
-    private <V extends DefaultCancellableEvent> void doSweepEvent(Iterable<Element> elements, Function<Element, Event<Consumer<V>>> eventFetcher, @Nullable Event<Consumer<V>> rootEvent, BiConsumer<Element, V> defaultBehaviour, Predicate<Element> terminator, V event) {
+    private <V extends DefaultCancellableEvent> void doSweepEvent(List<Element> elements, Function<Element, Event<Consumer<V>>> eventFetcher, @Nullable Event<Consumer<V>> rootEvent, BiConsumer<Element, V> defaultBehaviour, Predicate<Element> terminator, V event) {
+        event.setPropagationPath(elements);
+
         if (rootEvent != null)
             rootEvent.getSink().run(e -> e.accept(event));
 
@@ -502,5 +590,21 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
     @Override
     public void updateNarration(NarrationElementOutput builder) {
+    }
+
+    public void dispose() {
+        if (cachedTarget == null) return;
+        cachedTarget.clear(Minecraft.ON_OSX);
+    }
+
+    static class DirtySectionHolder implements Consumer<ReadableRectangle> {
+        private final ArrayList<ReadableRectangle> allDirtySections = new ArrayList<>();
+        private @Nullable ReadableRectangle dirtySection = null;
+
+        @Override
+        public void accept(ReadableRectangle rectangle) {
+            allDirtySections.add(rectangle);
+            dirtySection = Rectangle.reunionOf(dirtySection, rectangle);
+        }
     }
 }

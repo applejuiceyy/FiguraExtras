@@ -1,5 +1,7 @@
 package com.github.applejuiceyy.figuraextras.views.views.http;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import io.wispforest.owo.ui.component.Components;
 import io.wispforest.owo.ui.container.Containers;
@@ -85,7 +87,8 @@ public class RequestResponseViewer implements InfoViews.View {
         }
         if (content != null) {
             currentView = content;
-            viewRoot = content.getRoot();
+            // TODO
+            // viewRoot = content.getRoot();
             viewRoot.sizing(Sizing.fill(100), Sizing.fill(90));
             root.child(viewRoot);
         }
@@ -110,7 +113,8 @@ public class RequestResponseViewer implements InfoViews.View {
     }
 
     @Override
-    public Component getRoot() {
-        return root;
+    public Element getRoot() {
+        // TODO
+        return new Grid();
     }
 }

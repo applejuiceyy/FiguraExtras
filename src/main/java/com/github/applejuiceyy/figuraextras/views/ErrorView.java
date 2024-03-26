@@ -1,24 +1,15 @@
 package com.github.applejuiceyy.figuraextras.views;
 
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.core.HorizontalAlignment;
-import io.wispforest.owo.ui.core.ParentComponent;
-import io.wispforest.owo.ui.core.Sizing;
-import io.wispforest.owo.ui.core.VerticalAlignment;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import net.minecraft.network.chat.Component;
 
 public class ErrorView implements InfoViews.View {
-    ParentComponent root;
+    Element root;
 
     public ErrorView(Component text) {
-        root = Containers.horizontalFlow(Sizing.fill(100), Sizing.fill(100))
-                .child(
-                        Components.label(text)
-
-                )
-                .horizontalAlignment(HorizontalAlignment.CENTER)
-                .verticalAlignment(VerticalAlignment.CENTER);
+        root = Elements.center(new Label(text));
     }
 
     @Override
@@ -34,7 +25,7 @@ public class ErrorView implements InfoViews.View {
     }
 
     @Override
-    public io.wispforest.owo.ui.core.Component getRoot() {
+    public Element getRoot() {
         return root;
     }
 }

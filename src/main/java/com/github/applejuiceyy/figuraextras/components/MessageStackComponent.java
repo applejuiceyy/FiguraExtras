@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.components;
 
-import io.wispforest.owo.ui.base.BaseComponent;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import io.wispforest.owo.ui.core.OwoUIDrawContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -14,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 
-public class MessageStackComponent extends BaseComponent {
+public class MessageStackComponent extends Element {
     private final ArrayList<FormattedCharSequence> lines = new ArrayList<>();
     private final ArrayList<Message> messages = new ArrayList<>();
 
@@ -31,7 +32,7 @@ public class MessageStackComponent extends BaseComponent {
 
     public void addMessage(Component message, BooleanSupplier shouldShow) {
         if (shouldShow.getAsBoolean()) {
-            List<FormattedCharSequence> newLines = ComponentRenderUtils.wrapComponents(message, width, Minecraft.getInstance().font);
+            List<FormattedCharSequence> newLines = ComponentRenderUtils.wrapComponents(message, width.get(), Minecraft.getInstance().font);
             if (!(messageOffset == 0)) {
                 messageOffset += newLines.size();
             }
@@ -51,7 +52,7 @@ public class MessageStackComponent extends BaseComponent {
         lines.clear();
         for (Message message : messages) {
             if (message.shouldAppear.getAsBoolean()) {
-                List<FormattedCharSequence> newLines = ComponentRenderUtils.wrapComponents(message.content(), width, Minecraft.getInstance().font);
+                List<FormattedCharSequence> newLines = ComponentRenderUtils.wrapComponents(message.content(), width.get(), Minecraft.getInstance().font);
                 lines.addAll(newLines);
             }
         }
@@ -62,24 +63,23 @@ public class MessageStackComponent extends BaseComponent {
     }
 
     private int getLineCapacity() {
-        return (int) Math.ceil(height / 9f);
+        return (int) Math.ceil(height.get() / 9f);
     }
 
-    @Override
     public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
         int messageQuantity = this.lines.size();
         if (messageQuantity == 0) {
             return;
         }
 
-        if (previousWidth != width()) {
-            previousWidth = width;
+        if (previousWidth != width.get()) {
+            previousWidth = width.get();
             refreshLines();
         }
 
         Font font = Minecraft.getInstance().font;
 
-        int yPos = height;
+        int yPos = height.get();
 
         for (int i = lines.size() - 1 - messageOffset; i >= 0; i--) {
             if (yPos < 0) {
@@ -87,35 +87,35 @@ public class MessageStackComponent extends BaseComponent {
             }
             FormattedCharSequence message = lines.get(i);
             yPos -= font.lineHeight;
-            context.drawString(font, message, x, y + yPos, 0xffffffff);
+            context.drawString(font, message, x.get(), y.get() + yPos, 0xffffffff);
         }
         if (getLineCapacity() < lines.size()) {
-            int lowerHeight = height - (int) (((messageOffset + getLineCapacity()) / (float) lines.size()) * height);
-            int higherHeight = height - (int) ((messageOffset / (float) lines.size()) * height);
-            context.fill(x + width - 5, y + higherHeight, x + width, y + lowerHeight, 0xaa000000);
+            int lowerHeight = height.get() - (int) (((messageOffset + getLineCapacity()) / (float) lines.size()) * height.get());
+            int higherHeight = height.get() - (int) ((messageOffset / (float) lines.size()) * height.get());
+            context.fill(x.get() + width.get() - 5, y.get() + higherHeight, x.get() + width.get(), y.get() + lowerHeight, 0xaa000000);
         }
     }
 
     public Style getClickedComponentStyleAt(double x, double y) {
-        int i = (int) ((height - (y - this.y) - 1) / Minecraft.getInstance().font.lineHeight);
+        int i = (int) ((height.get() - (y - this.y.get()) - 1) / Minecraft.getInstance().font.lineHeight);
         if (i >= 0 && i < this.lines.size()) {
             FormattedCharSequence line = this.lines.get(this.lines.size() - 1 - i);
 
-            return Minecraft.getInstance().font.getSplitter().componentStyleAtWidth(line, Mth.floor(x - this.x));
+            return Minecraft.getInstance().font.getSplitter().componentStyleAtWidth(line, Mth.floor(x - this.x.get()));
         }
         return null;
     }
 
-    @Override
+    // TODO: tooltips
     public void drawTooltip(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
-        super.drawTooltip(context, mouseX, mouseY, partialTicks, delta);
-        if (this.isInBoundingBox(mouseX, mouseY)) {
-            context.renderComponentHoverEffect(
-                    Minecraft.getInstance().font,
-                    getClickedComponentStyleAt(mouseX, mouseY),
-                    mouseX, mouseY
-            );
-        }
+        //super.drawTooltip(context, mouseX, mouseY, partialTicks, delta);
+        //if (this.isInBoundingBox(mouseX, mouseY)) {
+        //    context.renderComponentHoverEffect(
+        //             Minecraft.getInstance().font,
+        //             getClickedComponentStyleAt(mouseX, mouseY),
+        //             mouseX, mouseY
+        //     );
+        // }
     }
 
     private void updateUpperBound() {
@@ -128,10 +128,20 @@ public class MessageStackComponent extends BaseComponent {
     }
 
     @Override
-    public boolean onMouseScroll(double mouseX, double mouseY, double amount) {
-        messageOffset += (int) amount;
+    protected void defaultMouseScrolledBehaviour(DefaultCancellableEvent.MousePositionAmountEvent event) {
+        messageOffset += (int) event.amount;
         updateUpperBound();
-        return true;
+    }
+
+    // TODO: correct optimal sizes
+    @Override
+    public int computeOptimalWidth() {
+        return 0;
+    }
+
+    @Override
+    public int computeOptimalHeight(int width) {
+        return 0;
     }
 
     record Message(Component content, BooleanSupplier shouldAppear) {

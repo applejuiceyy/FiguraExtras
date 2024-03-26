@@ -1,10 +1,10 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.dummy;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
-import io.wispforest.owo.ui.container.FlowLayout;
 import net.minecraft.util.Tuple;
 
 import java.util.Optional;
@@ -12,7 +12,7 @@ import java.util.Optional;
 public class DummyExpander implements ObjectExpander<DummyExpander.Dummy, Void, Object> {
 
     @Override
-    public void populateHeader(FlowLayout root, Observers.Observer<Tuple<Void, Object>> updater, Observers.Observer<Optional<Tuple<Void, Object>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover) {
+    public void populateHeader(Grid root, Observers.Observer<Tuple<Void, Object>> updater, Observers.Observer<Optional<Tuple<Void, Object>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover, Event<Runnable>.Source ticker) {
     }
 
     @Override

@@ -2,7 +2,7 @@ package com.github.applejuiceyy.figuraextras.tech.gui.layout;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Rectangle;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
@@ -268,7 +268,7 @@ public class Grid extends ParentElement<Grid.GridSettings> {
     }
 
     @Override
-    public int getOptimalWidth() {
+    public int computeOptimalWidth() {
         return Arrays.stream(computeSizing(flowElements(true), columns, e -> {
             if (getSettings(e).isOptimalWidth()) {
                 return e.getOptimalWidth();
@@ -278,7 +278,7 @@ public class Grid extends ParentElement<Grid.GridSettings> {
     }
 
     @Override
-    public int getOptimalHeight(int width) {
+    public int computeOptimalHeight(int width) {
         int[] cols = computeSizing(flowElements(true), columns, e -> {
             if (getSettings(e).isOptimalWidth()) {
                 return e.getOptimalWidth();
@@ -311,13 +311,13 @@ public class Grid extends ParentElement<Grid.GridSettings> {
 
     public Grid addRow(float value, SpacingKind kind) {
         rows.add(new Spacing(kind, value));
-        markLayoutDirty();
+        childrenChanged();
         return this;
     }
 
     public Grid addColumn(float value, SpacingKind kind) {
         columns.add(new Spacing(kind, value));
-        markLayoutDirty();
+        childrenChanged();
         return this;
     }
 

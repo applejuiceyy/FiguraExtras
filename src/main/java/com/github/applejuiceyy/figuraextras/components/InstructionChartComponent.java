@@ -1,16 +1,16 @@
 package com.github.applejuiceyy.figuraextras.components;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
-import io.wispforest.owo.ui.base.BaseComponent;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.network.chat.Component;
 import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 
-public class InstructionChartComponent extends BaseComponent {
+public class InstructionChartComponent extends Element {
     long cutoff = 10 * 1000;
     ArrayList<DataPoint> dataPoints = new ArrayList<>();
     long accumulatedTime;
@@ -42,17 +42,12 @@ public class InstructionChartComponent extends BaseComponent {
 
 
     @Override
-    public void update(float delta, int mouseX, int mouseY) {
-        super.update(delta, mouseX, mouseY);
-    }
-
-    @Override
-    public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         var matrices = context.pose();
         matrices.pushPose();
-        matrices.translate(x, y, 0);
+        matrices.translate(x.get(), y.get(), 0);
 
-        context.fill(0, 0, width, height, 0xff000000);
+        context.fill(0, 0, width.get(), height.get(), 0xff000000);
 
         if (!dataPoints.isEmpty()) {
             Matrix4f matrix4f = context.pose().last().pose();
@@ -68,10 +63,10 @@ public class InstructionChartComponent extends BaseComponent {
                 DataPoint dataPoint = dataPoints.get(i);
                 DataPoint next = dataPoints.get(i - 1);
 
-                float shortEnd = width - (currentDataPoints / (float) cutoff) * width;
-                float bigEnd = width - ((currentDataPoints + dataPoint.afterMillis) / (float) cutoff) * width;
-                float shortHeight = height - (dataPoint.instructions / (float) maxInstructionsSeen) * height;
-                float bigHeight = height - (next.instructions / (float) maxInstructionsSeen) * height;
+                float shortEnd = width.get() - (currentDataPoints / (float) cutoff) * width.get();
+                float bigEnd = width.get() - ((currentDataPoints + dataPoint.afterMillis) / (float) cutoff) * width.get();
+                float shortHeight = height.get() - (dataPoint.instructions / (float) maxInstructionsSeen) * height.get();
+                float bigHeight = height.get() - (next.instructions / (float) maxInstructionsSeen) * height.get();
 
                 currentDataPoints += dataPoint.afterMillis;
 
@@ -81,13 +76,13 @@ public class InstructionChartComponent extends BaseComponent {
                 }
 
                 bufferBuilder.vertex(matrix4f, bigEnd, bigHeight, 0).color(0xff00ff00).endVertex();
-                bufferBuilder.vertex(matrix4f, bigEnd, height, 0).color(0xff00ff00).endVertex();
-                bufferBuilder.vertex(matrix4f, shortEnd, height, 0).color(0xff00ff00).endVertex();
+                bufferBuilder.vertex(matrix4f, bigEnd, height.get(), 0).color(0xff00ff00).endVertex();
+                bufferBuilder.vertex(matrix4f, shortEnd, height.get(), 0).color(0xff00ff00).endVertex();
                 bufferBuilder.vertex(matrix4f, shortEnd, shortHeight, 0).color(0xff00ff00).endVertex();
 
                 bufferBuilder.vertex(matrix4f, shortEnd - 0.5f, shortHeight, 0).color(0xff00aa00).endVertex();
-                bufferBuilder.vertex(matrix4f, shortEnd - 0.5f, height, 0).color(0xff00aa00).endVertex();
-                bufferBuilder.vertex(matrix4f, shortEnd + 0.5f, height, 0).color(0xff00aa00).endVertex();
+                bufferBuilder.vertex(matrix4f, shortEnd - 0.5f, height.get(), 0).color(0xff00aa00).endVertex();
+                bufferBuilder.vertex(matrix4f, shortEnd + 0.5f, height.get(), 0).color(0xff00aa00).endVertex();
                 bufferBuilder.vertex(matrix4f, shortEnd + 0.5f, shortHeight, 0).color(0xff00aa00).endVertex();
 
                 bufferBuilder.vertex(matrix4f, shortEnd, shortHeight - 1, 0).color(0xffff0000).endVertex();
@@ -99,27 +94,37 @@ public class InstructionChartComponent extends BaseComponent {
             int p = (maxInstructionsSeen / 1000) * 100 + 100;
 
             for (int i = 0; i < maxInstructionsSeen; i += p) {
-                float h = height - (i / (float) maxInstructionsSeen) * height;
+                float h = height.get() - (i / (float) maxInstructionsSeen) * height.get();
 
                 bufferBuilder.vertex(matrix4f, 0, h, 0).color(0xff888888).endVertex();
                 bufferBuilder.vertex(matrix4f, 0, h + 0.5f, 0).color(0xff888888).endVertex();
-                bufferBuilder.vertex(matrix4f, width, h + 0.5f, 0).color(0xff888888).endVertex();
-                bufferBuilder.vertex(matrix4f, width, h, 0).color(0xff888888).endVertex();
+                bufferBuilder.vertex(matrix4f, width.get(), h + 0.5f, 0).color(0xff888888).endVertex();
+                bufferBuilder.vertex(matrix4f, width.get(), h, 0).color(0xff888888).endVertex();
             }
 
             BufferUploader.drawWithShader(bufferBuilder.end());
 
             for (int i = 0; i < maxInstructionsSeen; i += p) {
-                float h = height - (i / (float) maxInstructionsSeen) * height;
+                float h = height.get() - (i / (float) maxInstructionsSeen) * height.get();
 
-                context.drawText(Component.literal(String.valueOf(i)), 3, h + 2, 1, 0xff777777);
+                context.drawString(Minecraft.getInstance().font, String.valueOf(i), 3, (int) h + 2, 0xff777777);
             }
         }
 
-        context.fill(0, 0, 1, height, 0xffffffff);
-        context.fill(0, height - 1, width, height, 0xffffffff);
+        context.fill(0, 0, 1, height.get(), 0xffffffff);
+        context.fill(0, height.get() - 1, width.get(), height.get(), 0xffffffff);
 
         matrices.popPose();
+    }
+
+    @Override
+    public int computeOptimalWidth() {
+        return 0;
+    }
+
+    @Override
+    public int computeOptimalHeight(int width) {
+        return 0;
     }
 
     record DataPoint(long afterMillis, int instructions) {

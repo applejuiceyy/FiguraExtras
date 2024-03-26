@@ -1,12 +1,10 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.lua;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.container.FlowLayout;
-import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 import org.figuramc.figura.avatar.Avatar;
 import org.luaj.vm2.LuaTable;
@@ -97,8 +95,11 @@ public class LuaTableExpander implements ObjectExpander<LuaTable, LuaValue, LuaV
     }
 
     @Override
-    public void populateHeader(FlowLayout root, Observers.Observer<Tuple<LuaValue, LuaValue>> updater, Observers.Observer<Optional<Tuple<LuaValue, LuaValue>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover) {
-        interpreter.populateHeader(root, updater.derive(Tuple::getA), freeRoamUpdater.derive(v -> v.map(Tuple::getA)), objectViewChanger, popper, referenceConsumer, false);
-        root.child(Components.label(Component.literal(": ")));
+    public void populateHeader(Grid root, Observers.Observer<Tuple<LuaValue, LuaValue>> updater, Observers.Observer<Optional<Tuple<LuaValue, LuaValue>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover, Event<Runnable>.Source ticker) {
+        Grid inner = new Grid();
+        root.rows().percentage(1).cols().content().content();
+        interpreter.populateHeader(inner, updater.derive(Tuple::getA), freeRoamUpdater.derive(v -> v.map(Tuple::getA)), objectViewChanger, popper, referenceConsumer, false);
+        root.add(inner);
+        root.add(": ").setColumn(1);
     }
 }

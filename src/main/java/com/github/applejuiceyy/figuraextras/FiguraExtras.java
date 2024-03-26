@@ -26,5 +26,6 @@ public class FiguraExtras implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+
     }
 }

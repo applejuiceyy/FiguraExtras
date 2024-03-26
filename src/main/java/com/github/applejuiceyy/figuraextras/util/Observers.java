@@ -350,6 +350,16 @@ public class Observers {
             });
         }
 
+        @Override
+        public <OUT> Observer<OUT> derive(Function<VALUE, OUT> transformer, Function<String, String> supplier) {
+            return new DeriveObserver<>(original, val -> transformer.apply(this.transformer.apply(val)), supplier.apply(path));
+        }
+
+        @Override
+        public <OUT> Observer<OUT> derive(Function<VALUE, OUT> transformer) {
+            return new DeriveObserver<>(original, val -> transformer.apply(this.transformer.apply(val)), path);
+        }
+
         public VALUE get() {
             if (unsub == null) {
                 return transformer.apply(original.get());

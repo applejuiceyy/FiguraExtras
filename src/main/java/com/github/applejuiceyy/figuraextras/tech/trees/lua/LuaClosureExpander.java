@@ -1,12 +1,11 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.lua;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.component.LabelComponent;
-import io.wispforest.owo.ui.container.FlowLayout;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 import org.luaj.vm2.LuaClosure;
@@ -18,12 +17,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class LuaClosureExpander implements ObjectExpander<LuaClosure, Integer, LuaValue> {
     @Override
-    public void populateHeader(FlowLayout root, Observers.Observer<Tuple<Integer, LuaValue>> updater, Observers.Observer<Optional<Tuple<Integer, LuaValue>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover) {
-        LabelComponent label = Components.label(Component.empty());
+    public void populateHeader(Grid root, Observers.Observer<Tuple<Integer, LuaValue>> updater, Observers.Observer<Optional<Tuple<Integer, LuaValue>>> freeRoamUpdater, ViewChanger objectViewChanger, PopperConsumer popper, CyclicReferenceConsumer referenceConsumer, Event<Runnable>.Source remover, Event<Runnable>.Source ticker) {
+        Label label = new Label();
         updater.observe(value -> {
-            label.text(Component.literal("Upvalue " + value.getA() + ": "));
+            label.setText(Component.literal("Upvalue " + value.getA() + ": "));
         });
-        root.child(label);
+        root.rows().percentage(1).cols().percentage(1);
+        root.add(label);
     }
 
     @Override

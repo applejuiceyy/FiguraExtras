@@ -1,11 +1,16 @@
 package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.ImmutableRectangle;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.ReadableRectangle;
+import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -18,6 +23,10 @@ abstract public class Element implements Rectangle {
     public final Observers.WritableObserver<Integer> x = Observers.of(0);
     public final Observers.WritableObserver<Integer> y = Observers.of(0);
 
+    private final Int2IntOpenHashMap cachedOptimalHeight = new Int2IntOpenHashMap();
+    boolean hasRendered = false;
+    ImmutableRectangle clippingBox = null;
+    private @Nullable ReadableRectangle previousRestingPosition = null;
     public final Observers.WritableObserver<Boolean> hovering = Observers.of(false);
     public final Observers.WritableObserver<Boolean> activeHovering = Observers.of(false);
     public final Observers.WritableObserver<Boolean> hoveringWithin = Observers.of(false);
@@ -34,18 +43,97 @@ abstract public class Element implements Rectangle {
     public final Event<Consumer<DefaultCancellableEvent.KeyEvent>> keyReleased = Event.consumer();
 
     public final Event<Consumer<DefaultCancellableEvent.CharEvent>> charTyped = Event.consumer();
-
-    Rectangle clippingBox = null;
+    private boolean haveTranslated = false;
 
     private int componentDepth;
     private ParentElement<?> parent = null;
     private GuiState state = null;
     private boolean clip;
+    private boolean recurse = false;
+    private int cachedOptimalWidth = -1;
 
     private Surface surface = Surface.EMPTY;
 
+    {
+        x.observe(() -> {
+            this.enqueueDirtySection(true, false);
+            getState().markClipDirty();
+        });
+        y.observe(() -> {
+            this.enqueueDirtySection(true, false);
+            getState().markClipDirty();
+        });
+        width.observe(() -> {
+            this.enqueueDirtySection(true, false);
+            getState().markClipDirty();
+        });
+        height.observe(() -> {
+            this.enqueueDirtySection(true, false);
+            getState().markClipDirty();
+        });
+    }
+
+    protected void enqueueDirtySection(boolean translative, boolean recursive) {
+        enqueueDirtySection(getState().updateDirtySections, translative, recursive);
+    }
+
+    protected void enqueueDirtySection(Processor<Element> processor, boolean translative, boolean recursive) {
+        processor.enqueue(this);
+        haveTranslated = (haveTranslated || translative) && hasRendered;
+        recurse = recurse || recursive;
+    }
+
+    protected void dequeueDirtySection() {
+        getState().updateDirtySections.dequeue(this);
+        haveTranslated = false;
+        recurse = false;
+    }
+
+    private void markPreviousRenderingLocationDirty(Consumer<ReadableRectangle> sectionConsumer) {
+        // if(!renders()) return;
+        ParentElement<?> parent = getParent();
+        if (parent != null && parent.getSettings(this).isInvisible()) return;
+        if (previousRestingPosition != null) {
+            sectionConsumer.accept(previousRestingPosition);
+        }
+        previousRestingPosition = this.immutable();
+    }
+
+    protected void markActualRenderingLocationDirty(Consumer<ReadableRectangle> sectionConsumer) {
+        // if(!renders()) return;
+        ParentElement<?> parent = getParent();
+        if (parent != null && parent.getSettings(this).isInvisible()) return;
+        ReadableRectangle rectangle = this.immutable();
+        if (rectangle != null) {
+            sectionConsumer.accept(rectangle);
+        }
+
+    }
+
+    protected void markRenderingThisAndChildrenDirty(Consumer<ReadableRectangle> sectionConsumer, Processor<Element> processor) {
+        markActualRenderingLocationDirty(sectionConsumer);
+    }
+
+    void updateDirtySections(Consumer<ReadableRectangle> sectionConsumer, Processor<Element> processor) {
+        if (haveTranslated) {
+            markPreviousRenderingLocationDirty(sectionConsumer);
+            hasRendered = false;
+        }
+        haveTranslated = false;
+        if (recurse) {
+            markRenderingThisAndChildrenDirty(sectionConsumer, processor);
+        } else {
+            markActualRenderingLocationDirty(sectionConsumer);
+        }
+        recurse = false;
+    }
+
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
 
+    }
+
+    protected boolean renders() {
+        return false;
     }
 
     public boolean blocksMouseActivation() {
@@ -124,6 +212,18 @@ abstract public class Element implements Rectangle {
         }
         graphics.fill(getX(), getY() + getHeight(), getX() + Minecraft.getInstance().font.width(text), getY() + 9 + getHeight(), 0xffffffff);
         graphics.drawString(Minecraft.getInstance().font, text, getX(), getY() + getHeight(), 0xff000000, false);
+
+        String str = this.getClass().getSimpleName();
+        graphics.drawString(Minecraft.getInstance().font, str, getX(), getY(), 0xffffffff, false);
+    }
+
+    protected void optimalSizeChanged() {
+        cachedOptimalWidth = -1;
+        cachedOptimalHeight.clear();
+        ParentElement<?> parent = getParent();
+        if (parent != null) {
+            parent.childOptimalSizeChanged(this);
+        }
     }
 
     public boolean isFocused() {
@@ -183,19 +283,15 @@ abstract public class Element implements Rectangle {
     }
 
     public Element setSurface(Surface surface) {
+        enqueueDirtySection(false, false);
         this.surface = surface;
         getState().markClipDirty();
+        enqueueDirtySection(false, false);
         return this;
     }
 
     public Rectangle getInnerSpace() {
         return this;
-    }
-
-    protected void markLayoutDirty() {
-        if (getParent() != null && getParent().willCauseReflow(this)) {
-            getParent().markLayoutDirty();
-        }
     }
 
     public boolean shouldClip() {
@@ -235,7 +331,20 @@ abstract public class Element implements Rectangle {
     void visit(BiConsumer<ParentElement<?>, Element> consumer) {
     }
 
-    public abstract int getOptimalWidth();
+    public int getOptimalWidth() {
+        if (cachedOptimalWidth == -1) {
+            cachedOptimalWidth = computeOptimalWidth();
+        }
+        return cachedOptimalWidth;
+    }
 
-    public abstract int getOptimalHeight(int width);
+    ;
+
+    public int getOptimalHeight(int width) {
+        return cachedOptimalHeight.computeIfAbsent(width, this::computeOptimalHeight);
+    }
+
+    abstract public int computeOptimalWidth();
+
+    abstract public int computeOptimalHeight(int width);
 }
