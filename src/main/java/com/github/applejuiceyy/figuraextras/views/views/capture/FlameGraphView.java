@@ -3,18 +3,19 @@ package com.github.applejuiceyy.figuraextras.views.views.capture;
 import com.github.applejuiceyy.figuraextras.components.FlameGraphComponent;
 import com.github.applejuiceyy.figuraextras.components.RangeSliderComponent;
 import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 
 
-public class FlameGraphView implements InfoViews.View {
+public class FlameGraphView implements Lifecycle {
 
     private final Grid root;
     FlameGraphComponent component;
     RangeSliderComponent slider;
 
-    public FlameGraphView(InfoViews.Context context, FlameGraph.Frame frame) {
+    public FlameGraphView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint, FlameGraph.Frame frame) {
         root = new Grid();
 
         root.rows()
@@ -22,6 +23,10 @@ public class FlameGraphView implements InfoViews.View {
                 .content()
                 .cols()
                 .content();
+
+        additionPoint.accept(root);
+
+        // TODO
 
         /*component = new FlameGraphComponent(frame) {
             @Override
@@ -45,11 +50,6 @@ public class FlameGraphView implements InfoViews.View {
     @Override
     public void tick() {
 
-    }
-
-    @Override
-    public Element getRoot() {
-        return root;
     }
 
     @Override

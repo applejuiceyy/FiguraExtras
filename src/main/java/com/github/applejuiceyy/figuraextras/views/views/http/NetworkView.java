@@ -3,7 +3,9 @@ package com.github.applejuiceyy.figuraextras.views.views.http;
 import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import io.wispforest.owo.ui.container.Containers;
 import io.wispforest.owo.ui.container.FlowLayout;
@@ -22,7 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Flow;
 
-public class NetworkView implements InfoViews.View {
+public class NetworkView implements Lifecycle {
     FlowLayout content = Containers.verticalFlow(Sizing.fill(100), Sizing.content());
     ScrollContainer<FlowLayout> logging = Containers.verticalScroll(Sizing.content(), Sizing.fill(100), content);
 
@@ -31,7 +33,7 @@ public class NetworkView implements InfoViews.View {
     RequestResponseViewer viewer;
     Runnable unsub;
 
-    public NetworkView(InfoViews.Context context) {
+    public NetworkView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         logging.scrollbar(ScrollContainer.Scrollbar.vanilla());
         root.child(logging);
 
@@ -120,7 +122,7 @@ public class NetworkView implements InfoViews.View {
                     p.subscribe(flowSubscriber);
                     return bodySubscriber.getBody().toCompletableFuture().join();
                 });
-                viewer = new RequestResponseViewer(requestBody, bodyBytes, request, future);
+                viewer = new RequestResponseViewer(requestBody, additionPoint, bodyBytes, request, future);
                 root.child(viewer.root);
                 return true;
             });
@@ -138,7 +140,7 @@ public class NetworkView implements InfoViews.View {
             viewer.tick();
     }
 
-    @Override
+    // @Override
     public Element getRoot() {
         // TODO
         return new Grid();

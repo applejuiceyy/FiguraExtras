@@ -4,7 +4,6 @@ import com.github.applejuiceyy.figuraextras.components.SoundComponent;
 import com.github.applejuiceyy.figuraextras.ducks.SoundBufferAccess;
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
 import com.github.applejuiceyy.figuraextras.mixin.SoundBufferAccessor;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
@@ -13,6 +12,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.mojang.blaze3d.audio.Channel;
 import com.mojang.blaze3d.audio.Library;
@@ -31,14 +31,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-public class SoundView implements InfoViews.View {
+public class SoundView implements Lifecycle {
     private final Flow layout;
     private final Grid root;
     private final InfoViews.Context context;
 
     private final HashMap<SoundBuffer, Instance> textures = new HashMap<>();
 
-    public SoundView(InfoViews.Context context) {
+    public SoundView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
 
         root = new Grid();
@@ -51,6 +51,8 @@ public class SoundView implements InfoViews.View {
         layout = new Flow();
         Scrollbar scrollbar = new Scrollbar();
         Elements.makeVerticalContainerScrollable(layout, scrollbar, true);
+
+        additionPoint.accept(root);
     }
 
     @Override
@@ -78,14 +80,8 @@ public class SoundView implements InfoViews.View {
     }
 
     @Override
-    public Element getRoot() {
-        return root;
-    }
-
-    @Override
     public void render() {
-        for (Iterator<Map.Entry<SoundBuffer, Instance>> iterator = textures.entrySet().iterator(); iterator.hasNext(); ) {
-            Map.Entry<SoundBuffer, Instance> figuraTextureTextureComponentEntry = iterator.next();
+        for (Map.Entry<SoundBuffer, Instance> figuraTextureTextureComponentEntry : textures.entrySet()) {
             figuraTextureTextureComponentEntry.getValue().render();
         }
     }

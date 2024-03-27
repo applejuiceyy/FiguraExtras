@@ -2,34 +2,32 @@ package com.github.applejuiceyy.figuraextras.views.views;
 
 import com.github.applejuiceyy.figuraextras.components.InstructionChartComponent;
 import com.github.applejuiceyy.figuraextras.ducks.InstructionsAccess;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import org.figuramc.figura.avatar.Avatar;
 
-public class MetricsView implements InfoViews.View {
+public class MetricsView implements Lifecycle {
     private final InfoViews.Context context;
     private final Avatar.Instructions instructions;
     private final Flow root = new Flow();
     private final InstructionChartComponent chart;
     private final Runnable unsub;
 
-    public MetricsView(InfoViews.Context context, Avatar.Instructions instructions) {
+    public MetricsView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint, Avatar.Instructions instructions) {
         this.context = context;
         this.instructions = instructions;
         chart = new InstructionChartComponent();
         root.add(chart);
         this.unsub = ((InstructionsAccess) instructions).figuraExtrass$addHook(chart::consumeEntry);
+
+        additionPoint.accept(root);
     }
 
     @Override
     public void tick() {
 
-    }
-
-    @Override
-    public Element getRoot() {
-        return root;
     }
 
     @Override

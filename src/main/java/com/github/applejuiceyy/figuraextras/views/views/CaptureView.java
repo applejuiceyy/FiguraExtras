@@ -7,11 +7,12 @@ import com.github.applejuiceyy.figuraextras.tech.captures.ActiveOpportunity;
 import com.github.applejuiceyy.figuraextras.tech.captures.CaptureOpportunity;
 import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
 import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.util.Differential;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.github.applejuiceyy.figuraextras.views.views.capture.FlameGraphView;
 import net.minecraft.ChatFormatting;
@@ -19,12 +20,12 @@ import org.luaj.vm2.Globals;
 
 import java.util.Map;
 
-public class CaptureView implements InfoViews.View {
+public class CaptureView implements Lifecycle {
     InfoViews.Context context;
     Differential<Map.Entry<Object, CaptureOpportunity>, Object, Instance> differential;
     Flow root = new Flow();
 
-    public CaptureView(InfoViews.Context context) {
+    public CaptureView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
         differential = new Differential<>(
                 () -> ((LuaRuntimeAccess) context.getAvatar().luaRuntime).figuraExtrass$getNoticedPotentialCaptures().entrySet().iterator(),
@@ -37,16 +38,13 @@ public class CaptureView implements InfoViews.View {
                 o -> {
                 }
         );
+
+        additionPoint.accept(root);
     }
 
     @Override
     public void tick() {
 
-    }
-
-    @Override
-    public Element getRoot() {
-        return root;
     }
 
     @Override
@@ -72,7 +70,7 @@ public class CaptureView implements InfoViews.View {
                 Globals globals = ((LuaRuntimeAccessor) context.getAvatar().luaRuntime).getUserGlobals();
                 ((GlobalsAccess) globals).figuraExtrass$setCurrentlySearchingForCapture(
                         new ActiveOpportunity<SecondaryCallHook>(value, new FlameGraph(context.getAvatar().luaRuntime.typeManager, frame -> {
-                            context.setView(context -> new FlameGraphView(context, frame));
+                            context.setView((context, additionPoint) -> new FlameGraphView(context, additionPoint, frame));
                         })));
             });
         }

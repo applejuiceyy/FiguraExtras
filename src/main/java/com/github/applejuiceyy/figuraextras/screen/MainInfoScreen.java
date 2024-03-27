@@ -7,6 +7,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.github.applejuiceyy.figuraextras.window.WindowContext;
 import com.github.applejuiceyy.figuraextras.window.WindowContextReceiver;
@@ -18,8 +19,6 @@ import net.minecraft.network.chat.Style;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.function.Function;
 
 public class MainInfoScreen extends Screen implements WindowContextReceiver {
     ButtonComponent guiScale;
@@ -79,7 +78,7 @@ public class MainInfoScreen extends Screen implements WindowContextReceiver {
                             }
 
                             @Override
-                            public void setView(Function<InfoViews.Context, InfoViews.View> view) {
+                            public void setView(InfoViews.ViewConstructor<InfoViews.Context, Lifecycle> view) {
                                 info.setView(view);
                             }
 

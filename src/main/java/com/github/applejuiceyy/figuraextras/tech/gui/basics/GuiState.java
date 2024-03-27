@@ -47,17 +47,30 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public final Event<Consumer<DefaultCancellableEvent.KeyEvent>> keyReleased = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.CharEvent>> charTyped = Event.consumer();
 
-    public final Processor<ParentElement<?>> childReprocessor = new Processor<>((el, p) -> el.positionElements(), Comparator.comparingInt(Element::getDepth), this);
-
     private final DirtySectionHolder dirtySectionHolder = new DirtySectionHolder();
-    public final Processor<Element> updateDirtySections = new Processor<>((o, processor) -> o.updateDirtySections(dirtySectionHolder, processor), null, this);
 
+    public final Processor<ParentElement<?>> childReprocessor = new Processor<>((el, p) -> el.positionElements(), Comparator.comparingInt(Element::getDepth), this);
+    public final Processor<Element> updateDirtySections = new Processor<>((o, processor) -> o.updateDirtySections(dirtySectionHolder, processor), null, this);
+    public final Processor<Element> clipDirty = new Processor<>((element, processor) -> {
+        ImmutableRectangle rectangle = element.getParent() == null ? null : element.getParent().clippingBox;
+        if (element.shouldClip()) {
+            ReadableRectangle rect = Rectangle.expansiveIntersectionOf(rectangle, element);
+            rectangle = rect != null ? rect.immutable() : null;
+        }
+
+        element.clippingBox = rectangle;
+
+        if (element instanceof ParentElement<?> parentElement) {
+            for (Element child : parentElement.getElements()) {
+                processor.enqueue(child);
+            }
+        }
+    }, Comparator.comparingInt(Element::getDepth), this);
     private final Element root;
     private final List<Runnable> afterPriority = new ArrayList<>();
     private Element focused;
     private boolean thisFocused;
     private boolean priorityDirty = false;
-    private boolean clipDirty = false;
     private RenderTarget cachedTarget = null;
 
     public boolean renderDebug = false;
@@ -97,10 +110,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             }
         }
 
-        if (clipDirty) {
-            updateClippingBoxes(root, null);
-            clipDirty = false;
-        }
+        clipDirty.runExhaustively();
         Minecraft.getInstance().getProfiler().pop();
     }
 
@@ -126,10 +136,6 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         priorityDirty = true;
     }
 
-    public void markClipDirty() {
-        clipDirty = true;
-    }
-
 
     protected void integrateState(GuiState state) {
         childReprocessor.integrate(state.childReprocessor);
@@ -149,31 +155,27 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
         Rectangle toUpdate = null;
         if (dirtySectionHolder.dirtySection != null) {
-            Rectangle d = dirtySectionHolder.dirtySection.copy();
-            d.setX(dirtySectionHolder.dirtySection.getX() - 1);
-            d.setY(dirtySectionHolder.dirtySection.getY() - 1);
-            d.setWidth(dirtySectionHolder.dirtySection.getWidth() + 2);
-            d.setHeight(dirtySectionHolder.dirtySection.getHeight() + 2);
-            dirtySectionHolder.dirtySection = d.intersection(Rectangle.of(getX(), getY(), getWidth(), getHeight()));
-            assert dirtySectionHolder.dirtySection != null;
-            toUpdate = dirtySectionHolder.dirtySection.copy();
-            int width = (int) (getWidth() * Minecraft.getInstance().getWindow().getGuiScale());
-            int height = (int) (getHeight() * Minecraft.getInstance().getWindow().getGuiScale());
-            if (cachedTarget == null) {
-                cachedTarget = new TextureTarget(width, height, true, Minecraft.ON_OSX);
-            } else if (cachedTarget.width != width || cachedTarget.height != height) {
-                cachedTarget.resize(width, height, Minecraft.ON_OSX);
+            dirtySectionHolder.dirtySection = dirtySectionHolder.dirtySection.intersection(Rectangle.of(getX(), getY(), getWidth(), getHeight()));
+            if (dirtySectionHolder.dirtySection != null) {
+                toUpdate = dirtySectionHolder.dirtySection.copy();
+                int width = (int) (getWidth() * Minecraft.getInstance().getWindow().getGuiScale());
+                int height = (int) (getHeight() * Minecraft.getInstance().getWindow().getGuiScale());
+                if (cachedTarget == null) {
+                    cachedTarget = new TextureTarget(width, height, true, Minecraft.ON_OSX);
+                } else if (cachedTarget.width != width || cachedTarget.height != height) {
+                    cachedTarget.resize(width, height, Minecraft.ON_OSX);
+                }
+                pose.pushPose();
+                setClippingBox(dirtySectionHolder.dirtySection);
+                cachedTarget.clear(Minecraft.ON_OSX);
+                Stacks.RENDER_TARGETS.push(cachedTarget);
+                pose.translate(-getX(), -getY(), 0);
+                renderElements(elementOrder.tree, graphics, mouseX, mouseY, delta);
+                setClippingBox(null);
+                Stacks.RENDER_TARGETS.pop(false);
+                dirtySectionHolder.dirtySection = null;
+                pose.popPose();
             }
-            pose.pushPose();
-            setClippingBox(dirtySectionHolder.dirtySection);
-            cachedTarget.clear(Minecraft.ON_OSX);
-            Stacks.RENDER_TARGETS.push(cachedTarget);
-            pose.translate(-getX(), -getY(), 0);
-            renderElements(elementOrder.tree, graphics, mouseX, mouseY, delta);
-            setClippingBox(null);
-            Stacks.RENDER_TARGETS.pop(false);
-            dirtySectionHolder.dirtySection = null;
-            pose.popPose();
         }
 
 
@@ -292,7 +294,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     }
 
     private boolean shouldSkipRendering(Element bounding) {
-        return Rectangle.restrictiveIntersectionOf(dirtySectionHolder.dirtySection, bounding) == null;
+        return Rectangle.restrictiveIntersectionOf(dirtySectionHolder.dirtySection, Rectangle.expansiveIntersectionOf(bounding, bounding.clippingBox)) == null;
     }
 
     private void setClippingBox(@Nullable ReadableRectangle rect) {

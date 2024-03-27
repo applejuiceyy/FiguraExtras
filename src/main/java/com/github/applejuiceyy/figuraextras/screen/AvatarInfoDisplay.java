@@ -2,12 +2,14 @@ package com.github.applejuiceyy.figuraextras.screen;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.github.applejuiceyy.figuraextras.views.views.ModelView;
 import com.github.applejuiceyy.figuraextras.views.views.ObjectView;
@@ -15,18 +17,19 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Function;
-
 public class AvatarInfoDisplay {
     public final Grid root;
     private final InfoViews.Context context;
 
-    private @Nullable InfoViews.View view = null;
+    private final ParentElement.AdditionPoint additionPoint;
+
+    private @Nullable Lifecycle view = null;
 
     public AvatarInfoDisplay(InfoViews.Context context) {
         this.context = context;
 
         root = new Grid();
+        additionPoint = root.adder(settings -> settings.setColumn(1));
         root.rows()
                 .percentage(1)
                 .cols()
@@ -80,7 +83,7 @@ public class AvatarInfoDisplay {
         flowRoot.setSurface(Surface.contextBackground());
     }
 
-    private Function<InfoViews.Context, ? extends InfoViews.View> ensureScript(Function<InfoViews.Context, ? extends InfoViews.View> what) {
+    private InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> ensureScript(InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> what) {
         return InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, what, Component.literal("Script not detected"));
     }
 
@@ -89,28 +92,25 @@ public class AvatarInfoDisplay {
         return button;
     }
 
-    private Element hook(Element button, Function<InfoViews.Context, ? extends InfoViews.View> view) {
-        Function<InfoViews.Context, ? extends InfoViews.View> actual = wrap(view);
+    private Element hook(Element button, InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> view) {
+        InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> actual = wrap(view);
         return hook(button, () -> switchToView(actual));
     }
 
-    private void switchToView(Function<InfoViews.Context, ? extends InfoViews.View> apply) {
-        InfoViews.View built = apply.apply(context);
+    private void switchToView(InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> apply) {
         if (view != null) {
             view.dispose();
-            root.remove(built.getRoot());
+            additionPoint.remove();
         }
 
-        view = built;
-
-        root.add(built.getRoot()).setColumn(1);
+        view = apply.apply(context, additionPoint);
     }
 
-    public void setView(Function<InfoViews.Context, InfoViews.View> view) {
+    public void setView(InfoViews.ViewConstructor<InfoViews.Context, Lifecycle> view) {
         switchToView(wrap(view));
     }
 
-    private Function<InfoViews.Context, ? extends InfoViews.View> wrap(Function<InfoViews.Context, ? extends InfoViews.View> v) {
+    private InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> wrap(InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> v) {
         return InfoViews.onlyIf(
                 avatar -> Minecraft.getInstance().level != null,
                 InfoViews.onlyIf(
@@ -137,6 +137,8 @@ public class AvatarInfoDisplay {
     public void dispose() {
         if (view != null) {
             view.dispose();
+            additionPoint.remove();
         }
+        additionPoint.ensureRemoved();
     }
 }

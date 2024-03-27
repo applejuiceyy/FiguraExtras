@@ -57,19 +57,19 @@ abstract public class Element implements Rectangle {
     {
         x.observe(() -> {
             this.enqueueDirtySection(true, false);
-            getState().markClipDirty();
+            getState().clipDirty.enqueue(this);
         });
         y.observe(() -> {
             this.enqueueDirtySection(true, false);
-            getState().markClipDirty();
+            getState().clipDirty.enqueue(this);
         });
         width.observe(() -> {
             this.enqueueDirtySection(true, false);
-            getState().markClipDirty();
+            getState().clipDirty.enqueue(this);
         });
         height.observe(() -> {
             this.enqueueDirtySection(true, false);
-            getState().markClipDirty();
+            getState().clipDirty.enqueue(this);
         });
     }
 
@@ -96,14 +96,14 @@ abstract public class Element implements Rectangle {
         if (previousRestingPosition != null) {
             sectionConsumer.accept(previousRestingPosition);
         }
-        previousRestingPosition = this.immutable();
+        previousRestingPosition = Rectangle.expansiveIntersectionOf(this.immutable(), clippingBox);
     }
 
     protected void markActualRenderingLocationDirty(Consumer<ReadableRectangle> sectionConsumer) {
         // if(!renders()) return;
         ParentElement<?> parent = getParent();
         if (parent != null && parent.getSettings(this).isInvisible()) return;
-        ReadableRectangle rectangle = this.immutable();
+        ReadableRectangle rectangle = Rectangle.expansiveIntersectionOf(this.immutable(), clippingBox);
         if (rectangle != null) {
             sectionConsumer.accept(rectangle);
         }
@@ -285,7 +285,6 @@ abstract public class Element implements Rectangle {
     public Element setSurface(Surface surface) {
         enqueueDirtySection(false, false);
         this.surface = surface;
-        getState().markClipDirty();
         enqueueDirtySection(false, false);
         return this;
     }
@@ -300,7 +299,7 @@ abstract public class Element implements Rectangle {
 
     public void setClipping(boolean clip) {
         this.clip = clip;
-        getState().markClipDirty();
+        getState().clipDirty.enqueue(this);
         getState().markPriorityDirty();
     }
 

@@ -3,9 +3,10 @@ package com.github.applejuiceyy.figuraextras.views.views;
 import com.github.applejuiceyy.figuraextras.components.MessageStackComponent;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Event;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import net.minecraft.ChatFormatting;
 import org.figuramc.figura.FiguraMod;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class ChatLikeView implements InfoViews.View {
+public class ChatLikeView implements Lifecycle {
     private final InfoViews.Context context;
     private final MessageStackComponent stack = new MessageStackComponent();
 
@@ -25,7 +26,7 @@ public class ChatLikeView implements InfoViews.View {
     private final List<FiguraLuaPrinterDuck.Kind> show = new ArrayList<>();
     Runnable sub;
 
-    public ChatLikeView(InfoViews.Context context) {
+    public ChatLikeView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
         Event<BiConsumer<net.minecraft.network.chat.Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getAvatar()).figuraExtrass$getChatRedirect();
         if (!event.hasSubscribers() && (Configs.LOG_OTHERS.value || FiguraMod.isLocal(context.getAvatar().owner))) {
@@ -61,6 +62,8 @@ public class ChatLikeView implements InfoViews.View {
         root.add(stack);
 
         sub = event.getSource().subscribe((message, kind) -> stack.addMessage(message, () -> show.contains(kind)));
+
+        additionPoint.accept(root);
     }
 
     private <T> Consumer<Boolean> hideOrShow(List<T> list, T value, Runnable after) {
@@ -79,11 +82,6 @@ public class ChatLikeView implements InfoViews.View {
     @Override
     public void tick() {
 
-    }
-
-    @Override
-    public Element getRoot() {
-        return root;
     }
 
     @Override

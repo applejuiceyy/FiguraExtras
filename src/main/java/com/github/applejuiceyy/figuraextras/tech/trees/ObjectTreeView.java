@@ -1,7 +1,7 @@
 package com.github.applejuiceyy.figuraextras.tech.trees;
 
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.ContentPopOut;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
@@ -9,6 +9,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.ReferenceStore;
 import com.github.applejuiceyy.figuraextras.tech.trees.ui.EntryUI;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import io.wispforest.owo.ui.component.CheckboxComponent;
 import io.wispforest.owo.ui.component.Components;
@@ -16,7 +17,7 @@ import io.wispforest.owo.ui.component.DiscreteSliderComponent;
 import io.wispforest.owo.ui.container.Containers;
 import io.wispforest.owo.ui.core.Sizing;
 
-public abstract class ObjectTreeView<VALUE> implements InfoViews.View {
+public abstract class ObjectTreeView<VALUE> implements Lifecycle {
     protected final InfoViews.Context context;
 
     private final Grid root = new Grid();
@@ -28,7 +29,7 @@ public abstract class ObjectTreeView<VALUE> implements InfoViews.View {
 
     private final ContentPopOut contentPopOut;
 
-    public ObjectTreeView(InfoViews.Context context) {
+    public ObjectTreeView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
 
         root.rows()
@@ -54,16 +55,13 @@ public abstract class ObjectTreeView<VALUE> implements InfoViews.View {
         Scrollbar scrollbar = new Scrollbar();
         root.add(scrollbar).setColumn(1);
         Elements.makeVerticalContainerScrollable(container, scrollbar, true);
+
+        additionPoint.accept(root);
     }
 
     @Override
     public void tick() {
 
-    }
-
-    @Override
-    public Element getRoot() {
-        return root;
     }
 
     @Override

@@ -2,7 +2,7 @@ package com.github.applejuiceyy.figuraextras.views.views;
 
 import com.github.applejuiceyy.figuraextras.components.FiguraTextureComponent;
 import com.github.applejuiceyy.figuraextras.ducks.FiguraTextureAccess;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
@@ -10,6 +10,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import net.minecraft.ChatFormatting;
 import org.figuramc.figura.model.rendering.texture.FiguraTexture;
@@ -19,14 +20,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-public class TextureView implements InfoViews.View {
+public class TextureView implements Lifecycle {
     private final Flow layout;
     private final Grid root;
     private final InfoViews.Context context;
 
     private final HashMap<FiguraTexture, Instance> textures = new HashMap<>();
 
-    public TextureView(InfoViews.Context context) {
+    public TextureView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
 
         root = new Grid();
@@ -39,6 +40,8 @@ public class TextureView implements InfoViews.View {
         layout = new Flow();
         Scrollbar scrollbar = new Scrollbar();
         Elements.makeVerticalContainerScrollable(layout, scrollbar, true);
+
+        additionPoint.accept(root);
     }
 
     @Override
@@ -72,11 +75,6 @@ public class TextureView implements InfoViews.View {
                 figuraTextureTextureComponentEntry.getValue().tick();
             }
         }
-    }
-
-    @Override
-    public Element getRoot() {
-        return root;
     }
 
     @Override

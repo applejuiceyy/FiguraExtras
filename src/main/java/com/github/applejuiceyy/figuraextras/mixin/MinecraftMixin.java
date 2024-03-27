@@ -20,6 +20,9 @@ import net.minecraft.client.main.GameConfig;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.VirtualScreen;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.util.profiling.SingleTickProfiler;
+import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -33,7 +36,8 @@ import java.util.function.Supplier;
 public abstract class MinecraftMixin implements MinecraftAccess {
     @Unique
     WindowContentPopOutHost host;
-
+    @Unique
+    long lastFullRender = 0;
     @Unique
     MonitorContentPopOutHost monitorHost;
     @Unique
@@ -67,6 +71,12 @@ public abstract class MinecraftMixin implements MinecraftAccess {
 
     @Shadow
     private ProfilerFiller profiler;
+
+    @Shadow
+    public abstract void destroy();
+
+    @Shadow
+    protected abstract ProfilerFiller constructProfiler(boolean active, @Nullable SingleTickProfiler monitor);
 
     @Override
     public VirtualScreen figuraExtrass$getScreenManager() {
@@ -123,12 +133,23 @@ public abstract class MinecraftMixin implements MinecraftAccess {
     void a(boolean tick, CallbackInfo ci) {
         profiler.popPush("Other windows");
         ArrayList<DetachedWindow> toRemove = new ArrayList<>(0);
+        long current = System.currentTimeMillis();
+        boolean doRender = false;
+        if (lastFullRender < current - 500) {
+            lastFullRender = current;
+            doRender = true;
+        }
         for (DetachedWindow detachedWindow : FiguraExtras.windows) {
             if (detachedWindow.closeIfRequested()) {
                 toRemove.add(detachedWindow);
                 continue;
             }
 
+            if (!(doRender || GLFW.glfwGetWindowAttrib(detachedWindow.window.window.getWindow(), GLFW.GLFW_FOCUSED) > 0)) {
+                continue;
+            }
+
+            profiler.push("Setup Rendering");
             detachedWindow.window.renderTarget.bindWrite(true);
             RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT | GlConst.GL_COLOR_BUFFER_BIT, Minecraft.ON_OSX);
             detachedWindow.window.setupTransforms();
@@ -140,7 +161,7 @@ public abstract class MinecraftMixin implements MinecraftAccess {
                 target = accessor.getInput();
                 accessor.setInput(detachedWindow.window.getOwoLibBlurShaderCompatibilityTexture());
             }
-
+            profiler.pop();
             figuraExtrass$withWindow(detachedWindow.window.window, detachedWindow.window.renderTarget, () -> {
                 detachedWindow.render(guiGraphics);
             });
@@ -149,13 +170,14 @@ public abstract class MinecraftMixin implements MinecraftAccess {
                 accessor.setInput(target);
             }
 
-
+            profiler.push("Finishing rendering");
             guiGraphics.flush();
 
             detachedWindow.window.endTransforms();
 
             detachedWindow.window.renderTarget.unbindWrite();
             detachedWindow.window.updateDisplay();
+            profiler.pop();
         }
 
         for (DetachedWindow detachedWindow : toRemove) {

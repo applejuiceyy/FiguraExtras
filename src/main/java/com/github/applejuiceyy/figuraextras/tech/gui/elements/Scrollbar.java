@@ -13,8 +13,11 @@ public class Scrollbar extends Element implements NumberRangeAlike {
     public boolean enabled = true;
     private float size = 100, thumbSize = 10;
 
+    public Observers.WritableObserver<Float> pos = Observers.of(0f);
+
     {
-        pos.observe(() -> getState().updateDirtySections.enqueue(this));
+        pos.observe(() -> enqueueDirtySection(false, false));
+        activeHovering.observe(() -> enqueueDirtySection(false, false));
     }
 
     public float getSize() {
@@ -30,8 +33,6 @@ public class Scrollbar extends Element implements NumberRangeAlike {
     public float getThumbSize() {
         return thumbSize;
     }
-
-    public Observers.WritableObserver<Float> pos = Observers.of(0f);
 
     public Scrollbar setThumbSize(float thumbSize) {
         this.thumbSize = thumbSize;

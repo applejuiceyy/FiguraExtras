@@ -213,17 +213,30 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         return false;
     }
 
-    public Consumer<Element> adder(Consumer<S> settings) {
-        return new Consumer<>() {
+    public AdditionPoint adder(Consumer<S> settings) {
+        return new AdditionPoint() {
             Element el = null;
 
             @Override
             public void accept(Element element) {
-                if (el != null) {
-                    remove(el);
-                }
+                remove();
                 settings.accept(add(element));
                 el = element;
+            }
+
+            @Override
+            public void remove() {
+                if (el != null) {
+                    ParentElement.this.remove(el);
+                    el = null;
+                }
+            }
+
+            @Override
+            public void ensureRemoved() {
+                if (el != null) {
+                    throw new AdditionPointNotCleared("Addition point is not cleared");
+                }
             }
         };
     }
@@ -241,8 +254,8 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         s[0] = constructSettings(() -> this.willCauseReflow(s[0]), () -> needReflowDetached.add(element));
         markPriorityDirty();
         needReflowLayout = true;
-        getState().markClipDirty();
         settings.put(element, s[0]);
+        getState().clipDirty.enqueue(element);
         element.enqueueDirtySection(false, true);
         childrenChanged();
         return s[0];
@@ -492,8 +505,20 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         }
     }
 
+    public interface AdditionPoint extends Consumer<Element> {
+        void remove();
+
+        void ensureRemoved();
+    }
+
     static class NotAChildException extends RuntimeException {
         public NotAChildException(String string) {
+            super(string);
+        }
+    }
+
+    static class AdditionPointNotCleared extends RuntimeException {
+        public AdditionPointNotCleared(String string) {
             super(string);
         }
     }

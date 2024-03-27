@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.views.views;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.ObjectTreeView;
@@ -20,8 +21,8 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 public class ModelView extends ObjectTreeView<DummyExpander.Dummy> {
-    public ModelView(InfoViews.Context context) {
-        super(context);
+    public ModelView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
+        super(context, additionPoint);
     }
 
     @Override

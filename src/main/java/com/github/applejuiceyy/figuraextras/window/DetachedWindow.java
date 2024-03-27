@@ -178,17 +178,21 @@ public class DetachedWindow implements WindowContext {
     }
 
     public void render(GuiGraphics guiGraphics) {
+        Minecraft.getInstance().getProfiler().push("Screen Rendering");
         screenContainer.doEvent("beforeRender", guiGraphics, (int) window.mouseHandler.xpos(), (int) window.mouseHandler.ypos(), Minecraft.getInstance().getDeltaFrameTime());
         screenContainer.getScreen().render(guiGraphics, (int) window.mouseHandler.xpos(), (int) window.mouseHandler.ypos(), Minecraft.getInstance().getDeltaFrameTime());
         screenContainer.doEvent("afterRender", guiGraphics, (int) window.mouseHandler.xpos(), (int) window.mouseHandler.ypos(), Minecraft.getInstance().getDeltaFrameTime());
         host.render(guiGraphics, (int) window.mouseHandler.xpos(), (int) window.mouseHandler.ypos(), Minecraft.getInstance().getDeltaFrameTime());
         guiGraphics.flush();
+        Minecraft.getInstance().getProfiler().pop();
     }
 
     public void tick() {
+        Minecraft.getInstance().getProfiler().push("Screen Tick");
         screenContainer.doEvent("beforeTick");
         screenContainer.getScreen().tick();
         screenContainer.doEvent("beforeTick");
+        Minecraft.getInstance().getProfiler().pop();
     }
 
     public void close() {
