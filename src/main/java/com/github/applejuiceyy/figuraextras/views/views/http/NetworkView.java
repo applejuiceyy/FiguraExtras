@@ -1,7 +1,6 @@
 package com.github.applejuiceyy.figuraextras.views.views.http;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
@@ -158,12 +157,6 @@ public class NetworkView implements Lifecycle {
     public void tick() {
         if (viewer != null)
             viewer.tick();
-    }
-
-    // @Override
-    public Element getRoot() {
-        // TODO
-        return new Grid();
     }
 
     @Override

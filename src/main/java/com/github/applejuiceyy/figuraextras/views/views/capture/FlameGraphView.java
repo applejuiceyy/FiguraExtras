@@ -4,6 +4,7 @@ import com.github.applejuiceyy.figuraextras.components.FlameGraphComponent;
 import com.github.applejuiceyy.figuraextras.components.RangeSliderComponent;
 import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
@@ -22,29 +23,23 @@ public class FlameGraphView implements Lifecycle {
                 .percentage(1)
                 .content()
                 .cols()
-                .content();
+                .percentage(1);
 
         additionPoint.accept(root);
 
-        // TODO
-
-        /*component = new FlameGraphComponent(frame) {
-            @Override
-            protected void frameSelected(FlameGraph.Frame a, Integer b) {
-                slider.lowerKnob = b - 10;
-                slider.higherKnob = b + a.getInstructions() + 10;
-            }
+        component = new FlameGraphComponent(frame) {
         };
-        component.sizing(Sizing.fill(100), Sizing.fill(90));
 
-        root = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(100));
         root.add(component);
 
         slider = new RangeSliderComponent();
         slider.setMax(frame.getInstructions());
         slider.setMinSpacing(10);
-        slider.sizing(Sizing.fill(100), Sizing.fill(10));
-        root.child(slider);*/
+
+        Elements.TwoWaySetter.track(slider.lowerKnob, component.viewStart);
+        Elements.TwoWaySetter.track(slider.higherKnob, component.viewEnd);
+
+        root.add(slider).setRow(1);
     }
 
     @Override

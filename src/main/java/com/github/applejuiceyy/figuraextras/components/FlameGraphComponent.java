@@ -2,19 +2,18 @@ package com.github.applejuiceyy.figuraextras.components;
 
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import io.netty.util.collection.IntObjectHashMap;
-import io.wispforest.owo.ui.base.BaseComponent;
-import io.wispforest.owo.ui.core.CursorStyle;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Tuple;
 import org.joml.AxisAngle4d;
@@ -26,7 +25,7 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 
 import java.lang.reflect.Field;
 
-public class FlameGraphComponent extends BaseComponent {
+public class FlameGraphComponent extends Element {
     private final static IntObjectHashMap<String> opName = new IntObjectHashMap<>();
     private final static Int2IntOpenHashMap opToColor = new Int2IntOpenHashMap();
 
@@ -52,40 +51,59 @@ public class FlameGraphComponent extends BaseComponent {
     }
 
     private final FlameGraph.Frame frame;
-    public int viewStart;
-    public int viewEnd;
+    public Observers.WritableObserver<Integer> viewStart = Observers.of(0);
+    public Observers.WritableObserver<Integer> viewEnd = Observers.of(10);
+
+    {
+        viewStart.merge(viewEnd).observe(() -> enqueueDirtySection(false, false));
+    }
 
     public FlameGraphComponent(FlameGraph.Frame frame) {
         this.frame = frame;
     }
 
     @Override
-    public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
-        Tuple<FlameGraph.Frame, Integer> thing = getFrameInPos(mouseX - x, mouseY - y);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        Tuple<FlameGraph.Frame, Integer> thing = getFrameInPos(mouseX - x.get(), mouseY - y.get());
         FlameGraph.Frame selectedFrame = thing == null ? null : thing.getA();
 
         RenderSystem.setShader(GameRenderer::getRendertypeGuiShader);
         BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
         bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
-        PoseStack stack = context.pose();
+        PoseStack stack = graphics.pose();
         stack.pushPose();
 
-        stack.translate(x, y, 0);
+        stack.translate(x.get(), y.get(), 0);
 
-        populate(stack.last().pose(), bufferBuilder, mouseX - x, mouseY - y, frame, selectedFrame, 0, 0, 1);
+        populate(stack.last().pose(), bufferBuilder, mouseX - x.get(), mouseY - y.get(), frame, selectedFrame, 0, 0, 1);
 
         BufferUploader.drawWithShader(bufferBuilder.end());
 
         stack.translate(0, 0, 10);
-        renderOthers(context, frame, 0, 0);
+        renderOthers(graphics, frame, 0, 0);
         stack.popPose();
 
-        cursorStyle(thing == null ? CursorStyle.POINTER : CursorStyle.HAND);
+        // cursorStyle(thing == null ? CursorStyle.POINTER : CursorStyle.HAND);
+    }
+
+    @Override
+    protected void defaultMouseMoveBehaviour(DefaultCancellableEvent.MousePositionEvent event) {
+        enqueueDirtySection(false, false);
+    }
+
+    @Override
+    protected boolean renders() {
+        return super.renders();
+    }
+
+    @Override
+    public boolean blocksMouseActivation() {
+        return true;
     }
 
     int toView(int in) {
-        return (int) Mth.map(in, viewStart, viewEnd, 0, width);
+        return (int) Mth.map(in, viewStart.get(), viewEnd.get(), 0, width.get());
     }
 
     int getColor(int pos) {
@@ -261,14 +279,14 @@ public class FlameGraphComponent extends BaseComponent {
         return "[JAVA]";
     }
 
-    private void renderOthers(OwoUIDrawContext context, FlameGraph.Frame frame, int offset, int y) {
+    private void renderOthers(GuiGraphics context, FlameGraph.Frame frame, int offset, int y) {
         int start = toView(offset);
         if (start < 0) {
             start = 0;
         }
         int end = toView(offset + frame.getInstructions());
-        if (end > width) {
-            end = width;
+        if (end > width.get()) {
+            end = width.get();
         }
         Font font = Minecraft.getInstance().font;
         Component component = Component.literal(figureOutFrameName(frame) + " (" + frame.getInstructions() + " instructions)");
@@ -296,7 +314,7 @@ public class FlameGraphComponent extends BaseComponent {
 
         for (FlameGraph.Child child : frame.getChildren()) {
             int instructions = child.getInstructions();
-            if (viewStart < offset + instructions && child instanceof FlameGraph.Frame f) {
+            if (viewStart.get() < offset + instructions && child instanceof FlameGraph.Frame f) {
                 renderOthers(context, f, offset, y + 20);
             } else if (child instanceof FlameGraph.Space space) {
                 int prev = toView(offset);
@@ -363,17 +381,17 @@ public class FlameGraphComponent extends BaseComponent {
                 }
             }
             offset += instructions;
-            if (offset > viewEnd) {
+            if (offset > viewEnd.get()) {
                 break;
             }
         }
     }
 
-    @Override
-    public void drawTooltip(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
-        if (this.isInBoundingBox(mouseX, mouseY)) {
-            mouseX -= x;
-            mouseY -= y;
+    // TODO
+    /*public void drawTooltip(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
+        if (true) {
+            mouseX -= x.get();
+            mouseY -= y.get();
 
             Tuple<FlameGraph.Frame, Integer> thing = getFrameInPos(mouseX, mouseY);
 
@@ -431,7 +449,7 @@ public class FlameGraphComponent extends BaseComponent {
                 );
             }
         }
-    }
+    }*/
 
     public FlameGraph.Marker getMarkerInPos(FlameGraph.Frame frame, int offset, int x, int y) {
         if ((y - 1) % 20 > 16) {
@@ -484,19 +502,22 @@ public class FlameGraphComponent extends BaseComponent {
     }
 
     @Override
-    public boolean onMouseDown(double mouseX, double mouseY, int button) {
-
-        Tuple<FlameGraph.Frame, Integer> frame = getFrameInPos((int) mouseX, (int) (mouseY));
+    protected void defaultMouseDownBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
+        Tuple<FlameGraph.Frame, Integer> frame = getFrameInPos((int) event.x - getX(), (int) event.y - getY());
 
         if (frame != null) {
-            frameSelected(frame.getA(), frame.getB());
-            return true;
+            viewStart.set(frame.getB() - 10);
+            viewEnd.set(frame.getB() + frame.getA().getInstructions() + 10);
         }
-
-        return false;
     }
 
-    protected void frameSelected(FlameGraph.Frame a, Integer b) {
+    @Override
+    public int computeOptimalWidth() {
+        return 0;
+    }
 
+    @Override
+    public int computeOptimalHeight(int width) {
+        return 0;
     }
 }

@@ -11,10 +11,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
-import com.github.applejuiceyy.figuraextras.views.views.MetricsView;
-import com.github.applejuiceyy.figuraextras.views.views.ModelView;
-import com.github.applejuiceyy.figuraextras.views.views.ObjectView;
-import com.github.applejuiceyy.figuraextras.views.views.TextureView;
+import com.github.applejuiceyy.figuraextras.views.views.*;
 import com.github.applejuiceyy.figuraextras.views.views.http.NetworkView;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
@@ -73,7 +70,7 @@ public class AvatarInfoDisplay {
         flow.add(Button.minimal().addAnd("Output"));
         flow.add(hook(Button.minimal().addAnd("Network"), NetworkView::new));
         flow.add(Elements.separator());
-        flow.add(Button.minimal().addAnd("Capture"));
+        flow.add(hook(Button.minimal().addAnd("Capture"), CaptureView::new));
         flow.add(Elements.separator());
         flow.add(Button.minimal().addAnd("Download Avatar"));
 

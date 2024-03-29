@@ -243,7 +243,7 @@ public final class Elements {
     }
 
 
-    static class TwoWaySetter<A, B> {
+    static public class TwoWaySetter<A, B> {
         private final Observers.WritableObserver<A> a;
         private final Observers.WritableObserver<B> b;
         private final Function<A, B> aToBMapper;

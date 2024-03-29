@@ -1,13 +1,15 @@
 package com.github.applejuiceyy.figuraextras.components;
 
-import io.wispforest.owo.ui.base.BaseComponent;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.util.Observers;
+import net.minecraft.client.gui.GuiGraphics;
 
-public class RangeSliderComponent extends BaseComponent {
+public class RangeSliderComponent extends Element {
     private int max = 100;
     private int min = 0;
-    public int lowerKnob = 0;
-    public int higherKnob = 100;
+    public final Observers.WritableObserver<Integer> lowerKnob = Observers.of(0);
+    public final Observers.WritableObserver<Integer> higherKnob = Observers.of(100);
     int minSpacing = 10;
 
     int startHigherKnob = 0;
@@ -25,15 +27,39 @@ public class RangeSliderComponent extends BaseComponent {
     public void setMax(int max) {
         this.max = max;
         constraintsUpdated();
+        enqueueDirtySection(false, false);
+    }
 
+    public int getLowerKnob() {
+        return lowerKnob.get();
+    }
+
+    public RangeSliderComponent setLowerKnob(int lowerKnob) {
+        this.lowerKnob.set(lowerKnob);
+
+        enqueueDirtySection(false, false);
+        return this;
+    }
+
+    public int getHigherKnob() {
+        return higherKnob.get();
+    }
+
+    public RangeSliderComponent setHigherKnob(int higherKnob) {
+        this.higherKnob.set(higherKnob);
+
+        enqueueDirtySection(false, false);
+        return this;
     }
 
     public void setMin(int min) {
         this.min = min;
         constraintsUpdated();
-        if (higherKnob < min) {
-            higherKnob = min;
+        if (higherKnob.get() < min) {
+            higherKnob.set(min);
         }
+
+        enqueueDirtySection(false, false);
     }
 
     public void setMinSpacing(int minSpacing) {
@@ -42,113 +68,117 @@ public class RangeSliderComponent extends BaseComponent {
     }
 
     public void constraintsUpdated() {
-        if (higherKnob > max) {
-            higherKnob = max;
+        if (higherKnob.get() > max) {
+            higherKnob.set(max);
         }
-        if (lowerKnob < min) {
-            lowerKnob = min;
-        }
-
-        int currentSpacing = higherKnob - lowerKnob;
-        if (currentSpacing < minSpacing) {
-            int diff = currentSpacing - minSpacing;
-            int newHigh = higherKnob + min;
-            if (newHigh > max) {
-                int highDiff = newHigh - max;
-            }
+        if (lowerKnob.get() < min) {
+            lowerKnob.set(min);
         }
     }
 
     private int knobPosition(int knob) {
-        return (int) ((knob - min) / (float) max * width);
+        return (int) ((knob - min) / (float) max * width.get());
     }
 
     @Override
-    public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
-        int lowerKnob = knobPosition(this.lowerKnob);
-        int higherKnob = knobPosition(this.higherKnob);
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+        int lowerKnob = knobPosition(this.lowerKnob.get());
+        int higherKnob = knobPosition(this.higherKnob.get());
 
-        context.fill(lowerKnob + x, y + height / 2 - 8, higherKnob + x, y + height / 2 - 2, 0xffff0000);
+        context.fill(lowerKnob + x.get(), y.get() + height.get() / 2 - 8, higherKnob + x.get(), y.get() + height.get() / 2 - 2, 0xffff0000);
 
-        context.fill(lowerKnob + x - 1, y, lowerKnob + x + 1, y + height, 0xffffffff);
-        context.fill(higherKnob + x - 1, y, higherKnob + x + 1, y + height, 0xffffffff);
+        context.fill(lowerKnob + x.get() - 1, y.get(), lowerKnob + x.get() + 1, y.get() + height.get(), 0xffffffff);
+        context.fill(higherKnob + x.get() - 1, y.get(), higherKnob + x.get() + 1, y.get() + height.get(), 0xffffffff);
 
-        context.fill(lowerKnob + x - 5, (int) (y + height * (2 / 3f)), lowerKnob + x + 5, y + height, 0xffffffff);
-        context.fill(higherKnob + x - 5, (int) (y + height * (2 / 3f)), higherKnob + x + 5, y + height, 0xffffffff);
+        context.fill(lowerKnob + x.get() - 5, (int) (y.get() + height.get() * (2 / 3f)), lowerKnob + x.get() + 5, y.get() + height.get(), 0xffffffff);
+        context.fill(higherKnob + x.get() - 5, (int) (y.get() + height.get() * (2 / 3f)), higherKnob + x.get() + 5, y.get() + height.get(), 0xffffffff);
 
     }
 
     @Override
-    public boolean onMouseDown(double mouseX, double mouseY, int button) {
-        int lowerKnob = knobPosition(this.lowerKnob);
-        int higherKnob = knobPosition(this.higherKnob);
+    protected boolean renders() {
+        return super.renders();
+    }
+
+    @Override
+    public boolean blocksMouseActivation() {
+        return true;
+    }
+
+    @Override
+    protected void defaultMouseDownBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
+        int lowerKnob = knobPosition(this.lowerKnob.get());
+        int higherKnob = knobPosition(this.higherKnob.get());
         draggingHigherKnob = false;
         draggingLowerKnob = false;
         offset = 0;
         int w = 1;
-        if (mouseY > height * (2 / 3f)) {
+        if (event.y > height.get() * (2 / 3f)) {
             w = 5;
         }
-        if (mouseY > 0 && mouseY < height && mouseX > lowerKnob - w && mouseX < higherKnob + w) {
+        if (event.y > getY() && event.y < getHeight() + getY() && event.x > lowerKnob - w + getX() && event.x < higherKnob + w + getX()) {
             dragging = true;
-            startLowerKnob = this.lowerKnob;
-            startHigherKnob = this.higherKnob;
-            if (mouseX < lowerKnob + w) {
+            startLowerKnob = this.lowerKnob.get();
+            startHigherKnob = this.higherKnob.get();
+            if (event.x < lowerKnob + w + getX()) {
                 draggingLowerKnob = true;
-            } else if (mouseX < higherKnob - w) {
+            } else if (event.x < higherKnob - w + getX()) {
                 draggingHigherKnob = true;
                 draggingLowerKnob = true;
             } else {
                 draggingHigherKnob = true;
             }
-            return true;
         }
-        return false;
     }
 
-    @Override
-    public boolean canFocus(FocusSource source) {
-        return true;
-    }
 
     @Override
-    public boolean onMouseDrag(double mouseX, double mouseY, double deltaX, double deltaY, int button) {
+    protected void defaultMouseDraggedBehaviour(DefaultCancellableEvent.MousePositionButtonDeltaEvent event) {
         if (dragging) {
-            offset += deltaX * (max - min) / width;
+            offset += event.deltaX * (max - min) / width.get();
             if (draggingHigherKnob) {
-                higherKnob = (int) (startHigherKnob + offset);
-                if (higherKnob > max) {
-                    higherKnob = max;
+                higherKnob.set((int) (startHigherKnob + offset));
+                if (higherKnob.get() > max) {
+                    higherKnob.set(max);
                 }
-                if (higherKnob < min + minSpacing) {
-                    higherKnob = min + minSpacing;
+                if (higherKnob.get() < min + minSpacing) {
+                    higherKnob.set(min + minSpacing);
                 }
-                if (lowerKnob > higherKnob - minSpacing) {
-                    lowerKnob = higherKnob - minSpacing;
+                if (lowerKnob.get() > higherKnob.get() - minSpacing) {
+                    lowerKnob.set(higherKnob.get() - minSpacing);
                 }
             }
             if (draggingLowerKnob) {
-                lowerKnob = (int) (startLowerKnob + offset);
-                if (lowerKnob < min) {
-                    lowerKnob = min;
+                lowerKnob.set((int) (startLowerKnob + offset));
+                if (lowerKnob.get() < min) {
+                    lowerKnob.set(min);
                 }
-                if (lowerKnob > max - minSpacing) {
-                    lowerKnob = max - minSpacing;
+                if (lowerKnob.get() > max - minSpacing) {
+                    lowerKnob.set(max - minSpacing);
                 }
-                if (higherKnob < lowerKnob + minSpacing) {
-                    higherKnob = lowerKnob + minSpacing;
+                if (higherKnob.get() < lowerKnob.get() + minSpacing) {
+                    higherKnob.set(lowerKnob.get() + minSpacing);
                 }
             }
+
+            enqueueDirtySection(false, false);
         }
-        return dragging;
     }
 
     @Override
-    public boolean onMouseUp(double mouseX, double mouseY, int button) {
+    protected void defaultMouseUpBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
         if (dragging) {
             dragging = false;
-            return true;
         }
-        return false;
+    }
+
+    @Override
+    public int computeOptimalWidth() {
+        return 50;
+    }
+
+    @Override
+    public int computeOptimalHeight(int width) {
+        return 20;
     }
 }
