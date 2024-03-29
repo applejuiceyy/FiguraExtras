@@ -11,6 +11,7 @@ import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import com.mojang.datafixers.util.Either;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -58,6 +59,9 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             rectangle = rect != null ? rect.immutable() : null;
         }
 
+        if (element.clippingBox == rectangle || (rectangle != null && element.clippingBox != null && element.clippingBox.equalsRectangle(rectangle))) {
+            return;
+        }
         element.clippingBox = rectangle;
 
         if (element instanceof ParentElement<?> parentElement) {
@@ -92,7 +96,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
     public void work() {
         Minecraft.getInstance().getProfiler().push("Work GUI");
-        ((ParentElement<?>) root).childrenChanged();
+
         while (true) {
             childReprocessor.runExhaustively();
 
@@ -158,6 +162,11 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             dirtySectionHolder.dirtySection = dirtySectionHolder.dirtySection.intersection(Rectangle.of(getX(), getY(), getWidth(), getHeight()));
             if (dirtySectionHolder.dirtySection != null) {
                 toUpdate = dirtySectionHolder.dirtySection.copy();
+                toUpdate.setX(toUpdate.getX() - 1);
+                toUpdate.setY(toUpdate.getY() - 1);
+                toUpdate.setWidth(toUpdate.getWidth() + 2);
+                toUpdate.setHeight(toUpdate.getHeight() + 2);
+                dirtySectionHolder.dirtySection = toUpdate;
                 int width = (int) (getWidth() * Minecraft.getInstance().getWindow().getGuiScale());
                 int height = (int) (getHeight() * Minecraft.getInstance().getWindow().getGuiScale());
                 if (cachedTarget == null) {
@@ -178,8 +187,9 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             }
         }
 
-
-        blitCachedSectionToScreen(graphics);
+        if (cachedTarget != null) {
+            blitCachedSectionToScreen(graphics);
+        }
 
 
         if (renderDebug) {
@@ -202,12 +212,12 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                 graphics.fill(toUpdate.getX() + toUpdate.getWidth() - 1, toUpdate.getY() + 1, toUpdate.getX() + toUpdate.getWidth(), toUpdate.getY() + toUpdate.getHeight() - 1, 0xffff0000);
             }
 
-            for (ReadableRectangle dirtySection : dirtySectionHolder.allDirtySections) {
+            /*for (ReadableRectangle dirtySection : dirtySectionHolder.allDirtySections) {
                 graphics.fill(dirtySection.getX(), dirtySection.getY(), dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + 1, 0xff00ff00);
                 graphics.fill(dirtySection.getX(), dirtySection.getY() + dirtySection.getHeight() - 1, dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + dirtySection.getHeight(), 0xff00ff00);
                 graphics.fill(dirtySection.getX(), dirtySection.getY() + 1, dirtySection.getX() + 1, dirtySection.getY() + dirtySection.getHeight() - 1, 0xff00ff00);
                 graphics.fill(dirtySection.getX() + dirtySection.getWidth() - 1, dirtySection.getY() + 1, dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + dirtySection.getHeight() - 1, 0xff00ff00);
-            }
+            }*/
         }
         dirtySectionHolder.allDirtySections.clear();
         pose.popPose();
@@ -428,7 +438,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         for (int i = 0; i < mouseDownStack.size(); i++) {
             Element element = mouseDownStack.get(i);
             if (element.blocksMouseActivation()) {
-                doSweepEvent(mouseDownStack.subList(i, mouseDownStack.size()), e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent());
+                doSweepEvent(mouseDownStack.subList(i, mouseDownStack.size()), e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent.CausedEvent<>(Either.right(event)));
                 break;
             }
         }
@@ -482,11 +492,12 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             return true;
         }
         if (getFocused() == null) return false;
+        DefaultCancellableEvent.KeyEvent event = new DefaultCancellableEvent.KeyEvent(keyCode, scanCode, modifiers);
         List<Element> focusedPath = fire(getFocused(), e -> e.keyPressed, keyPressed,
                 Element::defaultKeyPressedBehaviour, e -> true,
-                new DefaultCancellableEvent.KeyEvent(keyCode, scanCode, modifiers));
-        if (keyCode == GLFW.GLFW_KEY_ENTER) {
-            doSweepEvent(focusedPath, e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent());
+                event);
+        if (!event.cancelDefault && keyCode == GLFW.GLFW_KEY_ENTER) {
+            doSweepEvent(focusedPath, e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent.CausedEvent<>(Either.left(event)));
         }
 
         return true;

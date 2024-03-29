@@ -42,7 +42,8 @@ public interface ReadableRectangle {
         return Rectangle.of(i, j, k - i, l - j);
     }
 
-    default boolean equal(ReadableRectangle other) {
+
+    default boolean equalsRectangle(ReadableRectangle other) {
         return other.getX() == getX() &&
                 other.getY() == getY() &&
                 other.getWidth() == getWidth() &&

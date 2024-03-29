@@ -83,6 +83,14 @@ public class Util {
         in.shouldStopListen().subscribe(o::stop);
     }
 
+    public static SafeCloseable maybeTry(Supplier<SafeCloseable> in, boolean yes) {
+        if (yes) {
+            return in.get();
+        }
+        return () -> {
+        };
+    }
+
     public interface SetterGetter<T> {
         void set(T value);
 

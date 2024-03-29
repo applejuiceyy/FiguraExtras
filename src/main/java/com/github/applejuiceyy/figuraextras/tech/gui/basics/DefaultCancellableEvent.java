@@ -90,4 +90,12 @@ public class DefaultCancellableEvent {
             this.deltaY = deltaY;
         }
     }
+
+    public static class CausedEvent<T> extends DefaultCancellableEvent {
+        public final T motivation;
+
+        public CausedEvent(T motivation) {
+            this.motivation = motivation;
+        }
+    }
 }

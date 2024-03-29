@@ -8,45 +8,31 @@ import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatar.Avatar;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.function.BiFunction;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class InfoViews {
-    public static ViewConstructor<Context, ConditionalView<Context, Avatar>> ifCondition(Predicate<Avatar> tester, ViewConstructor<Context, ? extends Lifecycle> ifTrue, ViewConstructor<Context, ? extends Lifecycle> ifFalse) {
-        return ifCondition(Context::getAvatar, tester, ifTrue, ifFalse);
+    public static <T, V> ConditionalViewBuilder<T, V> conditional() {
+        return new ConditionalViewBuilder<>();
     }
 
-    public static <V, T> ViewConstructor<V, ConditionalView<V, T>> ifCondition(Function<V, T> toPredicate, Predicate<T> tester, ViewConstructor<V, ? extends Lifecycle> ifTrue, ViewConstructor<V, ? extends Lifecycle> ifFalse) {
-        return (thing, additionPoint) -> ifCondition(thing, additionPoint, toPredicate, tester, ifTrue, ifFalse);
+    public static ConditionalViewBuilder<Context, Avatar> context() {
+        ConditionalViewBuilder<Context, Avatar> v = new ConditionalViewBuilder<>();
+        v.toPredicate(Context::getAvatar);
+        return v;
     }
 
-    public static <V, T> ConditionalView<V, T> ifCondition(V thing, ParentElement.AdditionPoint additionPoint, Function<V, T> toPredicate, Predicate<T> tester, ViewConstructor<V, ? extends Lifecycle> ifTrue, ViewConstructor<V, ? extends Lifecycle> ifFalse) {
-        return new ConditionalView<>(thing, additionPoint, toPredicate, tester, ifTrue, ifFalse);
+    public static <T> ConditionalViewBuilder<T, T> simpleConditional() {
+        ConditionalViewBuilder<T, T> v = new ConditionalViewBuilder<>();
+        v.toPredicate(Function.identity());
+        return v;
     }
 
-    public static <V> ConditionalView<V, V> ifCondition(V thing, ParentElement.AdditionPoint additionPoint, Predicate<V> tester, ViewConstructor<V, ? extends Lifecycle> ifTrue, ViewConstructor<V, ? extends Lifecycle> ifFalse) {
-        return ifCondition(thing, additionPoint, Function.identity(), tester, ifTrue, ifFalse);
-    }
-
-    public static ViewConstructor<Context, ConditionalView<Context, Avatar>> onlyIf(Predicate<Avatar> tester, ViewConstructor<Context, ? extends Lifecycle> ifTrue, Component otherwise) {
-        return ifCondition(tester, ifTrue, (avatar, ip) -> new ErrorView(otherwise, ip));
-    }
-
-    public static <V, T> ViewConstructor<V, ConditionalView<V, T>> onlyIf(Function<V, T> toPredicate, Predicate<T> tester, ViewConstructor<V, ? extends Lifecycle> ifTrue, Component otherwise) {
-        return ifCondition(toPredicate, tester, ifTrue, (avatar, ip) -> new ErrorView(otherwise, ip));
-    }
-
-    public static <V, T> ConditionalView<V, T> onlyIf(V thing, ParentElement.AdditionPoint additionPoint, Function<V, T> toPredicate, Predicate<T> tester, ViewConstructor<V, ? extends Lifecycle> ifTrue, Component otherwise) {
-        return ifCondition(thing, additionPoint, toPredicate, tester, ifTrue, (avatar, ip) -> new ErrorView(otherwise, ip));
-    }
-
-    public static <V> ConditionalView<V, V> onlyIf(V thing, ParentElement.AdditionPoint additionPoint, Predicate<V> tester, ViewConstructor<V, ? extends Lifecycle> ifTrue, Component otherwise) {
-        return ifCondition(thing, additionPoint, tester, ifTrue, (avatar, ip) -> new ErrorView(otherwise, ip));
-    }
-
-    public static <V> ConditionalView<V, V> onlyIf(V thing, ParentElement.AdditionPoint additionPoint, Predicate<V> tester, ViewConstructor<V, ? extends Lifecycle> ifTrue, String otherwise) {
-        return onlyIf(thing, additionPoint, tester, ifTrue, Component.literal(otherwise));
+    public static ConditionalViewBuilder<Void, Void> voiding() {
+        return simpleConditional();
     }
 
     public interface Context {
@@ -62,6 +48,85 @@ public class InfoViews {
     }
 
     public interface ViewConstructor<T, V extends Lifecycle> extends BiFunction<T, ParentElement.AdditionPoint, V> {
+    }
+
+    public static class ConditionalViewBuilder<T, V> implements ViewConstructor<T, ConditionalView<T, V>> {
+        Predicate<V> predicate;
+        ViewConstructor<T, ?> ifTrue;
+        ViewConstructor<T, ?> ifFalse;
+
+        Function<T, V> toPredicate;
+
+        private ConditionalViewBuilder() {
+
+        }
+
+        public ConditionalViewBuilder<T, V> predicate(Predicate<V> predicate) {
+            this.predicate = predicate;
+            return this;
+        }
+
+        public ConditionalViewBuilder<T, V> predicate(BooleanSupplier predicate) {
+            this.predicate = o -> predicate.getAsBoolean();
+            return this;
+        }
+
+        public ConditionalViewBuilder<T, V> ifTrue(ViewConstructor<T, ?> ifTrue) {
+            this.ifTrue = ifTrue;
+            return this;
+        }
+
+        public ConditionalViewBuilder<T, V> ifFalse(ViewConstructor<T, ?> ifFalse) {
+            this.ifFalse = ifFalse;
+            return this;
+        }
+
+        public ConditionalViewBuilder<T, V> ifTrue(Function<ParentElement.AdditionPoint, ? extends Lifecycle> ifTrue) {
+            return ifTrue((p, ap) -> ifTrue.apply(ap));
+        }
+
+        public ConditionalViewBuilder<T, V> ifFalse(Function<ParentElement.AdditionPoint, ? extends Lifecycle> ifFalse) {
+            return ifFalse((p, ap) -> ifFalse.apply(ap));
+        }
+
+        public ConditionalViewBuilder<T, V> ifTrue(Component ifTrue) {
+            return ifTrue((c, ip) -> new ErrorView(ifTrue, ip));
+        }
+
+        public ConditionalViewBuilder<T, V> ifFalse(Component ifFalse) {
+            return ifFalse((c, ip) -> new ErrorView(ifFalse, ip));
+        }
+
+        public ConditionalViewBuilder<T, V> ifTrue(String ifTrue) {
+            return ifTrue(Component.literal(ifTrue));
+        }
+
+        public ConditionalViewBuilder<T, V> ifFalse(String ifFalse) {
+            return ifFalse(Component.literal(ifFalse));
+        }
+
+
+        public ConditionalViewBuilder<T, V> toPredicate(Function<T, V> toPredicate) {
+            this.toPredicate = toPredicate;
+            return this;
+        }
+
+        public ViewConstructor<T, ConditionalView<T, V>> build() {
+            return this;
+        }
+
+        public ConditionalView<T, V> build(T thing, ParentElement.AdditionPoint additionPoint) {
+            return apply(thing, additionPoint);
+        }
+
+        @Override
+        public ConditionalView<T, V> apply(T t, ParentElement.AdditionPoint additionPoint) {
+            Objects.requireNonNull(toPredicate);
+            Objects.requireNonNull(predicate);
+            Objects.requireNonNull(ifFalse);
+            Objects.requireNonNull(ifTrue);
+            return new ConditionalView<>(t, additionPoint, toPredicate, predicate, ifTrue, ifFalse);
+        }
     }
 
     private static class ConditionalView<T, V> implements Lifecycle {

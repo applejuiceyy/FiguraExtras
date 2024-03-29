@@ -35,9 +35,19 @@ public class Label extends Element implements SetText {
     }
 
     public Label setText(Component text) {
+        if (componentsEqual(this.text, text)) {
+            this.text = text;
+            return this;
+        }
         this.text = text;
+        enqueueDirtySection(true, false);
         optimalSizeChanged();
         return this;
+    }
+
+    // from MutableComponent, mildly modified
+    public boolean componentsEqual(Component a, Component b) {
+        return a == b || a.getContents().equals(b.getContents()) && a.getStyle().equals(b.getStyle()) && a.getSiblings().equals(b.getSiblings());
     }
 
     @Override

@@ -14,6 +14,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
+import static com.github.applejuiceyy.figuraextras.util.Util.maybeTry;
+
 abstract public class ParentElement<S extends ParentElement.Settings> extends Element {
     public final Observers.WritableObserver<Integer> xView = Observers.of(0);
     public final Observers.WritableObserver<Integer> yView = Observers.of(0);
@@ -22,6 +24,8 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     private final HashMap<Element, S> settings = new HashMap<>();
     private boolean needReposition = false;
     private boolean needReflowLayout = false;
+
+    private boolean disableChildrenDirtyRequests = false;
     private List<Element> needReflowDetached = new ArrayList<>();
     boolean constrainX = true, constrainY = true;
     int previousX, previousY;
@@ -30,6 +34,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     {
         xView.observe(x -> {
             this.getState().childReprocessor.enqueue(this);
+            enqueueDirtySection(false, false, false);
             ;
             needReposition = true;
             previousX -= previousXView - x;
@@ -37,6 +42,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         });
         yView.observe(y -> {
             this.getState().childReprocessor.enqueue(this);
+            enqueueDirtySection(false, false, false);
             ;
             needReposition = true;
             previousY -= previousYView - y;
@@ -44,7 +50,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         });
         width.observe(() -> {
             this.getState().childReprocessor.enqueue(this);
-            ;
+            xView.set(Math.max(0, Math.min(xView.get(), xViewSize.get() - getWidth())));
             needReflowLayout = true;
         });
         xViewSize.observe(() -> {
@@ -52,7 +58,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         });
         height.observe(() -> {
             this.getState().childReprocessor.enqueue(this);
-            ;
+            yView.set(Math.max(0, Math.min(yView.get(), yViewSize.get() - getHeight())));
             needReflowLayout = true;
         });
         yViewSize.observe(() -> {
@@ -117,13 +123,20 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         }
 
         if (needReposition) {
-            for (Element element : getElements()) {
-                int relativeX = element.getX() - previousX,
-                        relativeY = element.getY() - previousY;
-                element.setX(relativeX + getX());
-                element.setY(relativeY + getY());
+            boolean disable = shouldClip() || disableChildrenDirtyRequests;
+            try (var ignored = maybeTry(getState().updateDirtySections::rejectNewEntries, disable)) {
+                for (Element element : getElements()) {
+                    if (element instanceof ParentElement<?> pe) {
+                        pe.disableChildrenDirtyRequests = disable;
+                    }
+                    int relativeX = element.getX() - previousX,
+                            relativeY = element.getY() - previousY;
+                    element.setX(relativeX + getX());
+                    element.setY(relativeY + getY());
+                }
+                needReposition = false;
             }
-            needReposition = false;
+            disableChildrenDirtyRequests = false;
         }
 
         for (Element element : needReflowDetached) {
@@ -293,7 +306,11 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             return;
         }
         if (element.hasRendered) {
-            element.enqueueDirtySection(false, true);
+            if (element instanceof ParentElement<?> ep) {
+                element.enqueueDirtySection(false, !ep.shouldClip());
+            } else {
+                element.enqueueDirtySection(false, true);
+            }
         } else {
             element.dequeueDirtySection();
         }
@@ -452,8 +469,9 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             return optimalHeight;
         }
 
-        public void setOptimalHeight(boolean optimalHeight) {
+        public Settings setOptimalHeight(boolean optimalHeight) {
             mayDirtLayout(() -> this.optimalHeight = optimalHeight);
+            return this;
         }
 
         public int getWidth() {

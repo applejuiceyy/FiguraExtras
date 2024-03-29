@@ -5,11 +5,13 @@ import com.github.applejuiceyy.figuraextras.tech.gui.geometry.ReadableRectangle;
 import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
+import com.mojang.datafixers.util.Either;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.BiConsumer;
@@ -31,7 +33,7 @@ abstract public class Element implements Rectangle {
     public final Observers.WritableObserver<Boolean> activeHovering = Observers.of(false);
     public final Observers.WritableObserver<Boolean> hoveringWithin = Observers.of(false);
     public final Observers.WritableObserver<Boolean> focused = Observers.of(false);
-    public final Event<Consumer<DefaultCancellableEvent>> activation = Event.consumer();
+    public final Event<Consumer<DefaultCancellableEvent.CausedEvent<Either<DefaultCancellableEvent.KeyEvent, DefaultCancellableEvent.MousePositionButtonEvent>>>> activation = Event.consumer();
 
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseDown = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseUp = Event.consumer();
@@ -44,12 +46,14 @@ abstract public class Element implements Rectangle {
 
     public final Event<Consumer<DefaultCancellableEvent.CharEvent>> charTyped = Event.consumer();
     private boolean haveTranslated = false;
+    private boolean recurse = false;
+    private boolean doSelf = false;
 
     private int componentDepth;
     private ParentElement<?> parent = null;
     private GuiState state = null;
     private boolean clip;
-    private boolean recurse = false;
+
     private int cachedOptimalWidth = -1;
 
     private Surface surface = Surface.EMPTY;
@@ -73,14 +77,34 @@ abstract public class Element implements Rectangle {
         });
     }
 
-    protected void enqueueDirtySection(boolean translative, boolean recursive) {
-        enqueueDirtySection(getState().updateDirtySections, translative, recursive);
+    protected Processor.AdditionStatus enqueueDirtySection(boolean translative, boolean recursive) {
+        return enqueueDirtySection(getState().updateDirtySections, translative, recursive);
     }
 
-    protected void enqueueDirtySection(Processor<Element> processor, boolean translative, boolean recursive) {
-        processor.enqueue(this);
-        haveTranslated = (haveTranslated || translative) && hasRendered;
-        recurse = recurse || recursive;
+    protected Processor.AdditionStatus enqueueDirtySection(Processor<Element> processor, boolean translative, boolean recursive) {
+        return enqueueDirtySection(processor, translative, recursive, true);
+    }
+
+    @Nullable
+    @Contract("_,_,true->!null")
+    protected Processor.AdditionStatus enqueueDirtySection(boolean translative, boolean recursive, boolean check) {
+        return enqueueDirtySection(getState().updateDirtySections, translative, recursive, check);
+    }
+
+    @Nullable
+    @Contract("_,_,_,true->!null")
+    protected Processor.AdditionStatus enqueueDirtySection(Processor<Element> processor, boolean translative, boolean recursive, boolean check) {
+        boolean should = !check || renders() || surface != Surface.EMPTY;
+        if (should || recursive) {
+            Processor.AdditionStatus enqueue = processor.enqueue(this);
+            if (!enqueue.rejected) {
+                haveTranslated = (haveTranslated || translative) && hasRendered;
+                recurse = recurse || recursive;
+                doSelf = should || doSelf;
+            }
+            return enqueue;
+        }
+        return null;
     }
 
     protected void dequeueDirtySection() {
@@ -96,18 +120,17 @@ abstract public class Element implements Rectangle {
         if (previousRestingPosition != null) {
             sectionConsumer.accept(previousRestingPosition);
         }
-        previousRestingPosition = Rectangle.expansiveIntersectionOf(this.immutable(), clippingBox);
     }
 
     protected void markActualRenderingLocationDirty(Consumer<ReadableRectangle> sectionConsumer) {
-        // if(!renders()) return;
+        if (!doSelf) return;
         ParentElement<?> parent = getParent();
         if (parent != null && parent.getSettings(this).isInvisible()) return;
         ReadableRectangle rectangle = Rectangle.expansiveIntersectionOf(this.immutable(), clippingBox);
         if (rectangle != null) {
             sectionConsumer.accept(rectangle);
         }
-
+        previousRestingPosition = rectangle;
     }
 
     protected void markRenderingThisAndChildrenDirty(Consumer<ReadableRectangle> sectionConsumer, Processor<Element> processor) {
@@ -126,6 +149,7 @@ abstract public class Element implements Rectangle {
             markActualRenderingLocationDirty(sectionConsumer);
         }
         recurse = false;
+        doSelf = false;
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
@@ -151,7 +175,7 @@ abstract public class Element implements Rectangle {
         return true;
     }
 
-    protected void defaultActivationBehaviour(DefaultCancellableEvent event) {
+    protected void defaultActivationBehaviour(DefaultCancellableEvent.CausedEvent event) {
 
     }
 

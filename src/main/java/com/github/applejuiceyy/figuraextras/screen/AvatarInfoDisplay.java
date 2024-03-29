@@ -11,10 +11,12 @@ import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
+import com.github.applejuiceyy.figuraextras.views.views.MetricsView;
 import com.github.applejuiceyy.figuraextras.views.views.ModelView;
 import com.github.applejuiceyy.figuraextras.views.views.ObjectView;
+import com.github.applejuiceyy.figuraextras.views.views.TextureView;
+import com.github.applejuiceyy.figuraextras.views.views.http.NetworkView;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 public class AvatarInfoDisplay {
@@ -62,14 +64,14 @@ public class AvatarInfoDisplay {
         flow.add(hook(Button.minimal().addAnd("Object View"), ensureScript(ObjectView::new)));
         flow.add(hook(Button.minimal().addAnd("Model View"), ensureScript(ModelView::new)));
         flow.add(Elements.separator());
-        flow.add(Button.minimal().addAnd("Tick Instructions"));
-        flow.add(Button.minimal().addAnd("Render Instructions"));
+        flow.add(hook(Button.minimal().addAnd("Tick Instructions"), ensureScript((c, ap) -> new MetricsView(c, ap, c.getAvatar().tick))));
+        flow.add(hook(Button.minimal().addAnd("Render Instructions"), ensureScript((c, ap) -> new MetricsView(c, ap, c.getAvatar().render))));
         flow.add(Elements.separator());
-        flow.add(Button.minimal().addAnd("Loaded Textures"));
+        flow.add(hook(Button.minimal().addAnd("Loaded Textures"), TextureView::new));
         flow.add(Button.minimal().addAnd("Loaded Sounds"));
         flow.add(Elements.separator());
         flow.add(Button.minimal().addAnd("Output"));
-        flow.add(Button.minimal().addAnd("Network"));
+        flow.add(hook(Button.minimal().addAnd("Network"), NetworkView::new));
         flow.add(Elements.separator());
         flow.add(Button.minimal().addAnd("Capture"));
         flow.add(Elements.separator());
@@ -84,7 +86,10 @@ public class AvatarInfoDisplay {
     }
 
     private InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> ensureScript(InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> what) {
-        return InfoViews.onlyIf(avatar -> avatar.loaded && avatar.luaRuntime != null, what, Component.literal("Script not detected"));
+        return InfoViews.context()
+                .predicate(avatar -> avatar.loaded && avatar.luaRuntime != null)
+                .ifTrue(what)
+                .ifFalse("Script not detected");
     }
 
     private Element hook(Element button, Runnable toRun) {
@@ -111,15 +116,15 @@ public class AvatarInfoDisplay {
     }
 
     private InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> wrap(InfoViews.ViewConstructor<InfoViews.Context, ? extends Lifecycle> v) {
-        return InfoViews.onlyIf(
-                avatar -> Minecraft.getInstance().level != null,
-                InfoViews.onlyIf(
-                        avatar -> !((AvatarAccess) avatar).figuraExtrass$isCleaned(),
-                        v,
-                        Component.literal("Avatar has been cleared")
-                ),
-                Component.literal("World not loaded")
-        );
+        return InfoViews.context()
+                .predicate(() -> Minecraft.getInstance().level != null)
+                .ifTrue(
+                        InfoViews.context()
+                                .predicate(avatar -> !((AvatarAccess) avatar).figuraExtrass$isCleaned())
+                                .ifTrue(v)
+                                .ifFalse("Avatar has been cleared")
+                )
+                .ifFalse("World not Loaded");
     }
 
     public void tick() {

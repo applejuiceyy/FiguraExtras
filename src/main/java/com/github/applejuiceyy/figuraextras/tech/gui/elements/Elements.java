@@ -200,6 +200,46 @@ public final class Elements {
         }
     }
 
+    public static Grid withVerticalScroll(ParentElement<?> content) {
+        return withVerticalScroll(content, false);
+
+    }
+
+    public static Grid withVerticalScroll(ParentElement<?> content, boolean hide) {
+        Grid ret = new Grid();
+        ret.rows()
+                .percentage(1)
+                .cols()
+                .percentage(1)
+                .content();
+        Scrollbar scrollbar = new Scrollbar();
+        ret.add(content);
+        ret.add(scrollbar).setColumn(1);
+        makeVerticalContainerScrollable(content, scrollbar, hide);
+        return ret;
+    }
+
+    public static Grid withHorizontalScroll(ParentElement<?> content) {
+        return withVerticalScroll(content, false);
+
+    }
+
+    public static Grid withHorizontalScroll(ParentElement<?> content, boolean hide) {
+        Grid ret = new Grid();
+        ret.rows()
+                .percentage(1)
+                .content()
+                .cols()
+                .percentage(1);
+        Scrollbar scrollbar = new Scrollbar();
+        scrollbar.setHorizontal(true);
+        ret.add(content);
+        ret.add(scrollbar).setRow(1);
+        makeHorizontalContainerScrollable(content, scrollbar, hide);
+        return ret;
+    }
+
+
     static class TwoWaySetter<A, B> {
         private final Observers.WritableObserver<A> a;
         private final Observers.WritableObserver<B> b;

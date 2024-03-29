@@ -2,97 +2,113 @@ package com.github.applejuiceyy.figuraextras.views.views.http;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.Component;
-import io.wispforest.owo.ui.core.Sizing;
+import com.github.applejuiceyy.figuraextras.views.InfoViews;
 
 import java.io.InputStream;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class RequestResponseViewer implements Lifecycle {
     public final HttpRequest request;
-    FlowLayout root;
-    FlowLayout tabs;
+    Grid root;
+    Grid tabs;
 
-    Component viewRoot;
-
+    ParentElement.AdditionPoint additionPoint;
     Lifecycle currentView;
 
-    public RequestResponseViewer(Optional<String> requestBody, ParentElement.AdditionPoint additionPoint, CompletableFuture<String> bodyBytes, HttpRequest request, CompletableFuture<HttpResponse<InputStream>> future) {
-        tabs = Containers.horizontalFlow(Sizing.content(), Sizing.fill(100));
+    public RequestResponseViewer(Optional<String> requestBody, ParentElement.AdditionPoint a, CompletableFuture<String> bodyBytes, HttpRequest request, CompletableFuture<HttpResponse<InputStream>> future) {
+        tabs = new Grid();
         this.request = request;
 
-        root = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(90));
-        root.child(Containers.horizontalScroll(Sizing.fill(100), Sizing.fill(10), tabs));
+        tabs.rows().content(); // columns added later on
 
-        // TODO
+        root = new Grid();
+        root
+                .rows()
+                .content()
+                .content()
+                .percentage(1)
+                .cols()
+                .percentage(1);
 
-        /*
-        addTab(Components.button(net.minecraft.network.chat.Component.literal("Request Headers"), o -> changeTo(new HeaderViewer(request.headers(), additionPoint))));
-        addTab(Components.button(
-                        net.minecraft.network.chat.Component.literal("Response Headers"), o -> changeTo(
-                                InfoViews.onlyIf(null, p -> future.isDone(),
-                                        n -> InfoViews.onlyIf(
-                                                null,
-                                                p -> !future.isCompletedExceptionally(),
-                                                (p, ap) -> {
-                                                    try {
-                                                        return new HeaderViewer(future.get().headers(), ap);
-                                                    } catch (InterruptedException | ExecutionException e) {
-                                                        throw new RuntimeException(e);
-                                                    }
-                                                },
-                                                "No useful information as it errored before the html stage"),
-                                        "Still Fetching")
-                        )
+        a.accept(root);
+
+        root.add(tabs);
+        Scrollbar scrollbar = new Scrollbar();
+        scrollbar.setHorizontal(true);
+        root.add(scrollbar).setRow(1).setOptimalHeight(false).setHeight(5);
+        Elements.makeHorizontalContainerScrollable(tabs, scrollbar, true);
+
+        additionPoint = root.adder(g -> g.setRow(2));
+
+        addTab("Request Headers", (o, ap) -> new HeaderViewer(request.headers(), ap));
+        addTab("Response Headers", InfoViews.voiding()
+                .predicate(future::isDone)
+                .ifFalse("Still Fetching")
+                .ifTrue(
+                        InfoViews.voiding()
+                                .predicate(() -> !future.isCompletedExceptionally())
+                                .ifFalse("No useful information as it failed before the html stage")
+                                .ifTrue(ap -> {
+                                    try {
+                                        return new HeaderViewer(future.get().headers(), ap);
+                                    } catch (InterruptedException | ExecutionException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                })
                 )
         );
 
-        addTab(Components.button(net.minecraft.network.chat.Component.literal("Request Body"), o -> changeTo(
-                InfoViews.onlyIf(null, p -> requestBody.isPresent(), (p, ap) -> {
-                    //noinspection OptionalGetWithoutIsPresent
-                    return new BodyViewer(requestBody.get(), ap);
-                }, net.minecraft.network.chat.Component.literal("Empty")))));
+        //noinspection OptionalGetWithoutIsPresent
+        addTab("Request Body", InfoViews.voiding()
+                .predicate(requestBody::isPresent)
+                .ifFalse("Empty")
+                .ifTrue(ap -> new BodyViewer(requestBody.get(), ap))
+        );
 
-        addTab(Components.button(net.minecraft.network.chat.Component.literal("Response Body"), o -> changeTo(
-                InfoViews.onlyIf(null, p -> !future.isCompletedExceptionally(), n -> InfoViews.onlyIf(
-                                null,
-                                p -> bodyBytes.isDone(),
-                                (p, ap) -> {
+        addTab("Response Body", InfoViews.voiding()
+                .predicate(bodyBytes::isDone)
+                .ifFalse("Still Fetching")
+                .ifTrue(
+                        InfoViews.voiding()
+                                .predicate(() -> !bodyBytes.isCompletedExceptionally())
+                                .ifFalse("No useful information as it failed before the html stage")
+                                .ifTrue(ap -> {
                                     try {
                                         return new BodyViewer(bodyBytes.get(), ap);
                                     } catch (InterruptedException | ExecutionException e) {
                                         throw new RuntimeException(e);
                                     }
-                                }, "Still Fetching"
-                        ),
-                        "No useful information as it errored before the html stage"))));
-        */
+                                })
+                )
+        );
     }
 
-    void addTab(Component button) {
-        tabs.child(button);
+    void addTab(String text, InfoViews.ViewConstructor<Void, ? extends Lifecycle> supplier) {
+        int column = tabs.columnCount();
+        tabs.addColumn(0, Grid.SpacingKind.CONTENT);
+        Button button = Button.vanilla();
+        button.add(text);
+        button.activation.subscribe(e -> changeTo(supplier));
+        tabs.add(button).setColumn(column);
     }
 
-    void changeTo(Lifecycle content) {
+    void changeTo(InfoViews.ViewConstructor<Void, ? extends Lifecycle> content) {
         if (currentView != null) {
             currentView.dispose();
-            viewRoot.remove();
+            additionPoint.remove();
             currentView = null;
-            viewRoot = null;
         }
         if (content != null) {
-            currentView = content;
-            // TODO
-            // viewRoot = content.getRoot();
-            viewRoot.sizing(Sizing.fill(100), Sizing.fill(90));
-            root.child(viewRoot);
+            currentView = content.apply(null, additionPoint);
         }
     }
 

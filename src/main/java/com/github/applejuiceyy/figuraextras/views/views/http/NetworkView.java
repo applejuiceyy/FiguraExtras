@@ -1,16 +1,15 @@
 package com.github.applejuiceyy.figuraextras.views.views.http;
 
-import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.container.ScrollContainer;
-import io.wispforest.owo.ui.core.Sizing;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import org.figuramc.figura.utils.ColorUtils;
@@ -25,17 +24,41 @@ import java.util.Optional;
 import java.util.concurrent.Flow;
 
 public class NetworkView implements Lifecycle {
-    FlowLayout content = Containers.verticalFlow(Sizing.fill(100), Sizing.content());
-    ScrollContainer<FlowLayout> logging = Containers.verticalScroll(Sizing.content(), Sizing.fill(100), content);
-
-    FlowLayout root = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(100));
-
+    private final Runnable unsub;
     RequestResponseViewer viewer;
-    Runnable unsub;
 
-    public NetworkView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
-        logging.scrollbar(ScrollContainer.Scrollbar.vanilla());
-        root.child(logging);
+    ParentElement.AdditionPoint additionPoint;
+
+    public NetworkView(InfoViews.Context context, ParentElement.AdditionPoint ap) {
+        Grid root = new Grid();
+        ap.accept(root);
+
+        root.rows()
+                .percentage(1)
+                .percentage(10)
+                .cols()
+                .percentage(1)
+                .content();
+
+        Grid logger = new Grid();
+        root.add(logger);
+
+        logger
+                .rows()
+                .percentage(1)
+                .cols()
+                .percentage(1)
+                .content();
+
+        Scrollbar scrollbar = new Scrollbar();
+        logger.add(scrollbar).setColumn(1);
+
+        com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow flow = new com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow();
+        logger.add(flow);
+
+        Elements.makeVerticalContainerScrollable(flow, scrollbar);
+
+        additionPoint = root.adder(g -> g.setRow(1));
 
         Style dismissed = Style.EMPTY.withColor(0xaaaaaa);
         Style host = Style.EMPTY.withColor(0xffffff);
@@ -89,7 +112,8 @@ public class NetworkView implements Lifecycle {
 
             component.append(withColor(" [ONGOING]", dismissed));
 
-            SmallButtonComponent c = new SmallButtonComponent(component, 0x00000000);
+            Button c = Button.minimal();
+            c.setText(component);
 
             future.whenComplete((response, throwable) -> {
                 if (throwable != null) {
@@ -106,13 +130,10 @@ public class NetworkView implements Lifecycle {
                 c.setText(copy);
             });
 
-            c.mouseDown().subscribe((x, y, m) -> {
-                logging.verticalSizing(Sizing.fill(10));
+            c.activation.subscribe(event -> {
                 if (viewer != null) {
-                    viewer.root.remove();
-                    if (viewer.request == request) {
-                        logging.verticalSizing(Sizing.fill(100));
-                    }
+                    viewer.dispose();
+                    additionPoint.remove();
                     viewer = null;
                 }
 
@@ -123,15 +144,14 @@ public class NetworkView implements Lifecycle {
                     return bodySubscriber.getBody().toCompletableFuture().join();
                 });
                 viewer = new RequestResponseViewer(requestBody, additionPoint, bodyBytes, request, future);
-                root.child(viewer.root);
-                return true;
             });
-            content.child(c);
+
+            flow.add(c);
         });
     }
 
     public MutableComponent withColor(String text, Style style) {
-        return net.minecraft.network.chat.Component.literal(text).withStyle(style);
+        return Component.literal(text).withStyle(style);
     }
 
     @Override

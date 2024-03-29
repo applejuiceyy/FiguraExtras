@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.views.views.http;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 
@@ -14,7 +15,7 @@ public class BodyViewer implements Lifecycle {
         } else {
             content.add(net.minecraft.network.chat.Component.literal(string));
         }
-        additionPoint.accept(content);
+        additionPoint.accept(Elements.withVerticalScroll(content));
     }
 
     @Override

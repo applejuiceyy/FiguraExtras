@@ -135,7 +135,7 @@ public abstract class MinecraftMixin implements MinecraftAccess {
         ArrayList<DetachedWindow> toRemove = new ArrayList<>(0);
         long current = System.currentTimeMillis();
         boolean doRender = false;
-        if (lastFullRender < current - 500) {
+        if (lastFullRender < current - 100) {
             lastFullRender = current;
             doRender = true;
         }

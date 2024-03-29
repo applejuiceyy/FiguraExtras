@@ -9,7 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 
 public class Scrollbar extends Element implements NumberRangeAlike {
-    public boolean horizontal = false;
+    private boolean horizontal = false;
     public boolean enabled = true;
     private float size = 100, thumbSize = 10;
 
@@ -26,7 +26,7 @@ public class Scrollbar extends Element implements NumberRangeAlike {
 
     public Scrollbar setSize(float size) {
         this.size = size;
-        getState().updateDirtySections.enqueue(this);
+        enqueueDirtySection(false, false);
         return this;
     }
 
@@ -36,7 +36,18 @@ public class Scrollbar extends Element implements NumberRangeAlike {
 
     public Scrollbar setThumbSize(float thumbSize) {
         this.thumbSize = thumbSize;
-        getState().updateDirtySections.enqueue(this);
+        enqueueDirtySection(false, false);
+        return this;
+    }
+
+    public boolean getHorizontal() {
+        return horizontal;
+    }
+
+    public Scrollbar setHorizontal(boolean value) {
+        horizontal = value;
+        enqueueDirtySection(false, false);
+        optimalSizeChanged();
         return this;
     }
 
@@ -52,6 +63,7 @@ public class Scrollbar extends Element implements NumberRangeAlike {
         graphics.pose().translate(getX(), getY(), 0);
         int v, w;
         if (horizontal) {
+            graphics.pose().translate(0, getHeight(), 0);
             graphics.pose().rotateAround(Axis.ZP.rotationDegrees(-90), 0, 0, 0);
             v = getHeight();
             w = getWidth();

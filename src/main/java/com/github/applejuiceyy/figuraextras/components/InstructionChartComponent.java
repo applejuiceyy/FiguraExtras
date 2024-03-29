@@ -35,6 +35,7 @@ public class InstructionChartComponent extends Element {
                 accumulatedTime -= dataPoints.remove(0).afterMillis;
             }
         }
+        enqueueDirtySection(false, false);
     }
 
     public void dispose() {
@@ -57,6 +58,10 @@ public class InstructionChartComponent extends Element {
 
             fallOff += 0.1;
             maxInstructionsSeen -= (int) fallOff;
+
+            if (maxInstructionsSeen < 100) {
+                maxInstructionsSeen = 100;
+            }
 
             long currentDataPoints = System.currentTimeMillis() - lastEntry;
             for (int i = dataPoints.size() - 1; i >= 1; i--) {

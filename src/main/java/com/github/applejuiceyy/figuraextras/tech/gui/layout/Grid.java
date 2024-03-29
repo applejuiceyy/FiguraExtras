@@ -321,6 +321,38 @@ public class Grid extends ParentElement<Grid.GridSettings> {
         return this;
     }
 
+    public Grid setRow(int position, float value, SpacingKind kind) {
+        rows.set(position, new Spacing(kind, value));
+        childrenChanged();
+        return this;
+    }
+
+    public Grid setColumn(int position, float value, SpacingKind kind) {
+        columns.set(position, new Spacing(kind, value));
+        childrenChanged();
+        return this;
+    }
+
+    public Grid deleteRow(int position) {
+        rows.remove(position);
+        childrenChanged();
+        return this;
+    }
+
+    public Grid deleteColumn(int position) {
+        columns.remove(position);
+        childrenChanged();
+        return this;
+    }
+
+    public int rowCount() {
+        return rows.size();
+    }
+
+    public int columnCount() {
+        return columns.size();
+    }
+
     public enum SpacingKind {
         PERCENTAGE, FIXED, CONTENT
     }

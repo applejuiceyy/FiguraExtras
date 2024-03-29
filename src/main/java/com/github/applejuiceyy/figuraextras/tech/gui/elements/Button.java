@@ -95,7 +95,7 @@ public class Button extends Grid implements SetText {
     }
 
     @Override
-    protected void defaultActivationBehaviour(DefaultCancellableEvent event) {
+    protected void defaultActivationBehaviour(DefaultCancellableEvent.CausedEvent event) {
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
         getState().setFocused(this);
     }
