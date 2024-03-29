@@ -5,6 +5,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import io.wispforest.owo.ui.core.OwoUIDrawContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ComponentRenderUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -12,6 +13,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 
@@ -46,6 +48,8 @@ public class MessageStackComponent extends Element {
             messages.remove(0);
         }
         updateUpperBound();
+        enqueueDirtySection(false, false);
+        optimalSizeChanged();
     }
 
     public void refreshLines() {
@@ -60,13 +64,16 @@ public class MessageStackComponent extends Element {
             lines.remove(0);
         }
         updateUpperBound();
+        enqueueDirtySection(false, false);
+        optimalSizeChanged();
     }
 
     private int getLineCapacity() {
         return (int) Math.ceil(height.get() / 9f);
     }
 
-    public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
+    @Override
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         int messageQuantity = this.lines.size();
         if (messageQuantity == 0) {
             return;
@@ -133,15 +140,34 @@ public class MessageStackComponent extends Element {
         updateUpperBound();
     }
 
-    // TODO: correct optimal sizes
     @Override
     public int computeOptimalWidth() {
-        return 0;
+        int ret = 0;
+        for (Message message : messages) {
+            if (message.shouldAppear.getAsBoolean()) {
+                ret = Math.max(
+                        Minecraft.getInstance().font
+                                .split(message.content(), Integer.MAX_VALUE)
+                                .stream()
+                                .map(o -> Minecraft.getInstance().font.width(o))
+                                .max(Comparator.comparingInt(e -> e))
+                                .orElse(0), ret
+                );
+            }
+        }
+        return ret;
     }
 
     @Override
     public int computeOptimalHeight(int width) {
-        return 0;
+        int ret = 0;
+        for (Message message : messages) {
+            if (message.shouldAppear.getAsBoolean()) {
+                List<FormattedCharSequence> newLines = ComponentRenderUtils.wrapComponents(message.content(), width, Minecraft.getInstance().font);
+                ret += newLines.size() * 9;
+            }
+        }
+        return ret;
     }
 
     record Message(Component content, BooleanSupplier shouldAppear) {

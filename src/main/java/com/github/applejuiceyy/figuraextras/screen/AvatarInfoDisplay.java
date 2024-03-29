@@ -64,10 +64,10 @@ public class AvatarInfoDisplay {
         flow.add(hook(Button.minimal().addAnd("Tick Instructions"), ensureScript((c, ap) -> new MetricsView(c, ap, c.getAvatar().tick))));
         flow.add(hook(Button.minimal().addAnd("Render Instructions"), ensureScript((c, ap) -> new MetricsView(c, ap, c.getAvatar().render))));
         flow.add(Elements.separator());
-        flow.add(hook(Button.minimal().addAnd("Loaded Textures"), TextureView::new));
-        flow.add(Button.minimal().addAnd("Loaded Sounds"));
+        flow.add(hook(Button.minimal().addAnd("Textures"), TextureView::new));
+        flow.add(hook(Button.minimal().addAnd("Sounds"), SoundView::new));
         flow.add(Elements.separator());
-        flow.add(Button.minimal().addAnd("Output"));
+        flow.add(hook(Button.minimal().addAnd("Output"), ChatLikeView::new));
         flow.add(hook(Button.minimal().addAnd("Network"), NetworkView::new));
         flow.add(Elements.separator());
         flow.add(hook(Button.minimal().addAnd("Capture"), CaptureView::new));

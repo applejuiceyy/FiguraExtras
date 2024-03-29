@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.components;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Processor;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.gui.GuiGraphics;
@@ -116,6 +117,10 @@ public class SoundComponent extends Element {
         }
     }
 
+    @Override
+    public Processor.AdditionStatus enqueueDirtySection(boolean translative, boolean recursive) {
+        return super.enqueueDirtySection(translative, recursive);
+    }
 
     record ShortShortTuple(short first, short second) {
         public static final ShortShortTuple ZERO = new ShortShortTuple((short) 0, (short) 0);

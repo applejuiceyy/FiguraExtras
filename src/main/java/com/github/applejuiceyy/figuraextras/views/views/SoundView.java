@@ -9,7 +9,6 @@ import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
-import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
@@ -33,26 +32,14 @@ import java.util.*;
 
 public class SoundView implements Lifecycle {
     private final Flow layout;
-    private final Grid root;
     private final InfoViews.Context context;
 
     private final HashMap<SoundBuffer, Instance> textures = new HashMap<>();
 
     public SoundView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
-
-        root = new Grid();
-        root.rows()
-                .content()
-                .cols()
-                .content()
-                .content();
-
         layout = new Flow();
-        Scrollbar scrollbar = new Scrollbar();
-        Elements.makeVerticalContainerScrollable(layout, scrollbar, true);
-
-        additionPoint.accept(root);
+        additionPoint.accept(Elements.withVerticalScroll(layout, true));
     }
 
     @Override
@@ -102,6 +89,7 @@ public class SoundView implements Lifecycle {
         public long millisPlay = 0;
         ParentElement<Grid.GridSettings> button;
 
+        boolean needUpdate = false;
         ChannelAccess.ChannelHandle handle = null;
         private final MutableComponent stopComponent = net.minecraft.network.chat.Component.literal("Stop");
         private final MutableComponent playComponent = net.minecraft.network.chat.Component.literal("Play");
@@ -226,6 +214,12 @@ public class SoundView implements Lifecycle {
                 long millisSince = System.currentTimeMillis() - millisPlay;
                 float perSecond = millisSince / 1000f;
                 soundComponent.sampleOffset = (int) (perSecond * ((SoundBufferAccessor) sound).getAudioFormat().getSampleRate());
+                boolean nowUpdate = soundComponent.sampleOffset > 0 && soundComponent.sampleOffset < soundComponent.sampleEnding + soundComponent.getWidth() * 10;
+                if (needUpdate || nowUpdate) {
+                    soundComponent.enqueueDirtySection(false, false);
+                }
+
+                needUpdate = nowUpdate;
             }
         }
     }

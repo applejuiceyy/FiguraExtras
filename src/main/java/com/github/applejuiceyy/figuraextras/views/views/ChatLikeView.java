@@ -4,6 +4,8 @@ import com.github.applejuiceyy.figuraextras.components.MessageStackComponent;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
@@ -38,7 +40,14 @@ public class ChatLikeView implements Lifecycle {
         }
 
         root = new Grid();
-        // TODO
+
+        root
+                .rows()
+                .content()
+                .percentage(1)
+                .cols()
+                .percentage(1);
+
         // FlowLayout controls = Containers.horizontalFlow(Sizing.fill(100), Sizing.fill(10));
         // root.add(controls);
 
@@ -59,9 +68,9 @@ public class ChatLikeView implements Lifecycle {
         // controls.child(showErrors);
         // controls.child(showOthers);
 
-        root.add(stack);
+        root.add(Elements.withVerticalScroll(new Flow().addAnd(stack), true)).setRow(1);
 
-        sub = event.getSource().subscribe((message, kind) -> stack.addMessage(message, () -> show.contains(kind)));
+        sub = event.getSource().subscribe((message, kind) -> stack.addMessage(message, () -> show.contains(kind) || show.isEmpty()));
 
         additionPoint.accept(root);
     }
