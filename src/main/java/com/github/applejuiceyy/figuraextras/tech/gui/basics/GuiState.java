@@ -159,7 +159,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
         Rectangle toUpdate = null;
         if (dirtySectionHolder.dirtySection != null) {
-            dirtySectionHolder.dirtySection = dirtySectionHolder.dirtySection.intersection(Rectangle.of(getX(), getY(), getWidth(), getHeight()));
+            dirtySectionHolder.dirtySection = dirtySectionHolder.dirtySection.intersection(root);
             if (dirtySectionHolder.dirtySection != null) {
                 toUpdate = dirtySectionHolder.dirtySection.copy();
                 toUpdate.setX(toUpdate.getX() - 1);
@@ -610,12 +610,16 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         cachedTarget.clear(Minecraft.ON_OSX);
     }
 
-    static class DirtySectionHolder implements Consumer<ReadableRectangle> {
+    class DirtySectionHolder implements Consumer<ReadableRectangle> {
         private final ArrayList<ReadableRectangle> allDirtySections = new ArrayList<>();
         private @Nullable ReadableRectangle dirtySection = null;
 
         @Override
         public void accept(ReadableRectangle rectangle) {
+            if (dirtySection != null && dirtySection.intersection(root) == null) {
+                return;
+            }
+            ;
             allDirtySections.add(rectangle);
             dirtySection = Rectangle.reunionOf(dirtySection, rectangle);
         }

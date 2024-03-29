@@ -92,6 +92,11 @@ public abstract class FiguraTextureMixin implements FiguraTextureAccess {
     }
 
     @Override
+    public boolean figuraExtrass$hasRealTimePendingModifications() {
+        return realTimePendingModifications;
+    }
+
+    @Override
     public boolean figuraExtrass$hasPendingModifications() {
         return pendingModifications;
     }
@@ -112,7 +117,7 @@ public abstract class FiguraTextureMixin implements FiguraTextureAccess {
 
     @Override
     public void figuraExtrass$refreshUpdatedTexture() {
-        if (realTimeTexture != null && (realTimePendingModifications || !realTimeTextureIsRegistered)) {
+        if (realTimeTexture != null) {
             if (!realTimeTextureIsRegistered) {
                 Minecraft.getInstance().getTextureManager().register(realTimeTextureIdentifier, realTimeTexture);
                 realTimeTextureIsRegistered = true;

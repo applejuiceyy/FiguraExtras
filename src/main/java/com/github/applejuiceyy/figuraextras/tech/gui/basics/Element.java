@@ -157,7 +157,14 @@ abstract public class Element implements Rectangle {
     }
 
     protected boolean renders() {
-        return false;
+        try {
+            return !this.getClass()
+                    .getMethod("render", GuiGraphics.class, int.class, int.class, float.class)
+                    .getDeclaringClass()
+                    .equals(Element.class);
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
     }
 
     public boolean blocksMouseActivation() {

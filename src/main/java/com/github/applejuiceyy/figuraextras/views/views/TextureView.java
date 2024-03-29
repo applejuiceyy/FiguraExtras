@@ -7,7 +7,6 @@ import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
-import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
@@ -22,7 +21,6 @@ import java.util.Map;
 
 public class TextureView implements Lifecycle {
     private final Flow layout;
-    private final Grid root;
     private final InfoViews.Context context;
 
     private final HashMap<FiguraTexture, Instance> textures = new HashMap<>();
@@ -30,18 +28,8 @@ public class TextureView implements Lifecycle {
     public TextureView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
 
-        root = new Grid();
-        root.rows()
-                .content()
-                .cols()
-                .content()
-                .content();
-
         layout = new Flow();
-        Scrollbar scrollbar = new Scrollbar();
-        Elements.makeVerticalContainerScrollable(layout, scrollbar, true);
-
-        additionPoint.accept(root);
+        additionPoint.accept(Elements.withVerticalScroll(layout));
     }
 
     @Override
@@ -79,7 +67,9 @@ public class TextureView implements Lifecycle {
 
     @Override
     public void render() {
-
+        for (Instance value : textures.values()) {
+            value.render();
+        }
     }
 
     @Override
@@ -94,14 +84,16 @@ public class TextureView implements Lifecycle {
         private final FiguraTexture texture;
         private final Label label;
         private final Button button;
+        private final FiguraTextureComponent figuraTextureComponent;
+        private final Grid nomenclatureLayout;
         public Flow root;
         private final net.minecraft.network.chat.Component notDirty;
         private final net.minecraft.network.chat.Component dirty;
 
         private final net.minecraft.network.chat.Component showUpdatedTexture =
-                net.minecraft.network.chat.Component.literal("Show Updated Texture").withStyle(ChatFormatting.UNDERLINE);
+                net.minecraft.network.chat.Component.literal("Showing Uploaded Texture").withStyle(ChatFormatting.UNDERLINE);
         private final net.minecraft.network.chat.Component showUploadedTexture =
-                net.minecraft.network.chat.Component.literal("Show Uploaded Texture").withStyle(ChatFormatting.UNDERLINE);
+                net.minecraft.network.chat.Component.literal("Showing Updated Texture").withStyle(ChatFormatting.UNDERLINE);
 
 
         private boolean showingUpdatedTexture = false;
@@ -115,7 +107,7 @@ public class TextureView implements Lifecycle {
             root.setSurface(Surface.contextBackground());
 
             label = (Label) new Label().setText(texture.getName());
-            Grid nomenclatureLayout = new Grid();
+            this.nomenclatureLayout = new Grid();
             nomenclatureLayout.rows()
                     .content()
                     .cols()
@@ -134,7 +126,7 @@ public class TextureView implements Lifecycle {
             root.add(nomenclatureLayout);
             root.add(new Label(net.minecraft.network.chat.Component.literal("   (" + texture.getWidth() + "x" + texture.getHeight() + ")").withStyle(ChatFormatting.GRAY)));
 
-            FiguraTextureComponent component = new FiguraTextureComponent(texture, () -> {
+            figuraTextureComponent = new FiguraTextureComponent(texture, c -> {
                 if (this.showingUpdatedTexture) {
                     ((FiguraTextureAccess) texture).figuraExtrass$refreshUpdatedTexture();
                     return ((FiguraTextureAccess) texture).figuraExtrass$getUpdatedTexture();
@@ -143,8 +135,7 @@ public class TextureView implements Lifecycle {
                 }
             }, context.getAvatar());
 
-
-            root.add(component);
+            root.add(Elements.withHorizontalScroll(new Flow().addAnd(figuraTextureComponent), true));
         }
 
         private void setShowingUpdatedTexture(boolean showing) {
@@ -154,13 +145,21 @@ public class TextureView implements Lifecycle {
                 } else {
                     ((FiguraTextureAccess) texture).figuraExtrass$unlockUpdatedTexture();
                 }
+                figuraTextureComponent.enqueueDirtySection(false, false);
                 showingUpdatedTexture = showing;
+            }
+        }
+
+        public void render() {
+            if (((FiguraTextureAccess) texture).figuraExtrass$hasRealTimePendingModifications() && this.showingUpdatedTexture) {
+                figuraTextureComponent.enqueueDirtySection(false, false);
             }
         }
 
         public void tick() {
             boolean modifications = ((FiguraTextureAccess) texture).figuraExtrass$hasPendingModifications();
             label.setText(modifications ? dirty : notDirty);
+            nomenclatureLayout.getSettings(button).setInvisible(!modifications);
         }
 
         public void dispose() {

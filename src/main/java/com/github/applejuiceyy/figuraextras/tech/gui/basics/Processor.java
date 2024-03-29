@@ -77,7 +77,7 @@ public class Processor<T> {
         while (run()) ;
     }
 
-    enum AdditionStatus {
+    public enum AdditionStatus {
         OK(true, false), ALREADY(false, false), REJECTED(false, true);
 
         public final boolean added;

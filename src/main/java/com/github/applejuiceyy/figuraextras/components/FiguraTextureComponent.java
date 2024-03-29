@@ -1,19 +1,20 @@
 package com.github.applejuiceyy.figuraextras.components;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Processor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.model.rendering.texture.FiguraTexture;
 
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 public class FiguraTextureComponent extends Element {
     private final FiguraTexture texture;
-    private final Supplier<ResourceLocation> location;
+    private final Function<FiguraTextureComponent, ResourceLocation> location;
     private final Avatar avatar;
 
-    public FiguraTextureComponent(FiguraTexture texture, Supplier<ResourceLocation> location, Avatar avatar) {
+    public FiguraTextureComponent(FiguraTexture texture, Function<FiguraTextureComponent, ResourceLocation> location, Avatar avatar) {
         this.texture = texture;
         this.location = location;
         this.avatar = avatar;
@@ -63,7 +64,7 @@ public class FiguraTextureComponent extends Element {
             shouldDrawRuler = true;
         }*/
 
-        context.blit(this.location.get(), x.get(), y.get(), 0, 0, texture.getWidth(), texture.getHeight(), texture.getWidth(), texture.getHeight());
+        context.blit(this.location.apply(this), x.get(), y.get(), 0, 0, texture.getWidth(), texture.getHeight(), texture.getWidth(), texture.getHeight());
 
         /*if (shouldDrawRuler) {
             int steps = ((width / 10) / 50) * 50;
@@ -75,5 +76,15 @@ public class FiguraTextureComponent extends Element {
         }
 
         matrices.popPose();*/
+    }
+
+    @Override
+    public Processor.AdditionStatus enqueueDirtySection(boolean translative, boolean recursive) {
+        return super.enqueueDirtySection(translative, recursive);
+    }
+
+    @Override
+    protected boolean renders() {
+        return true;
     }
 }

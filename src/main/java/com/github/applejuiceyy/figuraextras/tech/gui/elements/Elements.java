@@ -136,6 +136,9 @@ public final class Elements {
         bindScrollbar(element.height, element.yViewSize, element.yView, verticalScrollbar, hide);
         element.mouseScrolled.getSource().subscribe(event -> {
             event.cancelPropagation();
+            if (verticalScrollbar.getMax() <= 0) {
+                return;
+            }
             verticalScrollbar.pos.set(Math.min(Math.max(0, (float) (verticalScrollbar.pos.get() - event.amount * 10)), verticalScrollbar.getMax()));
         });
         return element;

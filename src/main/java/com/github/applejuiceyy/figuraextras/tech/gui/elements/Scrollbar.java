@@ -116,12 +116,12 @@ public class Scrollbar extends Element implements NumberRangeAlike {
 
     @Override
     public int computeOptimalWidth() {
-        return 15;
+        return horizontal ? 10 + 60 + 10 : 10;
     }
 
     @Override
     public int computeOptimalHeight(int width) {
-        return 10 + 60 + 10;
+        return horizontal ? 10 : 10 + 60 + 10;
     }
 
     @Override
