@@ -33,7 +33,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
 
     {
         xView.observe(x -> {
-            this.getState().childReprocessor.enqueue(this);
+            ifState(state -> state.childReprocessor.enqueue(this));
             enqueueDirtySection(false, false, false);
             ;
             needReposition = true;
@@ -41,15 +41,14 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             previousXView = x;
         });
         yView.observe(y -> {
-            this.getState().childReprocessor.enqueue(this);
+            ifState(state -> state.childReprocessor.enqueue(this));
             enqueueDirtySection(false, false, false);
-            ;
             needReposition = true;
             previousY -= previousYView - y;
             previousYView = y;
         });
         width.observe(() -> {
-            this.getState().childReprocessor.enqueue(this);
+            ifState(state -> state.childReprocessor.enqueue(this));
             xView.set(Math.max(0, Math.min(xView.get(), xViewSize.get() - getWidth())));
             needReflowLayout = true;
         });
@@ -57,7 +56,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             xView.set(Math.max(0, Math.min(xView.get(), xViewSize.get() - getWidth())));
         });
         height.observe(() -> {
-            this.getState().childReprocessor.enqueue(this);
+            ifState(state -> state.childReprocessor.enqueue(this));
             yView.set(Math.max(0, Math.min(yView.get(), yViewSize.get() - getHeight())));
             needReflowLayout = true;
         });
@@ -65,8 +64,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             yView.set(Math.max(0, Math.min(yView.get(), yViewSize.get() - getHeight())));
         });
         x.merge(y).observe(() -> {
-            this.getState().childReprocessor.enqueue(this);
-            ;
+            ifState(state -> state.childReprocessor.enqueue(this));
             needReposition = true;
         });
     }
@@ -78,8 +76,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     public ParentElement<S> setConstrainX(boolean constrainX) {
         this.constrainX = constrainX;
         boundingChanged();
-        this.getState().childReprocessor.enqueue(this);
-        ;
+        ifState(state -> state.childReprocessor.enqueue(this));
         needReflowLayout = true;
         return this;
     }
@@ -91,8 +88,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     public ParentElement<S> setConstrainY(boolean constrainY) {
         this.constrainY = constrainY;
         boundingChanged();
-        this.getState().childReprocessor.enqueue(this);
-        ;
+        ifState(state -> state.childReprocessor.enqueue(this));
         needReflowLayout = true;
         return this;
     }
@@ -116,6 +112,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     }
 
     public void positionElements() {
+        assert getState() != null;
         if (needReflowLayout) {
             positionElements(flowElements(true));
             needReposition = false;
@@ -163,8 +160,10 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     protected void childrenChanged() {
         if (settings.isEmpty()) return;
         optimalSizeChanged();
-        getState().childReprocessor.enqueue(this);
-        needReflowLayout = true;
+        ifState(state -> {
+            state.childReprocessor.enqueue(this);
+            needReflowLayout = true;
+        });
     }
 
     public void childOptimalSizeChanged(Element element) {
@@ -176,14 +175,21 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
 
     protected void boundingChanged() {
         if (settings.isEmpty()) return;
-        getState().childReprocessor.enqueue(this);
-        needReflowLayout = true;
+        ifState(state -> {
+            state.childReprocessor.enqueue(this);
+            needReflowLayout = true;
+        });
     }
 
     @Override
     protected void markRenderingThisAndChildrenDirty(Consumer<ReadableRectangle> sectionConsumer, Processor<Element> processor) {
         super.markRenderingThisAndChildrenDirty(sectionConsumer, processor);
-        getElements().forEach(e -> e.enqueueDirtySection(processor, false, true));
+        ifState(state -> {
+            for (Element e : getElements()) {
+
+                e.enqueueDirtySectionImmediately(state, false, true);
+            }
+        });
     }
 
     public S getSettings(Element element) {
@@ -201,15 +207,21 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     }
 
     @Override
-    void setState(GuiState state) {
-        super.setState(state);
-        getElements().forEach(e -> e.setState(state));
+    void setStateInternal(GuiState state) {
+        super.setStateInternal(state);
+        getElements().forEach(e -> e.setStateInternal(state));
     }
 
     @Override
     void setDepth(int depth) {
         super.setDepth(depth);
         getElements().forEach(e -> e.setDepth(getDepth() + 1));
+    }
+
+    @Override
+    void setInTree(boolean inTree) {
+        super.setInTree(inTree);
+        getElements().forEach(e -> e.setInTree(isInTree()));
     }
 
     @Override
@@ -258,17 +270,17 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         if (element.getParent() != null) {
             element.getParent().remove(element);
         }
-        getState().integrateState(element.getState());
-        element.setState(getState());
+        element.setStateInternal(getState());
         element.setDepth(getDepth() + 1);
         element.setParent(this);
+        element.setInTree(true);
         //noinspection unchecked
         S[] s = (S[]) new Settings[]{null};
         s[0] = constructSettings(() -> this.willCauseReflow(s[0]), () -> needReflowDetached.add(element));
         markPriorityDirty();
         needReflowLayout = true;
         settings.put(element, s[0]);
-        getState().clipDirty.enqueue(element);
+        ifState(state -> state.clipDirty.enqueue(element));
         element.enqueueDirtySection(false, true);
         childrenChanged();
         return s[0];
@@ -298,7 +310,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     }
 
     protected void markPriorityDirty() {
-        this.getState().markPriorityDirty();
+        whenState(GuiState::markPriorityDirty);
     }
 
     public void remove(Element element) {
@@ -315,7 +327,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
             element.dequeueDirtySection();
         }
 
-        element.setState(null);
+        element.setInTree(false);
         element.setParent(null);
         element.setDepth(0);
         markPriorityDirty();

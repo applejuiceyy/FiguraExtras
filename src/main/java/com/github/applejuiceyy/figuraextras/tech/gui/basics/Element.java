@@ -11,9 +11,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -35,6 +35,8 @@ abstract public class Element implements Rectangle {
     public final Observers.WritableObserver<Boolean> focused = Observers.of(false);
     public final Event<Consumer<DefaultCancellableEvent.CausedEvent<Either<DefaultCancellableEvent.KeyEvent, DefaultCancellableEvent.MousePositionButtonEvent>>>> activation = Event.consumer();
 
+
+    public final Event<Consumer<DefaultCancellableEvent.ToolTipEvent>> tooltip = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseDown = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseUp = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionEvent>> mouseMove = Event.consumer();
@@ -52,6 +54,10 @@ abstract public class Element implements Rectangle {
     private int componentDepth;
     private ParentElement<?> parent = null;
     private GuiState state = null;
+
+    private boolean isInTree = false;
+
+    private ArrayList<Consumer<GuiState>> queuedStateOperations = null;
     private boolean clip;
 
     private int cachedOptimalWidth = -1;
@@ -60,43 +66,40 @@ abstract public class Element implements Rectangle {
 
     {
         x.observe(() -> {
-            this.enqueueDirtySection(true, false);
-            getState().clipDirty.enqueue(this);
+            ifState(state -> {
+                this.enqueueDirtySectionImmediately(state, true, false);
+                state.clipDirty.enqueue(this);
+            });
         });
         y.observe(() -> {
-            this.enqueueDirtySection(true, false);
-            getState().clipDirty.enqueue(this);
+            ifState(state -> {
+                this.enqueueDirtySectionImmediately(state, true, false);
+                state.clipDirty.enqueue(this);
+            });
         });
         width.observe(() -> {
-            this.enqueueDirtySection(true, false);
-            getState().clipDirty.enqueue(this);
+            ifState(state -> {
+                this.enqueueDirtySectionImmediately(state, true, false);
+                state.clipDirty.enqueue(this);
+            });
         });
         height.observe(() -> {
-            this.enqueueDirtySection(true, false);
-            getState().clipDirty.enqueue(this);
+            ifState(state -> {
+                this.enqueueDirtySectionImmediately(state, true, false);
+                state.clipDirty.enqueue(this);
+            });
         });
     }
 
-    protected Processor.AdditionStatus enqueueDirtySection(boolean translative, boolean recursive) {
-        return enqueueDirtySection(getState().updateDirtySections, translative, recursive);
-    }
-
-    protected Processor.AdditionStatus enqueueDirtySection(Processor<Element> processor, boolean translative, boolean recursive) {
-        return enqueueDirtySection(processor, translative, recursive, true);
+    protected Processor.AdditionStatus enqueueDirtySectionImmediately(GuiState state, boolean translative, boolean recursive) {
+        return enqueueDirtySectionImmediately(state, translative, recursive, true);
     }
 
     @Nullable
-    @Contract("_,_,true->!null")
-    protected Processor.AdditionStatus enqueueDirtySection(boolean translative, boolean recursive, boolean check) {
-        return enqueueDirtySection(getState().updateDirtySections, translative, recursive, check);
-    }
-
-    @Nullable
-    @Contract("_,_,_,true->!null")
-    protected Processor.AdditionStatus enqueueDirtySection(Processor<Element> processor, boolean translative, boolean recursive, boolean check) {
+    protected Processor.AdditionStatus enqueueDirtySectionImmediately(GuiState state, boolean translative, boolean recursive, boolean check) {
         boolean should = !check || renders() || surface != Surface.EMPTY;
         if (should || recursive) {
-            Processor.AdditionStatus enqueue = processor.enqueue(this);
+            Processor.AdditionStatus enqueue = state.updateDirtySections.enqueue(this);
             if (!enqueue.rejected) {
                 haveTranslated = (haveTranslated || translative) && hasRendered;
                 recurse = recurse || recursive;
@@ -107,10 +110,20 @@ abstract public class Element implements Rectangle {
         return null;
     }
 
+    protected void enqueueDirtySection(boolean translative, boolean recursive) {
+        enqueueDirtySection(translative, recursive, true);
+    }
+
+    protected void enqueueDirtySection(boolean translative, boolean recursive, boolean check) {
+        ifState(state -> enqueueDirtySectionImmediately(state, translative, recursive, check));
+    }
+
     protected void dequeueDirtySection() {
-        getState().updateDirtySections.dequeue(this);
-        haveTranslated = false;
-        recurse = false;
+        ifState(state -> {
+            state.updateDirtySections.dequeue(this);
+            haveTranslated = false;
+            recurse = false;
+        });
     }
 
     private void markPreviousRenderingLocationDirty(Consumer<ReadableRectangle> sectionConsumer) {
@@ -182,7 +195,11 @@ abstract public class Element implements Rectangle {
         return true;
     }
 
-    protected void defaultActivationBehaviour(DefaultCancellableEvent.CausedEvent event) {
+    protected void defaultToolTipBehaviour(DefaultCancellableEvent.ToolTipEvent event) {
+
+    }
+
+    protected void defaultActivationBehaviour(DefaultCancellableEvent.CausedEvent<Either<DefaultCancellableEvent.KeyEvent, DefaultCancellableEvent.MousePositionButtonEvent>> event) {
 
     }
 
@@ -258,7 +275,7 @@ abstract public class Element implements Rectangle {
     }
 
     public boolean isFocused() {
-        return getState().getFocused() == this;
+        return getState() != null && getState().getFocused() == this;
     }
 
     public int getX() {
@@ -309,6 +326,18 @@ abstract public class Element implements Rectangle {
         this.componentDepth = depth;
     }
 
+    public boolean isInTree() {
+        return isInTree;
+    }
+
+    void setInTree(boolean inTree) {
+        if (!inTree && isFocused()) {
+            assert getState() != null;
+            getState().setFocused(null);
+        }
+        isInTree = inTree;
+    }
+
     public Surface getSurface() {
         return surface;
     }
@@ -330,8 +359,10 @@ abstract public class Element implements Rectangle {
 
     public void setClipping(boolean clip) {
         this.clip = clip;
-        getState().clipDirty.enqueue(this);
-        getState().markPriorityDirty();
+        ifState(state -> {
+            state.clipDirty.enqueue(this);
+            state.markPriorityDirty();
+        });
     }
 
     public <T extends DefaultCancellableEvent> boolean doSweepingEvent(Function<Element, Event<Consumer<T>>> eventGetter, T event, Function<Iterable<Element>, Element> forwarder) {
@@ -347,15 +378,45 @@ abstract public class Element implements Rectangle {
         return false;
     }
 
-    public GuiState getState() {
-        if (state == null) {
-            state = new GuiState(this);
-        }
+    public @Nullable GuiState getState() {
         return state;
     }
 
     void setState(GuiState state) {
+        if (parent != null) {
+            throw new RuntimeException("Cannot create a state on a child");
+        }
+        setStateInternal(state);
+    }
+
+    public boolean ifState(Consumer<GuiState> stateOperation) {
+        if (this.state == null) {
+            return false;
+        } else {
+            stateOperation.accept(this.state);
+            return true;
+        }
+    }
+
+    public boolean whenState(Consumer<GuiState> stateOperation) {
+        if (this.state == null) {
+            if (queuedStateOperations == null) {
+                queuedStateOperations = new ArrayList<>();
+            }
+            queuedStateOperations.add(stateOperation);
+            return false;
+        } else {
+            stateOperation.accept(this.state);
+            return true;
+        }
+    }
+
+    void setStateInternal(GuiState state) {
         this.state = state;
+        if (state != null && queuedStateOperations != null) {
+            queuedStateOperations.forEach(c -> c.accept(state));
+            queuedStateOperations = null;
+        }
     }
 
     void visit(BiConsumer<ParentElement<?>, Element> consumer) {
@@ -368,11 +429,11 @@ abstract public class Element implements Rectangle {
         return cachedOptimalWidth;
     }
 
-    ;
 
     public int getOptimalHeight(int width) {
         return cachedOptimalHeight.computeIfAbsent(width, this::computeOptimalHeight);
     }
+
 
     abstract public int computeOptimalWidth();
 

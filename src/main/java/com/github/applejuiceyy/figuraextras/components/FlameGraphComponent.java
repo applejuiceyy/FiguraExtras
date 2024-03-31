@@ -14,6 +14,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Tuple;
 import org.joml.AxisAngle4d;
@@ -53,6 +54,7 @@ public class FlameGraphComponent extends Element {
     private final FlameGraph.Frame frame;
     public Observers.WritableObserver<Integer> viewStart = Observers.of(0);
     public Observers.WritableObserver<Integer> viewEnd = Observers.of(10);
+    private DefaultCancellableEvent.ToolTipEvent toolTipEvent;
 
     {
         viewStart.merge(viewEnd).observe(() -> enqueueDirtySection(false, false));
@@ -89,6 +91,9 @@ public class FlameGraphComponent extends Element {
 
     @Override
     protected void defaultMouseMoveBehaviour(DefaultCancellableEvent.MousePositionEvent event) {
+        if (toolTipEvent != null) {
+            toolTipEvent.invalidate();
+        }
         enqueueDirtySection(false, false);
     }
 
@@ -387,70 +392,6 @@ public class FlameGraphComponent extends Element {
         }
     }
 
-    // TODO
-    /*public void drawTooltip(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
-        if (true) {
-            mouseX -= x.get();
-            mouseY -= y.get();
-
-            Tuple<FlameGraph.Frame, Integer> thing = getFrameInPos(mouseX, mouseY);
-
-            if (thing != null) {
-                FlameGraph.Frame frame = thing.getA();
-
-
-                Component component = null;
-
-                FlameGraph.Marker marker = getMarkerInPos(frame, thing.getB(), mouseX, mouseY);
-                if (marker != null) {
-                    component = Component.literal(marker.name() + " (" + marker.instruction() + " instructions into the function)");
-                }
-
-                if (component == null) {
-                    FlameGraph.Region region = getRegionInPos(frame, thing.getB(), mouseX, mouseY);
-                    if (region != null) {
-                        component = Component.literal(region.name() + " (" + region.instruction() + " instructions into the function taking " + region.duration() + " instructions)");
-                    }
-                }
-
-                if (component == null) {
-                    int x = toView(thing.getB());
-                    int xn = toView(thing.getA().getInstructions() + thing.getB());
-                    if (mouseX < Math.min(x + 5, (x + xn) / 2)) {
-                        MutableComponent c;
-                        component = c = Component.empty();
-
-                        if (frame.type == LuaDuck.CallType.TAIL) {
-                            c.append("Function was called on a tail return\n\n");
-                        }
-                        if (frame.argumentComponent != null) {
-                            c.append(frame.argumentComponent);
-                        }
-                    }
-
-                }
-
-                if (component == null) {
-                    if (frame.getReturnType() == LuaDuck.ReturnType.ERROR) {
-                        int x = toView(thing.getB() + frame.getInstructions());
-                        if (mouseX > x - 3) {
-                            component = Component.literal("Function returned non-graciously with an error");
-                        }
-                    }
-                }
-
-                if (component == null) {
-                    component = Component.literal(figureOutFrameName(frame) + " (" + frame.getInstructions() + " instructions)");
-                }
-
-                Font font = Minecraft.getInstance().font;
-                context.drawTooltip(font, mouseX + x, mouseY + y,
-                        font.split(component, 500).stream().map(ClientTooltipComponent::create).toList()
-                );
-            }
-        }
-    }*/
-
     public FlameGraph.Marker getMarkerInPos(FlameGraph.Frame frame, int offset, int x, int y) {
         if ((y - 1) % 20 > 16) {
             for (FlameGraph.Marker marker : frame.getMarkers()) {
@@ -508,6 +449,67 @@ public class FlameGraphComponent extends Element {
         if (frame != null) {
             viewStart.set(frame.getB() - 10);
             viewEnd.set(frame.getB() + frame.getA().getInstructions() + 10);
+        }
+    }
+
+    @Override
+    protected void defaultToolTipBehaviour(DefaultCancellableEvent.ToolTipEvent event) {
+        toolTipEvent = event;
+        toolTipEvent.dispose.subscribe(() -> toolTipEvent = null);
+        int mouseX = (int) (event.x - x.get());
+        int mouseY = (int) (event.y - y.get());
+
+        Tuple<FlameGraph.Frame, Integer> thing = getFrameInPos(mouseX, mouseY);
+
+        if (thing != null) {
+            FlameGraph.Frame frame = thing.getA();
+
+
+            Component component = null;
+
+            FlameGraph.Marker marker = getMarkerInPos(frame, thing.getB(), mouseX, mouseY);
+            if (marker != null) {
+                component = Component.literal(marker.name() + " (" + marker.instruction() + " instructions into the function)");
+            }
+
+            if (component == null) {
+                FlameGraph.Region region = getRegionInPos(frame, thing.getB(), mouseX, mouseY);
+                if (region != null) {
+                    component = Component.literal(region.name() + " (" + region.instruction() + " instructions into the function taking " + region.duration() + " instructions)");
+                }
+            }
+
+            if (component == null) {
+                int x = toView(thing.getB());
+                int xn = toView(thing.getA().getInstructions() + thing.getB());
+                if (mouseX < Math.min(x + 5, (x + xn) / 2)) {
+                    MutableComponent c;
+                    component = c = Component.empty();
+
+                    if (frame.type == LuaDuck.CallType.TAIL) {
+                        c.append("Function was called on a tail return\n\n");
+                    }
+                    if (frame.argumentComponent != null) {
+                        c.append(frame.argumentComponent);
+                    }
+                }
+
+            }
+
+            if (component == null) {
+                if (frame.getReturnType() == LuaDuck.ReturnType.ERROR) {
+                    int x = toView(thing.getB() + frame.getInstructions());
+                    if (mouseX > x - 3) {
+                        component = Component.literal("Function returned non-graciously with an error");
+                    }
+                }
+            }
+
+            if (component == null) {
+                component = Component.literal(figureOutFrameName(frame) + " (" + frame.getInstructions() + " instructions)");
+            }
+
+            event.add(component);
         }
     }
 

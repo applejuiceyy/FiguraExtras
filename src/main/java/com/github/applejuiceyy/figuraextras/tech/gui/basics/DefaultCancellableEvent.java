@@ -1,5 +1,12 @@
 package com.github.applejuiceyy.figuraextras.tech.gui.basics;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
+import com.github.applejuiceyy.figuraextras.util.Event;
+import com.mojang.datafixers.util.Either;
+import net.minecraft.network.chat.Component;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -96,6 +103,64 @@ public class DefaultCancellableEvent {
 
         public CausedEvent(T motivation) {
             this.motivation = motivation;
+        }
+    }
+
+    public static class ToolTipEvent extends DefaultCancellableEvent.MousePositionEvent {
+        private final Runnable invalidator;
+        private final List<Component> components = new ArrayList<>();
+        Event<Runnable> disposing = Event.runnable();
+        public final Event<Runnable>.Source dispose = disposing.getSource();
+        private Flow flow = null;
+        private GuiState state = null;
+        private List<Element> componentElementMapping = null;
+
+        public ToolTipEvent(double x, double y, Runnable invalidator) {
+            super(x, y);
+            this.invalidator = invalidator;
+        }
+
+        public Runnable add(Component component) {
+            if (flow != null) {
+                Label label = new Label();
+                label.setText(component);
+                flow.add(label);
+                return () -> flow.remove(label);
+            } else {
+                components.add(component);
+                return () -> {
+                    int idx = components.indexOf(component);
+                    if (flow != null) {
+                        flow.remove(componentElementMapping.remove(idx));
+                    }
+                    components.remove(idx);
+                };
+            }
+        }
+
+        public Flow getRoot() {
+            if (flow == null) {
+                flow = new Flow();
+                state = new GuiState(flow);
+                state.setShouldDoTooltips(false);
+                state.setUseBackingRenderTarget(false);
+                componentElementMapping = new ArrayList<>();
+                components.forEach(component -> {
+                    Label label = new Label();
+                    label.setText(component);
+                    flow.add(label);
+                    componentElementMapping.add(label);
+                });
+            }
+            return flow;
+        }
+
+        public void invalidate() {
+            invalidator.run();
+        }
+
+        Either<List<Component>, Flow> get() {
+            return flow == null ? Either.left(components) : Either.right(flow);
         }
     }
 }

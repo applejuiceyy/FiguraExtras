@@ -6,6 +6,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.SetText;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.mojang.datafixers.util.Either;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -95,8 +96,9 @@ public class Button extends Grid implements SetText {
     }
 
     @Override
-    protected void defaultActivationBehaviour(DefaultCancellableEvent.CausedEvent event) {
+    protected void defaultActivationBehaviour(DefaultCancellableEvent.CausedEvent<Either<DefaultCancellableEvent.KeyEvent, DefaultCancellableEvent.MousePositionButtonEvent>> event) {
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        assert getState() != null;
         getState().setFocused(this);
     }
 

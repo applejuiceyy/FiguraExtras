@@ -161,18 +161,30 @@ public final class Elements {
         };
 
         TwoWaySetter.track(viewPosObserver, verticalScrollbar.pos, Integer::floatValue, Float::intValue, () -> {
-            if (ints[2] == 0) verticalScrollbar.getState().childReprocessor.after(runnable);
-            ints[2] = 1;
+            if (ints[2] == 0) {
+                verticalScrollbar.ifState(state -> {
+                    state.childReprocessor.after(runnable);
+                    ints[2] = 1;
+                });
+            }
         });
         sizeObserver.observe(v -> {
-            if (ints[2] == 0) verticalScrollbar.getState().childReprocessor.after(runnable);
+            if (ints[2] == 0) {
+                verticalScrollbar.ifState(state -> {
+                    state.childReprocessor.after(runnable);
+                    ints[2] = 1;
+                });
+            }
             ints[0] = v;
-            ints[2] = 1;
         });
         viewSizeObserver.observe(v -> {
-            if (ints[2] == 0) verticalScrollbar.getState().childReprocessor.after(runnable);
+            if (ints[2] == 0) {
+                verticalScrollbar.ifState(state -> {
+                    state.childReprocessor.after(runnable);
+                    ints[2] = 1;
+                });
+            }
             ints[1] = v;
-            ints[2] = 1;
         });
     }
 

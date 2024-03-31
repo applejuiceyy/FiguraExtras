@@ -11,7 +11,6 @@ import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.github.applejuiceyy.figuraextras.window.WindowContext;
 import com.github.applejuiceyy.figuraextras.window.WindowContextReceiver;
-import io.wispforest.owo.ui.component.ButtonComponent;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -21,8 +20,8 @@ import org.figuramc.figura.avatar.AvatarManager;
 import org.jetbrains.annotations.Nullable;
 
 public class MainInfoScreen extends Screen implements WindowContextReceiver {
-    ButtonComponent guiScale;
     private final GuiState awWrapper;
+    private final Button guiScaleButton;
     private @Nullable AvatarInfoDisplay info = null;
     WindowContext context;
     AvatarInfoDisplay avatarInfoDisplay = null;
@@ -35,6 +34,8 @@ public class MainInfoScreen extends Screen implements WindowContextReceiver {
         super(Component.empty());
 
         Grid root = new Grid();
+
+        awWrapper = new GuiState(root);
         root.setSurface(Surface.solid(0xff000000));
 
         root.addRow(0, Grid.SpacingKind.CONTENT);
@@ -59,7 +60,7 @@ public class MainInfoScreen extends Screen implements WindowContextReceiver {
         Button selectAvatarButton = (Button) Button.minimal(2).addAnd("Select avatar");
         selectAvatarButton.mouseDown.subscribe(event -> {
             event.cancelPropagation();
-            Elements.spawnContextMenu(selectAvatarButton.getState(), event.x, event.y, (flow, culler) -> {
+            Elements.spawnContextMenu(awWrapper, event.x, event.y, (flow, culler) -> {
                 boolean empty = true;
                 for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
                     empty = false;
@@ -120,10 +121,8 @@ public class MainInfoScreen extends Screen implements WindowContextReceiver {
 
         centerer.add("No Avatar Selected").setRow(1).setColumn(1);
 
-        Button guiScaleButton = (Button) Button.minimal(2).addAnd("Gui Scale: Auto");
-        top.add(guiScaleButton).setColumn(2);
-
-        awWrapper = root.getState();
+        this.guiScaleButton = (Button) Button.minimal(2).addAnd("Gui Scale: Auto");
+        top.add(guiScaleButton).setColumn(2).setDoLayout(false).setInvisible(true);
     }
 
     public void tick() {
@@ -161,17 +160,19 @@ public class MainInfoScreen extends Screen implements WindowContextReceiver {
     @Override
     public void acknowledge(WindowContext context) {
         this.context = context;
-        if (guiScale != null && context.canSetGuiScale()) {
-            guiScale.visible = true;
-            guiScale.onPress(o -> {
+        if (context.canSetGuiScale()) {
+            ParentElement.Settings settings = guiScaleButton.getParent().getSettings(guiScaleButton);
+            settings.setInvisible(false);
+            settings.setDoLayout(true);
+            guiScaleButton.activation.subscribe(event -> {
                 int current = context.getLockedGuiScale().orElse(0);
                 current++;
                 if (current >= context.getRecommendedGuiScale()) {
                     context.unlockGuiScale();
-                    o.setMessage(Component.literal("Gui Scale: AUTO"));
+                    guiScaleButton.setText(Component.literal("Gui Scale: AUTO"));
                 } else {
                     context.lockGuiScale(current);
-                    o.setMessage(Component.literal("Gui Scale: " + current));
+                    guiScaleButton.setText(Component.literal("Gui Scale: " + current));
                 }
             });
         }

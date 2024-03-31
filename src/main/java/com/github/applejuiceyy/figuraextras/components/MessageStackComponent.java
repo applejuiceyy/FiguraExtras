@@ -75,7 +75,9 @@ public class MessageStackComponent extends Element {
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         int messageQuantity = this.lines.size();
+        Font font = Minecraft.getInstance().font;
         if (messageQuantity == 0) {
+            context.drawString(font, Component.literal("No messages yet"), x.get(), y.get(), 0xff777777);
             return;
         }
 
@@ -84,7 +86,7 @@ public class MessageStackComponent extends Element {
             refreshLines();
         }
 
-        Font font = Minecraft.getInstance().font;
+
 
         int yPos = height.get();
 
@@ -141,6 +143,11 @@ public class MessageStackComponent extends Element {
     }
 
     @Override
+    protected void defaultToolTipBehaviour(DefaultCancellableEvent.ToolTipEvent event) {
+        super.defaultToolTipBehaviour(event);
+    }
+
+    @Override
     public int computeOptimalWidth() {
         int ret = 0;
         for (Message message : messages) {
@@ -167,7 +174,7 @@ public class MessageStackComponent extends Element {
                 ret += newLines.size() * 9;
             }
         }
-        return ret;
+        return Math.max(ret, 9);
     }
 
     record Message(Component content, BooleanSupplier shouldAppear) {

@@ -45,6 +45,7 @@
     "gui.owolib.BlurProgramAccessor",
     "lua.DeadSlotMixin",
     "lua.TableMixin",
+    "render.GuiGraphicsAccessor",
     "window.VirtualScreenMixin",
     "window.WindowMixin"
   ],
