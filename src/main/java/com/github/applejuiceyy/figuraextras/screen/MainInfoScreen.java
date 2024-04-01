@@ -1,5 +1,6 @@
 package com.github.applejuiceyy.figuraextras.screen;
 
+import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.GuiState;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
@@ -36,6 +37,7 @@ public class MainInfoScreen extends Screen implements WindowContextReceiver {
         Grid root = new Grid();
 
         awWrapper = new GuiState(root);
+        awWrapper.setUseBackingRenderTarget(!FiguraExtras.disableCachedRendering.value);
         root.setSurface(Surface.solid(0xff000000));
 
         root.addRow(0, Grid.SpacingKind.CONTENT);

@@ -247,6 +247,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         } else {
             dirtySectionHolder.dirtySection = root;
             renderElements(elementOrder.tree, graphics, mouseX, mouseY, delta);
+            setClippingBox(null);
         }
 
         if (renderDebug) {
