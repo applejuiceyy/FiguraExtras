@@ -15,6 +15,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWCursorEnterCallback;
 import org.lwjgl.glfw.GLFWNativeWin32;
 import org.lwjgl.system.windows.User32;
 import org.lwjgl.system.windows.WindowProcI;
@@ -44,13 +45,14 @@ public class MonitorContentPopOutHost implements ContentPopOutHost {
         consumer.accept(potentialReinserting.component);
         potentialReinserting.secondaryWindow.close();
         potentialReinserting.sub.stop();
+        potentialReinserting.glfwCursorEnterCallback.close();
         window.remove(potentialReinserting);
         potentialReinserting = null;
     }
 
     @Override
     public void add(Observers.Observer<Component> component) {
-        new Instance(component);
+        Minecraft.getInstance().tell(() -> new Instance(component));
     }
 
     public void update() {
@@ -73,19 +75,12 @@ public class MonitorContentPopOutHost implements ContentPopOutHost {
             if (sw[0] != targetWidth || sh[0] != targetHeight) {
                 GLFW.glfwSetWindowSize(window.window.getWindow(), targetWidth, targetHeight);
 
-                window.renderTarget.bindWrite(true);
-                RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT | GlConst.GL_COLOR_BUFFER_BIT, Minecraft.ON_OSX);
-                window.renderTarget.unbindWrite();
-                window.updateDisplay();
-                window.renderTarget.bindWrite(true);
-                RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT | GlConst.GL_COLOR_BUFFER_BIT, Minecraft.ON_OSX);
-                window.renderTarget.unbindWrite();
+                window.renderTarget.clear(Minecraft.ON_OSX);
                 window.updateDisplay();
             }
 
-
+            window.renderTarget.clear(Minecraft.ON_OSX);
             window.renderTarget.bindWrite(true);
-            RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT | GlConst.GL_COLOR_BUFFER_BIT, Minecraft.ON_OSX);
 
             window.setupTransforms();
             GuiGraphics guiGraphics = new GuiGraphics(
@@ -132,6 +127,7 @@ public class MonitorContentPopOutHost implements ContentPopOutHost {
     }
 
     class Instance {
+        GLFWCursorEnterCallback glfwCursorEnterCallback;
         SecondaryWindow secondaryWindow;
         Observers.Observer<Component> component;
         Observers.UnSubscriber sub;
@@ -222,9 +218,12 @@ public class MonitorContentPopOutHost implements ContentPopOutHost {
                     int width = font.width(live);
 
                     if ((width - x) + y < 5) {
-                        secondaryWindow.close();
-                        sub.stop();
-                        window.remove(Instance.this);
+                        Minecraft.getInstance().tell(() -> {
+                            secondaryWindow.close();
+                            sub.stop();
+                            glfwCursorEnterCallback.close();
+                            window.remove(Instance.this);
+                        });
                         return;
                     }
 
@@ -242,7 +241,7 @@ public class MonitorContentPopOutHost implements ContentPopOutHost {
                 }
             });
 
-            GLFW.glfwSetCursorEnterCallback(secondaryWindow.window.getWindow(), (w, entered) -> {
+            glfwCursorEnterCallback = GLFW.glfwSetCursorEnterCallback(secondaryWindow.window.getWindow(), (w, entered) -> {
                 if (secondaryWindow.window.getWindow() == w) {
                     showCorners = entered;
                 }

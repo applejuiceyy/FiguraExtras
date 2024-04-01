@@ -1,25 +1,20 @@
 package com.github.applejuiceyy.figuraextras.screen.contentpopout;
 
-import com.github.applejuiceyy.figuraextras.components.SmallButtonComponent;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.event.MouseDown;
-import io.wispforest.owo.ui.event.MouseEnter;
-import io.wispforest.owo.ui.event.MouseLeave;
-import io.wispforest.owo.util.EventSource;
 import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.function.Supplier;
 
 public class ContentPopOut {
-    private final FlowLayout root;
+
     private final ArrayList<PopOutInstance<?>> instances = new ArrayList<>();
-    private final ContentPopOutHost host;
+    private final Supplier<ContentPopOutHost> host;
 
 
-    public ContentPopOut(FlowLayout root, ContentPopOutHost host) {
-        this.root = root;
+    public ContentPopOut(Supplier<ContentPopOutHost> host) {
         this.host = host;
     }
 
@@ -36,67 +31,29 @@ public class ContentPopOut {
     }
 
     public class PopOutInstance<T extends Element> {
-        boolean showingButton = false;
-        boolean shouldShowButton = false;
-        SmallButtonComponent popper;
+
+        private final Runnable subscribe;
         T component;
-
-        EventSource<MouseEnter>.Subscription enterSub;
-        EventSource<MouseLeave>.Subscription leaveSub;
-        EventSource<MouseEnter>.Subscription enterSub2;
-        EventSource<MouseLeave>.Subscription leaveSub2;
-        EventSource<MouseDown>.Subscription clickSub;
-
 
         PopOutInstance(T component, Observers.Observer<Component> value) {
 
             this.component = component;
-            // TODO
-            /*
-            popper = new SmallButtonComponent();
-            popper.sizing(Sizing.fixed(10), Sizing.fixed(10));
 
-            clickSub = popper.mouseDown().subscribe((x, y, button) -> {
-                host.add(value);
-                shouldShowButton = false;
-                return true;
+            subscribe = component.mouseDown.subscribe(event -> {
+                if (event.button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
+                    host.get().add(value);
+                    event.cancelPropagation();
+                    event.cancelDefault();
+                }
             });
-
-            enterSub = component.mouseEnter().subscribe(() -> shouldShowButton = true);
-
-            leaveSub = component.mouseLeave().subscribe(() -> shouldShowButton = false);
-
-            enterSub2 = popper.mouseEnter().subscribe(() -> shouldShowButton = true);
-
-            leaveSub2 = popper.mouseLeave().subscribe(() -> shouldShowButton = false);
-            */
-
         }
 
         public void render() {
-            if (showingButton != shouldShowButton) {
-                if (shouldShowButton) {
-                    root.child(popper);
-                } else {
-                    root.removeChild(popper);
-                }
-                showingButton = shouldShowButton;
-            }
-            /*popper.positioning(
-                    Positioning.absolute(component.x() - 10, component.y())
-            );*/
+
         }
 
         public void remove() {
-            if (showingButton) {
-                showingButton = false;
-                root.removeChild(popper);
-            }
-            clickSub.cancel();
-            enterSub.cancel();
-            clickSub.cancel();
-            enterSub2.cancel();
-            leaveSub2.cancel();
+            subscribe.run();
         }
     }
 

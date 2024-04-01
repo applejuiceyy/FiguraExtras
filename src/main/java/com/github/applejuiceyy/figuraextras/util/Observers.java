@@ -1,7 +1,5 @@
 package com.github.applejuiceyy.figuraextras.util;
 
-import io.wispforest.owo.util.EventSource;
-import io.wispforest.owo.util.EventStream;
 import net.minecraft.util.Tuple;
 import org.luaj.vm2.LuaValue;
 
@@ -37,8 +35,8 @@ public class Observers {
     };
 
     public static abstract class Observer<VALUE> {
-        private final EventStream<Runnable> startListening = new EventStream<>(v -> () -> v.forEach(Runnable::run));
-        private final EventStream<Runnable> stopListening = new EventStream<>(v -> () -> v.forEach(Runnable::run));
+        private final Event<Runnable> startListening = Event.runnable();
+        private final Event<Runnable> stopListening = Event.runnable();
         private final ArrayList<Predicate<VALUE>> subscribers = new ArrayList<>();
         private final ArrayList<Runnable> backlog = new ArrayList<>();
         private final int ownId;
@@ -185,22 +183,22 @@ public class Observers {
 
         private void startListening() {
             preventMisfires = true;
-            startListening.sink().run();
+            startListening.run(Runnable::run);
             preventMisfires = false;
         }
 
         private void stopListening() {
             preventMisfires = true;
-            stopListening.sink().run();
+            stopListening.run(Runnable::run);
             preventMisfires = false;
         }
 
-        public EventSource<Runnable> shouldListen() {
-            return startListening.source();
+        public Event<Runnable>.Source shouldListen() {
+            return startListening.getSource();
         }
 
-        public EventSource<Runnable> shouldStopListen() {
-            return stopListening.source();
+        public Event<Runnable>.Source shouldStopListen() {
+            return stopListening.getSource();
         }
 
         public <OUT> Observer<OUT> derive(Function<VALUE, OUT> transformer) {

@@ -2,7 +2,6 @@ package com.github.applejuiceyy.figuraextras.mixin;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.ducks.MinecraftAccess;
-import com.github.applejuiceyy.figuraextras.mixin.gui.owolib.BlurProgramAccessor;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.MonitorContentPopOutHost;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
 import com.github.applejuiceyy.figuraextras.util.Util;
@@ -11,7 +10,6 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.GlConst;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
-import io.wispforest.owo.client.OwoClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.gui.GuiGraphics;
@@ -155,20 +153,11 @@ public abstract class MinecraftMixin implements MinecraftAccess {
             detachedWindow.window.setupTransforms();
             GuiGraphics guiGraphics = new GuiGraphics((Minecraft) (Object) this, this.renderBuffers().bufferSource());
 
-            RenderTarget target = null;
-            BlurProgramAccessor accessor = ((BlurProgramAccessor) OwoClient.BLUR_PROGRAM);
-            if (detachedWindow.window.getOwoLibBlurShaderCompatibilityTexture() != null) {
-                target = accessor.getInput();
-                accessor.setInput(detachedWindow.window.getOwoLibBlurShaderCompatibilityTexture());
-            }
+
             profiler.pop();
             figuraExtrass$withWindow(detachedWindow.window.window, detachedWindow.window.renderTarget, () -> {
                 detachedWindow.render(guiGraphics);
             });
-
-            if (target != null) {
-                accessor.setInput(target);
-            }
 
             profiler.push("Finishing rendering");
             guiGraphics.flush();

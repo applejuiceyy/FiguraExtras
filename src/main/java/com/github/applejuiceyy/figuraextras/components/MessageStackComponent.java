@@ -2,7 +2,6 @@ package com.github.applejuiceyy.figuraextras.components;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -115,18 +114,6 @@ public class MessageStackComponent extends Element {
         return null;
     }
 
-    // TODO: tooltips
-    public void drawTooltip(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
-        //super.drawTooltip(context, mouseX, mouseY, partialTicks, delta);
-        //if (this.isInBoundingBox(mouseX, mouseY)) {
-        //    context.renderComponentHoverEffect(
-        //             Minecraft.getInstance().font,
-        //             getClickedComponentStyleAt(mouseX, mouseY),
-        //             mouseX, mouseY
-        //     );
-        // }
-    }
-
     private void updateUpperBound() {
         if (messageOffset > lines.size() - getLineCapacity()) {
             messageOffset = lines.size() - getLineCapacity();
@@ -144,7 +131,12 @@ public class MessageStackComponent extends Element {
 
     @Override
     protected void defaultToolTipBehaviour(DefaultCancellableEvent.ToolTipEvent event) {
-        super.defaultToolTipBehaviour(event);
+        // TODO: tooltips
+        /*context.renderComponentHoverEffect(
+            Minecraft.getInstance().font,
+            getClickedComponentStyleAt(event.x, event.y),
+                event.x, event.y
+        );*/
     }
 
     @Override

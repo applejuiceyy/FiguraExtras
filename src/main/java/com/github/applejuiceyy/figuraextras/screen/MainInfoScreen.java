@@ -95,7 +95,7 @@ public class MainInfoScreen extends Screen implements WindowContextReceiver {
 
                             @Override
                             public WindowContentPopOutHost getHost() {
-                                return null;
+                                return context.getContentPopOutHost();
                             }
                         });
                         root.add(info.root).setColumn(0).setRow(1);

@@ -11,11 +11,7 @@ import com.github.applejuiceyy.figuraextras.tech.trees.core.ReferenceStore;
 import com.github.applejuiceyy.figuraextras.tech.trees.ui.EntryUI;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
-import io.wispforest.owo.ui.component.CheckboxComponent;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.component.DiscreteSliderComponent;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.core.Sizing;
+
 
 public abstract class ObjectTreeView<VALUE> implements Lifecycle {
     protected final InfoViews.Context context;
@@ -23,9 +19,6 @@ public abstract class ObjectTreeView<VALUE> implements Lifecycle {
     private final Grid root = new Grid();
 
     EntryUI<VALUE> expanderUI;
-
-    private final DiscreteSliderComponent slider = Components.discreteSlider(Sizing.fill(70), 1, 100);
-    private final CheckboxComponent checkbox = Components.checkbox(net.minecraft.network.chat.Component.literal("ticks"));
 
     private final ContentPopOut contentPopOut;
 
@@ -39,7 +32,7 @@ public abstract class ObjectTreeView<VALUE> implements Lifecycle {
                 .content();
 
         // TODO: implement this
-        contentPopOut = new ContentPopOut(Containers.verticalFlow(Sizing.content(), Sizing.content()), context.getHost());
+        contentPopOut = new ContentPopOut(context::getHost);
 
 
         expanderUI = new EntryUI<>(
