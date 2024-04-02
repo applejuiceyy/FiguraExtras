@@ -1,9 +1,11 @@
 package com.github.applejuiceyy.figuraextras.views.views;
 
+import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.components.SoundComponent;
 import com.github.applejuiceyy.figuraextras.ducks.SoundBufferAccess;
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
 import com.github.applejuiceyy.figuraextras.mixin.SoundBufferAccessor;
+import com.github.applejuiceyy.figuraextras.mixin.figura.LuaSoundAccessor;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
@@ -11,6 +13,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.github.applejuiceyy.figuraextras.util.Differential;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import com.mojang.blaze3d.audio.Channel;
@@ -20,70 +23,106 @@ import com.mojang.blaze3d.audio.SoundBuffer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.sounds.ChannelAccess;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.phys.Vec3;
+import org.figuramc.figura.ducks.ChannelHandleAccessor;
+import org.figuramc.figura.lua.api.sound.LuaSound;
 import org.figuramc.figura.lua.api.sound.SoundAPI;
 import org.lwjgl.openal.AL10;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.OptionalInt;
+import java.util.stream.Collectors;
 
 public class SoundView implements Lifecycle {
-    private final Flow layout;
+
     private final InfoViews.Context context;
 
-    private final HashMap<SoundBuffer, Instance> textures = new HashMap<>();
+    private final HashMap<SoundBuffer, CustomSoundInstance> textures = new HashMap<>();
+    private final Differential<Map.Entry<String, SoundBuffer>, String, CustomSoundInstance> customSoundsDifferential;
+    private final Differential<Map.Entry<String, List<LuaSound>>, String, VanillaSoundInstance> vanillaSoundsDifferential;
 
     public SoundView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
-        layout = new Flow();
-        additionPoint.accept(Elements.withVerticalScroll(layout, true));
+        FiguraExtras.showSoundPositions.compute(context.getAvatar().owner, (k, v) -> v == null ? 1 : ++v);
+
+        Grid grid = new Grid();
+        grid.rows().percentage(7).percentage(3).cols().percentage(1);
+
+        Flow customSoundsLayout = new Flow();
+        grid.add(Elements.withVerticalScroll(customSoundsLayout, true));
+
+        Flow vanillaSoundsLayout = new Flow();
+        grid.add(Elements.withVerticalScroll(vanillaSoundsLayout, true)).setRow(1);
+        additionPoint.accept(grid);
+
+        customSoundsDifferential = new Differential<>(
+                context.getAvatar().customSounds.entrySet(),
+                Map.Entry::getKey,
+                thing -> {
+                    CustomSoundInstance inst = new CustomSoundInstance(thing.getKey(), thing.getValue(), context);
+                    customSoundsLayout.add(inst.root);
+                    return inst;
+                },
+                customSoundInstance -> {
+                    customSoundsLayout.remove(customSoundInstance.root);
+                    customSoundInstance.dispose();
+                }
+        );
+
+        vanillaSoundsDifferential = new Differential<>(
+                () -> ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtrass$getFiguraHandles()
+                        .stream()
+                        .filter(sound -> {
+                            ChannelHandleAccessor accessor = (ChannelHandleAccessor) sound.getHandle();
+                            return ((LuaSoundAccessor) sound).getSound() != null &&
+                                    sound.isPlaying() && accessor != null && accessor.getOwner().equals(context.getAvatar().owner);
+                        })
+                        .collect(Collectors.groupingBy(LuaSound::getId))
+                        .entrySet()
+                        .iterator(),
+                Map.Entry::getKey,
+                thing -> {
+                    VanillaSoundInstance inst = new VanillaSoundInstance(thing.getKey(), thing.getValue().size(), context);
+                    vanillaSoundsLayout.add(inst.root);
+                    return inst;
+                },
+                vanillaSoundInstance -> {
+                    vanillaSoundsLayout.remove(vanillaSoundInstance.root);
+                    vanillaSoundInstance.dispose();
+                }
+        );
     }
 
     @Override
     public void tick() {
-        ArrayList<SoundBuffer> seen = new ArrayList<>();
-        for (Map.Entry<String, SoundBuffer> texture : context.getAvatar().customSounds.entrySet()) {
-            if (!textures.containsKey(texture.getValue())) {
-                Instance inst = new Instance(texture.getKey(), texture.getValue(), context);
-                layout.add(inst.root);
-                textures.put(texture.getValue(), inst);
-                seen.add(texture.getValue());
-            }
-            seen.add(texture.getValue());
-        }
-
-        for (Iterator<Map.Entry<SoundBuffer, Instance>> iterator = textures.entrySet().iterator(); iterator.hasNext(); ) {
-            Map.Entry<SoundBuffer, Instance> figuraTextureTextureComponentEntry = iterator.next();
-            if (!seen.contains(figuraTextureTextureComponentEntry.getKey())) {
-                iterator.remove();
-                figuraTextureTextureComponentEntry.getValue().dispose();
-            } else {
-                figuraTextureTextureComponentEntry.getValue().tick();
-            }
-        }
+        customSoundsDifferential.update(CustomSoundInstance::tick);
     }
 
     @Override
     public void render() {
-        for (Map.Entry<SoundBuffer, Instance> figuraTextureTextureComponentEntry : textures.entrySet()) {
-            figuraTextureTextureComponentEntry.getValue().render();
-        }
+        customSoundsDifferential.update(CustomSoundInstance::render);
+        vanillaSoundsDifferential.update((inst, v) -> inst.setCount(v.getValue().size()));
     }
 
     @Override
     public void dispose() {
-        for (Instance value : textures.values()) {
-            value.dispose();
-        }
+        customSoundsDifferential.dispose();
+        FiguraExtras.showSoundPositions.compute(context.getAvatar().owner, (k, v) -> v == null || v == 1 ? null : --v);
     }
 
-    static class Instance {
+    static class CustomSoundInstance {
         private final InfoViews.Context context;
         private final SoundBuffer sound;
         private final Label label;
+        private final Label currentPlayingSounds;
+        private final String name;
         public Flow root;
         SoundComponent soundComponent;
         public long millisPlay = 0;
@@ -94,9 +133,11 @@ public class SoundView implements Lifecycle {
         private final MutableComponent stopComponent = net.minecraft.network.chat.Component.literal("Stop");
         private final MutableComponent playComponent = net.minecraft.network.chat.Component.literal("Play");
 
-        public Instance(String name, SoundBuffer sound, InfoViews.Context context) {
+        public CustomSoundInstance(String name, SoundBuffer sound, InfoViews.Context context) {
             this.context = context;
             this.sound = sound;
+            this.name = name;
+
             root = new Flow();
 
             root.setSurface(Surface.contextBackground());
@@ -165,7 +206,17 @@ public class SoundView implements Lifecycle {
                 });
             });
 
-            root.add(button);
+            Grid grid = new Grid();
+
+            grid.rows().content().cols().content().fixed(20).content();
+
+            grid.add(button);
+
+            currentPlayingSounds = new Label();
+            grid.add(currentPlayingSounds).setColumn(2);
+
+            root.add(grid);
+
         }
 
         public ByteBuffer searchForByteBuffer(SoundBuffer sound, String key) {
@@ -221,6 +272,46 @@ public class SoundView implements Lifecycle {
 
                 needUpdate = nowUpdate;
             }
+
+            int sounds = 0;
+            for (LuaSound luaSound : ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtrass$getFiguraHandles()) {
+                if (((LuaSoundAccessor) luaSound).getBuffer() == null) continue; // it's a vanilla sound
+                ChannelHandleAccessor accessor = (ChannelHandleAccessor) luaSound.getHandle();
+                if (luaSound.isPlaying() && accessor != null && accessor.getOwner().equals(context.getAvatar().owner) && luaSound.getId().equals(name)) {
+                    sounds++;
+                }
+            }
+
+            currentPlayingSounds.setText(Component.literal(sounds + " playing").withStyle(style -> style.withColor(0xffff5500)));
+        }
+    }
+
+    static class VanillaSoundInstance {
+        private final InfoViews.Context context;
+        private final String name;
+        private final Label count;
+        public Grid root;
+
+        public VanillaSoundInstance(String name, int count, InfoViews.Context context) {
+            this.context = context;
+            this.name = name;
+
+            root = new Grid();
+            root.rows().content().cols().content().percentage(1).content();
+            root.setSurface(Surface.contextBackground());
+
+            this.count = new Label();
+            setCount(count);
+
+            root.add(name);
+            root.add(this.count).setColumn(2);
+        }
+
+        public void setCount(int count) {
+            this.count.setText(Component.literal(count + " playing").withStyle(style -> style.withColor(0xffff5500)));
+        }
+
+        public void dispose() {
         }
     }
 }

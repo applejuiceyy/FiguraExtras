@@ -4,35 +4,36 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class Differential<I, K, O> {
-    private final Supplier<Iterator<I>> iterator;
+    private final Iterable<I> iterator;
     private final HashMap<K, O> mapping = new HashMap<>();
     private final Function<I, K> key;
     private final Function<I, O> creator;
     private final Consumer<O> disposer;
 
-    public Differential(Supplier<Iterator<I>> iterator, Function<I, K> key, Function<I, O> creator, Consumer<O> disposer) {
+    public Differential(Iterable<I> iterator, Function<I, K> key, Function<I, O> creator, Consumer<O> disposer) {
         this.key = key;
         this.iterator = iterator;
         this.creator = creator;
         this.disposer = disposer;
     }
 
-    public void update(Consumer<O> consumer) {
-        Iterator<I> t = iterator.get();
+    public void update(BiConsumer<O, I> consumer) {
+        Iterator<I> t = iterator.iterator();
         ArrayList<K> seen = new ArrayList<>();
         while (t.hasNext()) {
             I r = t.next();
-            seen.add(key.apply(r));
+            K key = this.key.apply(r);
+            seen.add(key);
 
-            if (mapping.containsKey(key.apply(r))) {
-                consumer.accept(mapping.get(key.apply(r)));
+            if (mapping.containsKey(key)) {
+                consumer.accept(mapping.get(key), r);
             } else {
-                mapping.put(key.apply(r), creator.apply(r));
+                mapping.put(key, creator.apply(r));
             }
         }
 
@@ -43,6 +44,10 @@ public class Differential<I, K, O> {
                 disposer.accept(ioEntry.getValue());
             }
         }
+    }
+
+    public void update(Consumer<O> consumer) {
+        update((o, u) -> consumer.accept(o));
     }
 
     public void withoutTest(Consumer<O> consumer) {

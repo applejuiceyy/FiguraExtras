@@ -28,7 +28,7 @@ public class CaptureView implements Lifecycle {
     public CaptureView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
         differential = new Differential<>(
-                () -> ((LuaRuntimeAccess) context.getAvatar().luaRuntime).figuraExtrass$getNoticedPotentialCaptures().entrySet().iterator(),
+                ((LuaRuntimeAccess) context.getAvatar().luaRuntime).figuraExtrass$getNoticedPotentialCaptures().entrySet(),
                 Map.Entry::getValue,
                 o -> {
                     Instance i = new Instance(o.getValue());

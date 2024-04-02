@@ -10,6 +10,7 @@
     "figura.InstructionsMixin",
     "figura.LuaRuntimeAccessor",
     "figura.LuaRuntimeMixin",
+    "figura.LuaSoundAccessor",
     "figura.S2CMessageHandlerMixin",
     "figura.networking.HttpRequestBuilderMixin",
     "figura.networking.HttpRequestsAPIAccessor",
