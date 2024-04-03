@@ -74,8 +74,7 @@ public class FiguraExtras implements ClientModInitializer {
                     poseStack.pushPose();
                     FiguraVec3 pos = sound.getPos();
                     Vec3 position = ctx.camera().getPosition();
-                    poseStack.translate(-position.x, -position.y, -position.z);
-                    poseStack.translate(pos.x, pos.y, pos.z);
+                    poseStack.translate(-position.x + pos.x, -position.y + pos.y, -position.z + pos.z);
                     poseStack.mulPose(ctx.camera().rotation());
                     poseStack.scale(-0.1f, -0.1f, 0.1f);
 
