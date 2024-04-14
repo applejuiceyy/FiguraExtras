@@ -8,10 +8,14 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
 import org.figuramc.figura.lua.LuaTypeManager;
 import org.joml.Matrix4f;
 import org.luaj.vm2.LuaValue;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -63,6 +67,10 @@ public class Util {
         });
     }
 
+    public static <T> CompletableFuture<T> fail(ResponseErrorCode code, String message) {
+        return CompletableFuture.failedFuture(new ResponseErrorException(new ResponseError(code, message, null)));
+    }
+
     public static Component appendReference(LuaTypeManager typeManager, LuaValue value, Component suffix, boolean quoteStrings) {
         MutableComponent component = FiguraLuaPrinterAccessor.invokeGetPrintText(typeManager, value, false, quoteStrings);
         if (component == null) {
@@ -81,6 +89,21 @@ public class Util {
         });
         in.shouldListen().subscribe(o::start);
         in.shouldStopListen().subscribe(o::stop);
+    }
+
+    public static void thread(Runnable runnable) {
+        new Thread(runnable).start();
+    }
+
+    public static void after(Runnable runnable, long millis) {
+        new Thread(() -> {
+            try {
+                Thread.sleep(millis);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            runnable.run();
+        }).start();
     }
 
     public static SafeCloseable maybeTry(Supplier<SafeCloseable> in, boolean yes) {

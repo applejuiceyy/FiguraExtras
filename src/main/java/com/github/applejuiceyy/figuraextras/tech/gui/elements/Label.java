@@ -5,8 +5,12 @@ import com.github.applejuiceyy.figuraextras.tech.gui.basics.SetText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Mth;
 
 import java.util.Comparator;
+import java.util.List;
 
 public class Label extends Element implements SetText {
 
@@ -45,9 +49,28 @@ public class Label extends Element implements SetText {
         return this;
     }
 
+    public Style getComponentAt(double x, double y) {
+        int i = (int) ((y - this.y.get() - 1) / Minecraft.getInstance().font.lineHeight);
+        List<FormattedCharSequence> split = Minecraft.getInstance().font.split(text, width.get());
+        if (i >= 0 && i < split.size()) {
+            FormattedCharSequence line = split.get(split.size() - 1 - i);
+            return Minecraft.getInstance().font.getSplitter().componentStyleAtWidth(line, Mth.floor(x - this.x.get()));
+        }
+        return null;
+    }
+
     // from MutableComponent, mildly modified
     public boolean componentsEqual(Component a, Component b) {
         return a == b || a.getContents().equals(b.getContents()) && a.getStyle().equals(b.getStyle()) && a.getSiblings().equals(b.getSiblings());
+    }
+
+
+    @Override
+    public HoverIntent mouseHoverIntent(double mouseX, double mouseY) {
+        Style style = getComponentAt(mouseX, mouseY);
+        if (style.getClickEvent() != null) return HoverIntent.INTERACT;
+        if (style.getHoverEvent() != null) return HoverIntent.LOOK;
+        return HoverIntent.NONE;
     }
 
     @Override

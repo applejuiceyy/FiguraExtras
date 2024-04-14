@@ -2,6 +2,8 @@ package com.github.applejuiceyy.figuraextras.ducks;
 
 import com.github.applejuiceyy.figuraextras.tech.captures.ActiveOpportunity;
 import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
+import com.github.applejuiceyy.figuraextras.util.Event;
+import org.jetbrains.annotations.Nullable;
 import org.luaj.vm2.LuaTable;
 
 public interface GlobalsAccess {
@@ -9,9 +11,9 @@ public interface GlobalsAccess {
 
     void figuraExtrass$setCurrentlySearchingForCapture(ActiveOpportunity<?> captureOpportunity);
 
-    SecondaryCallHook figuraExtrass$getCurrentCapture();
+    @Nullable SecondaryCallHook figuraExtrass$getCurrentCapture();
 
-    void figuraExtrass$setCurrentCapture(SecondaryCallHook hook);
+    Event<SecondaryCallHook>.Source figuraExtrass$getCaptureEventSource();
 
     LuaTable figuraExtrass$getOffTheShelfDebugLib();
 

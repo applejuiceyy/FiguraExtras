@@ -103,8 +103,8 @@ public class FlameGraphComponent extends Element {
     }
 
     @Override
-    public boolean blocksMouseActivation() {
-        return true;
+    public Element.HoverIntent mouseHoverIntent(double mouseX, double mouseY) {
+        return HoverIntent.INTERACT;
     }
 
     int toView(int in) {

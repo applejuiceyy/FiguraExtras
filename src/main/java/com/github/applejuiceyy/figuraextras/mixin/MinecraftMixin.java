@@ -15,6 +15,7 @@ import net.minecraft.client.MouseHandler;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.main.GameConfig;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.VirtualScreen;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -200,6 +201,16 @@ public abstract class MinecraftMixin implements MinecraftAccess {
             FiguraExtras.windows.remove(detachedWindow);
         }
         profiler.pop();
+    }
+
+    @Inject(method = "clearLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("RETURN"))
+    void e(CallbackInfo ci) {
+        FiguraExtras.updateInformation();
+    }
+
+    @Inject(method = "setLevel", at = @At("RETURN"))
+    void e(ClientLevel world, CallbackInfo ci) {
+        FiguraExtras.updateInformation();
     }
 
     public WindowContentPopOutHost figuraExtrass$getContentPopOutHost() {

@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 @Mixin(targets = "org.figuramc.figura.lua.FiguraLuaPrinter$1", remap = false)
 class FiguraLuaPrinterLambda1Mixin {
@@ -30,10 +30,10 @@ class FiguraLuaPrinterLambda1Mixin {
 
     @Inject(method = "invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At("HEAD"), remap = false)
     private void e(Varargs args, CallbackInfoReturnable<Varargs> cir) {
-        Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) val$runtime.owner).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) val$runtime.owner).figuraExtrass$getChatRedirect();
         FiguraLuaPrinterDuck.currentAvatar = val$runtime.owner;
         FiguraLuaPrinterDuck.currentKind = FiguraLuaPrinterDuck.Kind.PRINT;
-        switchLogOthersBack = Configs.LOG_OTHERS.value;
+        FiguraLuaPrinterDuck.logOthers = switchLogOthersBack = Configs.LOG_OTHERS.value;
         switchLogLocationBack = Configs.LOG_LOCATION.value;
         if (!Configs.LOG_OTHERS.value && redirect.hasSubscribers()) {
             Configs.LOG_OTHERS.value = true;
@@ -46,10 +46,10 @@ class FiguraLuaPrinterLambda1Mixin {
         Configs.LOG_OTHERS.value = switchLogOthersBack;
     }
 
-    @Inject(method = "invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "TAIL"), remap = false)
-    private void h(Varargs args, CallbackInfoReturnable<Varargs> cir) {
+    @Inject(method = "invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "TAIL"))
+    private void reset(Varargs args, CallbackInfoReturnable<Varargs> cir) {
         FiguraLuaPrinterDuck.currentAvatar = null;
         FiguraLuaPrinterDuck.currentKind = FiguraLuaPrinterDuck.Kind.OTHER;
-        Configs.LOG_LOCATION.value = switchLogLocationBack;
+        Configs.LOG_OTHERS.value = switchLogOthersBack;
     }
 }

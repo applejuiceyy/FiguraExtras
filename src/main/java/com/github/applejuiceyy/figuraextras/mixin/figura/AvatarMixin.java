@@ -41,7 +41,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 @Mixin(value = Avatar.class, remap = false)
 public class AvatarMixin implements AvatarAccess {
@@ -50,8 +50,14 @@ public class AvatarMixin implements AvatarAccess {
     @Shadow
     public AvatarRenderer renderer;
 
+    @SuppressWarnings("unchecked")
     @Unique
-    Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> chatRedirector = Event.biConsumer();
+    Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> chatRedirector = new Event<>((subs, firing) -> (a, b) -> {
+        firing.startFiring();
+        boolean b1 = subs.stream().allMatch(p -> p.test(a, b));
+        firing.finishFiring();
+        return b1;
+    });
     @Unique
     Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> networkEvent = Event.triConsumer();
     @Unique
@@ -109,8 +115,8 @@ public class AvatarMixin implements AvatarAccess {
         modelRootObserver.set(Optional.ofNullable(
                 renderer == null ? null : new DummyExpander.Dummy(renderer.root)
         ));
-        objectRootUpdater.getSink().run(Runnable::run);
-        modelRootUpdater.getSink().run(Runnable::run);
+        objectRootUpdater.getSink().run();
+        modelRootUpdater.getSink().run();
     }
 
     @Inject(method = "loadSound", at = @At(value = "INVOKE", target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"), locals = LocalCapture.CAPTURE_FAILSOFT)
@@ -135,7 +141,7 @@ public class AvatarMixin implements AvatarAccess {
     }
 
     @Override
-    public Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect() {
+    public Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect() {
         return chatRedirector;
     }
 

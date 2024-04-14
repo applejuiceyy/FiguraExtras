@@ -1,5 +1,6 @@
 package com.github.applejuiceyy.figuraextras.views.views;
 
+import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.components.MessageStackComponent;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
@@ -11,12 +12,14 @@ import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.InfoViews;
 import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.config.Configs;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
 public class ChatLikeView implements Lifecycle {
@@ -30,13 +33,9 @@ public class ChatLikeView implements Lifecycle {
 
     public ChatLikeView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
-        Event<BiConsumer<net.minecraft.network.chat.Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getAvatar()).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getAvatar()).figuraExtrass$getChatRedirect();
         if (!event.hasSubscribers() && (Configs.LOG_OTHERS.value || FiguraMod.isLocal(context.getAvatar().owner))) {
-            FiguraMod.sendChatMessage(
-                    net.minecraft.network.chat.Component.literal("[FiguraExtras] ")
-                            .withStyle(ChatFormatting.BLUE)
-                            .append(net.minecraft.network.chat.Component.literal("Redirecting output to informational screens").withStyle(ChatFormatting.WHITE))
-            );
+            FiguraExtras.sendBrandedMessage("Redirecting output to informational screens");
         }
 
         root = new Grid();
@@ -70,7 +69,10 @@ public class ChatLikeView implements Lifecycle {
 
         root.add(Elements.withVerticalScroll(new Flow().addAnd(stack), true)).setRow(1);
 
-        sub = event.getSource().subscribe((message, kind) -> stack.addMessage(message, () -> show.contains(kind) || show.isEmpty()));
+        sub = event.getSource().subscribe((message, kind) -> {
+            stack.addMessage(message, () -> show.contains(kind) || show.isEmpty());
+            return false;
+        });
 
         additionPoint.accept(root);
     }
@@ -101,13 +103,9 @@ public class ChatLikeView implements Lifecycle {
     @Override
     public void dispose() {
         sub.run();
-        Event<BiConsumer<net.minecraft.network.chat.Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getAvatar()).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getAvatar()).figuraExtrass$getChatRedirect();
         if (!event.hasSubscribers() && (Configs.LOG_OTHERS.value || FiguraMod.isLocal(context.getAvatar().owner))) {
-            FiguraMod.sendChatMessage(
-                    net.minecraft.network.chat.Component.literal("[FiguraExtras] ")
-                            .withStyle(ChatFormatting.BLUE)
-                            .append(net.minecraft.network.chat.Component.literal("No longer redirecting output to informational screens").withStyle(ChatFormatting.WHITE))
-            );
+            FiguraExtras.sendBrandedMessage("No longer redirecting output to informational screens");
         }
     }
 }

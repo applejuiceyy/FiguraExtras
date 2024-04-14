@@ -28,6 +28,6 @@ public class ExpanderHost<V> {
     }
 
     public Runnable getCancel() {
-        return () -> stopUpdatingEntries.getSink().run(Runnable::run);
+        return () -> stopUpdatingEntries.getSink().run();
     }
 }

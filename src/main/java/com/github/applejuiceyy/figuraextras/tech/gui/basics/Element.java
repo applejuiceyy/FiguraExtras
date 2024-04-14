@@ -30,7 +30,7 @@ abstract public class Element implements Rectangle {
     ImmutableRectangle clippingBox = null;
     private @Nullable ReadableRectangle previousRestingPosition = null;
     public final Observers.WritableObserver<Boolean> hovering = Observers.of(false);
-    public final Observers.WritableObserver<Boolean> activeHovering = Observers.of(false);
+    public final Observers.WritableObserver<HoverIntent> hoveringKind = Observers.of(HoverIntent.NONE);
     public final Observers.WritableObserver<Boolean> hoveringWithin = Observers.of(false);
     public final Observers.WritableObserver<Boolean> focused = Observers.of(false);
     public final Event<Consumer<DefaultCancellableEvent.CausedEvent<Either<DefaultCancellableEvent.KeyEvent, DefaultCancellableEvent.MousePositionButtonEvent>>>> activation = Event.consumer();
@@ -180,15 +180,8 @@ abstract public class Element implements Rectangle {
         }
     }
 
-    public boolean blocksMouseActivation() {
-        return false;
-    }
-
-    /***
-     this function is only relevant if blocksMouseActivation returns true
-     */
-    public boolean canActivate() {
-        return true;
+    public HoverIntent mouseHoverIntent(double mouseX, double mouseY) {
+        return HoverIntent.NONE;
     }
 
     public boolean hoveringMouseHitTest(double mouseX, double mouseY) {
@@ -249,8 +242,8 @@ abstract public class Element implements Rectangle {
         if (hovering.get()) {
             text.append("hovered ");
         }
-        if (activeHovering.get()) {
-            text.append("activeHovered ");
+        if (hoveringKind.get() != HoverIntent.NONE) {
+            text.append("intentiousHovering ");
         }
         if (hoveringWithin.get()) {
             text.append("hoveredWithin ");
@@ -366,7 +359,7 @@ abstract public class Element implements Rectangle {
     }
 
     public <T extends DefaultCancellableEvent> boolean doSweepingEvent(Function<Element, Event<Consumer<T>>> eventGetter, T event, Function<Iterable<Element>, Element> forwarder) {
-        eventGetter.apply(this).getSink().run(e -> e.accept(event));
+        eventGetter.apply(this).getSink().accept(event);
         return event.isPropagating();
     }
 
@@ -438,4 +431,16 @@ abstract public class Element implements Rectangle {
     abstract public int computeOptimalWidth();
 
     abstract public int computeOptimalHeight(int width);
+
+    public enum HoverIntent {
+        NONE(false, false), LOOK(false, true), INTERACT(true, false), INTERACT_LOOK(true, true);
+
+        public final boolean interact;
+        public final boolean look;
+
+        HoverIntent(boolean interact, boolean look) {
+            this.interact = interact;
+            this.look = look;
+        }
+    }
 }

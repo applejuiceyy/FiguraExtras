@@ -5,6 +5,7 @@ import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.lua.FiguraLuaPrinter;
@@ -22,6 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 
 @Mixin(value = FiguraLuaPrinter.class, remap = false)
@@ -38,15 +40,21 @@ public abstract class FiguraLuaPrinterMixin {
             return;
         }
 
-        Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) FiguraLuaPrinterDuck.currentAvatar).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) FiguraLuaPrinterDuck.currentAvatar).figuraExtrass$getChatRedirect();
         if (redirect.hasSubscribers()) {
             String print = message.getString();
             if (!print.isEmpty()) {
                 message = print.endsWith("\n") ? TextUtils.substring(message, 0, print.length() - 1) : message;
             }
             Component finalMessage = message;
-            redirect.getSink().run(v -> v.accept(TextUtils.replaceTabs(finalMessage), FiguraLuaPrinterDuck.currentKind));
-            ci.cancel();
+            if (redirect.getSink().test(TextUtils.replaceTabs(finalMessage), FiguraLuaPrinterDuck.currentKind)) {
+                if (!FiguraLuaPrinterDuck.logOthers && !FiguraMod.isLocal(FiguraLuaPrinterDuck.currentAvatar.owner)) {
+                    ci.cancel();
+                }
+            } else {
+                ci.cancel();
+            }
+            ;
         }
     }
 
@@ -57,35 +65,33 @@ public abstract class FiguraLuaPrinterMixin {
             cancellable = true
     )
     private static void moreCheese(LuaError error, Avatar owner, CallbackInfo ci, String message, MutableComponent component) {
-        Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) owner).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) owner).figuraExtrass$getChatRedirect();
         if (redirect.hasSubscribers()) {
-            redirect.getSink().run(v -> v.accept(TextUtils.replaceTabs(component), FiguraLuaPrinterDuck.Kind.ERRORS));
-            ci.cancel();
+            if (!redirect.getSink().test(TextUtils.replaceTabs(component), FiguraLuaPrinterDuck.Kind.ERRORS)) {
+                ci.cancel();
+            }
         }
     }
 
     @Unique
     private static Integer switchLogPingsBack = 0;
 
-    @Inject(method = "sendPingMessage", at = @At(value = "HEAD"))
-    private static void evenMoreCheese(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci) {
-        FiguraLuaPrinterDuck.currentAvatar = owner;
-        FiguraLuaPrinterDuck.currentKind = FiguraLuaPrinterDuck.Kind.PINGS;
-        Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) owner).figuraExtrass$getChatRedirect();
+    @Inject(method = "sendPingMessage", at = @At("HEAD"))
+    private static void tamperConfigVariable(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci) {
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) owner).figuraExtrass$getChatRedirect();
         switchLogPingsBack = Configs.LOG_PINGS.value;
         if (redirect.hasSubscribers()) {
             Configs.LOG_PINGS.value = 2;
         }
     }
 
-    @Inject(method = "sendPingMessage", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;empty()Lnet/minecraft/network/chat/MutableComponent;", remap = true))
-    private static void soMuchCheeseOhMyGod(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci) {
+    @Inject(method = "sendPingMessage", at = @At(value = "FIELD", target = "Lorg/figuramc/figura/config/Configs;LOG_LOCATION:Lorg/figuramc/figura/config/ConfigType$EnumConfig;"), locals = LocalCapture.CAPTURE_FAILHARD, cancellable = true)
+    private static void evenMoreCheese(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci, int config, MutableComponent text) {
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) owner).figuraExtrass$getChatRedirect();
         Configs.LOG_PINGS.value = switchLogPingsBack;
-    }
-
-    @Inject(method = "sendPingMessage", at = @At(value = "TAIL"))
-    private static void AAAAAAAAAAAAAAAAAAA(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci) {
-        FiguraLuaPrinterDuck.currentKind = FiguraLuaPrinterDuck.Kind.OTHER;
+        if (!redirect.getSink().test(text, FiguraLuaPrinterDuck.Kind.PINGS) || (switchLogPingsBack == 0 || switchLogPingsBack == 1 && !owner.isHost)) {
+            ci.cancel();
+        }
     }
 
     @Inject(method = "userdataToText", at = @At(value = "HEAD"), cancellable = true)

@@ -94,7 +94,7 @@ public class HttpRequestBuilderMixin {
         ((AvatarAccess) ((NetworkingAPIAccessor) ((HttpRequestsAPIAccessor) parent).getParent()).getOwner())
                 .figuraExtrass$getNetworkLogger()
                 .getSink()
-                .run(v -> v.accept(asyncResponse, req, wireTapped));
+                .accept(asyncResponse, req, wireTapped);
         wireTapped = null;
     }
 }

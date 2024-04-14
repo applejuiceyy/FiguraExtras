@@ -13,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 public interface AvatarAccess {
     boolean figuraExtrass$isCleaned();
@@ -21,7 +22,7 @@ public interface AvatarAccess {
 
     Expander<DummyExpander.Dummy> figuraExtrass$getModelViewTree();
 
-    Event<BiConsumer<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect();
+    Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect();
 
     Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtrass$getNetworkLogger();
 }

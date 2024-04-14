@@ -46,7 +46,7 @@ public class DescriptionUI<V> {
                 }
                 contentNomenclature = new Grid();
                 place.add(contentNomenclature);
-                remover.getSink().run(Runnable::run);
+                remover.getSink().run();
                 remover = Event.runnable();
 
                 currentDescriber = value.get().getA();
@@ -72,7 +72,7 @@ public class DescriptionUI<V> {
 
     public void dispose() {
         referenceCreator.dispose();
-        remover.getSink().run(Runnable::run);
+        remover.getSink().run();
         sub.stop();
     }
 }

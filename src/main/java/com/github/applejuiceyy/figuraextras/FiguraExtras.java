@@ -2,30 +2,48 @@ package com.github.applejuiceyy.figuraextras;
 
 
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
+import com.github.applejuiceyy.figuraextras.vscode.C2CClientImpl;
+import com.github.applejuiceyy.figuraextras.vscode.ReceptionistServer;
+import com.github.applejuiceyy.figuraextras.vscode.ipc.IPCFactory;
+import com.github.applejuiceyy.figuraextras.vscode.protocol.C2CServer;
+import com.github.applejuiceyy.figuraextras.vscode.protocol.ClientInformation;
+import com.github.applejuiceyy.figuraextras.vscode.protocol.WorldInformation;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.SharedConstants;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.phys.Vec3;
+import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Badges;
 import org.figuramc.figura.config.ConfigType;
+import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.ducks.ChannelHandleAccessor;
 import org.figuramc.figura.lua.api.sound.LuaSound;
 import org.figuramc.figura.lua.api.sound.SoundAPI;
 import org.figuramc.figura.math.vector.FiguraVec3;
 import org.joml.Matrix4f;
+import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.logging.Logger;
+import java.util.function.UnaryOperator;
 
 public class FiguraExtras implements ClientModInitializer {
     public static ArrayList<DetachedWindow> windows = new ArrayList<>();
@@ -37,6 +55,8 @@ public class FiguraExtras implements ClientModInitializer {
     public static final ConfigType.BoolConfig disableCachedRendering;
     public static final ConfigType.StringConfig progCmd;
     private static final ConfigType.Category category;
+
+    public static Logger logger = LogUtils.getLogger();
 
     static {
         try {
@@ -51,6 +71,10 @@ public class FiguraExtras implements ClientModInitializer {
         disableServerToasts = new ConfigType.BoolConfig("disable_server_toasts", category, false);
         disableCachedRendering = new ConfigType.BoolConfig("disable_cached_rendering", category, false);
 
+        ConfigType.ButtonConfig kofi = new ConfigType.ButtonConfig("kofi", category, () -> {
+            Util.getPlatform().openUri("https://ko-fi.com/theapplejuice");
+        });
+        kofi.name = Component.literal("Huh? Kofi? Is that some kind of lettuce?").withStyle(ChatFormatting.GREEN);
 
         category.name = Component.literal("FiguraExtras");
         progName.name = Component.literal("Open With Program Name");
@@ -59,10 +83,50 @@ public class FiguraExtras implements ClientModInitializer {
         disableCachedRendering.name = Component.literal("Disable Cached Rendering");
     }
 
-    public static Logger logger = Logger.getLogger("FiguraExtras");
+    public static void sendBrandedMessage(Component text) {
+        sendBrandedMessage("FiguraExtras", text);
+    }
+
+    public static void sendBrandedMessage(String header, Component text) {
+        sendBrandedMessage(header, ChatFormatting.BLUE, text);
+    }
+
+    public static void sendBrandedMessage(String header, ChatFormatting formatting, Component text) {
+        sendBrandedMessage(header, style -> style.withColor(formatting), text);
+    }
+
+    public static void sendBrandedMessage(String header, UnaryOperator<Style> style, Component text) {
+        Minecraft.getInstance().execute(() -> FiguraMod.sendChatMessage(
+                Component.literal("[" + header + "] ")
+                        .withStyle(style)
+                        .append(text)
+        ));
+    }
+
+    public static void sendBrandedMessage(String text) {
+        sendBrandedMessage(Component.literal(text).withStyle(ChatFormatting.WHITE));
+    }
+
+    public static void sendBrandedMessage(String header, String text) {
+        sendBrandedMessage(header, Component.literal(text).withStyle(ChatFormatting.WHITE));
+    }
+
+    public static void sendBrandedMessage(String header, ChatFormatting formatting, String text) {
+        sendBrandedMessage(header, formatting, Component.literal(text).withStyle(ChatFormatting.WHITE));
+    }
+
+    public static void sendBrandedMessage(String header, UnaryOperator<Style> style, String text) {
+        sendBrandedMessage(header, style, Component.literal(text).withStyle(ChatFormatting.WHITE));
+    }
+
+    public static void updateInformation() {
+        ReceptionistServer.getOrCreateOrConnect().updateInformation();
+    }
 
     @Override
     public void onInitializeClient() {
+        updateInformation();
+
         WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
             if (showSoundPositions.isEmpty()) return;
             Style style = Badges.System.SOUND.badge.getStyle();

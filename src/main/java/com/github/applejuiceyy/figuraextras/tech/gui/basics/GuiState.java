@@ -100,7 +100,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public GuiState setShouldDoTooltips(boolean shouldDoTooltips) {
         this.shouldDoTooltips = shouldDoTooltips;
         if (!shouldDoTooltips && activeTooltipEvent != null) {
-            activeTooltipEvent.disposing.run(Runnable::run);
+            activeTooltipEvent.disposing.getSink().run();
             activeTooltipEvent = null;
         }
         return this;
@@ -273,11 +273,11 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             Minecraft.getInstance().getProfiler().popPush("Tooltip");
             if (activeTooltipEvent == null && !currentHoverStack.isEmpty()) {
                 activeTooltipEvent = new DefaultCancellableEvent.ToolTipEvent(mouseX, mouseY, () -> {
-                    activeTooltipEvent.disposing.run(Runnable::run);
+                    activeTooltipEvent.disposing.getSink().run();
                     activeTooltipEvent = null;
                 });
 
-                doSweepEvent(currentHoverStack, e -> e.tooltip, null, Element::defaultToolTipBehaviour, Element::blocksMouseActivation, activeTooltipEvent);
+                doSweepEvent(currentHoverStack, e -> e.tooltip, null, Element::defaultToolTipBehaviour, element -> element.mouseHoverIntent(mouseX, mouseY) != Element.HoverIntent.NONE, activeTooltipEvent);
             }
 
             if (activeTooltipEvent != null) {
@@ -439,7 +439,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         event.setPropagationPath(elements);
 
         if (rootEvent != null)
-            rootEvent.getSink().run(e -> e.accept(event));
+            rootEvent.getSink().accept(event);
 
         if (!event.isPropagating()) {
             return;
@@ -447,7 +447,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
         for (Element element : elements) {
             Event<Consumer<V>> apply = eventFetcher.apply(element);
-            apply.getSink().run(runners -> runners.accept(event));
+            apply.getSink().accept(event);
             if (!event.isPropagating()) {
                 break;
             }
@@ -498,7 +498,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             return;
         }
         if (activeTooltipEvent != null) {
-            activeTooltipEvent.disposing.run(Runnable::run);
+            activeTooltipEvent.disposing.getSink().run();
             activeTooltipEvent = null;
         }
 
@@ -513,27 +513,30 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         for (int i1 = currentHoverStack.size() - 1; i1 >= breakoffPoint; i1--) {
             currentHoverStack.get(i1).hovering.set(false);
             currentHoverStack.get(i1).hoveringWithin.set(false);
-            currentHoverStack.get(i1).activeHovering.set(false);
+            currentHoverStack.get(i1).hoveringKind.set(Element.HoverIntent.NONE);
         }
 
         for (int i1 = breakoffPoint; i1 < path.size(); i1++) {
             path.get(i1).hovering.set(true);
         }
         int activeHovering = path.size() - 1;
+        boolean hasGivenLook = false;
         for (; activeHovering >= 0; activeHovering--) {
             Element element = path.get(activeHovering);
             element.hoveringWithin.set(false);
-            if (element.blocksMouseActivation()) {
-                element.activeHovering.set(true);
+            Element.HoverIntent hoverIntent = element.mouseHoverIntent(mouseX, mouseY);
+            if (hoverIntent == Element.HoverIntent.INTERACT) {
+                element.hoveringKind.set(hasGivenLook ? Element.HoverIntent.INTERACT : Element.HoverIntent.INTERACT_LOOK);
                 activeHovering--;
                 break;
-            } else {
-                element.activeHovering.set(false);
+            } else if (!hasGivenLook && hoverIntent == Element.HoverIntent.LOOK) {
+                element.hoveringKind.set(Element.HoverIntent.LOOK);
+                hasGivenLook = true;
             }
         }
         for (; activeHovering >= 0; activeHovering--) {
             path.get(activeHovering).hoveringWithin.set(true);
-            path.get(activeHovering).activeHovering.set(false);
+            path.get(activeHovering).hoveringKind.set(Element.HoverIntent.NONE);
         }
 
         currentHoverStack = path;
@@ -542,7 +545,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         List<Element> path = defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseMove, mouseMove, Element::defaultMouseMoveBehaviour,
-                Element::blocksMouseActivation,
+                element -> element.mouseHoverIntent(mouseX, mouseY) == Element.HoverIntent.INTERACT,
                 new DefaultCancellableEvent.MousePositionEvent(mouseX, mouseY));
 
         if (mouseDownStack == null) {
@@ -553,13 +556,13 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         DefaultCancellableEvent.MousePositionButtonEvent event = new DefaultCancellableEvent.MousePositionButtonEvent(mouseX, mouseY, button);
-        mouseDownStack = defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseDown, mouseDown, Element::defaultMouseDownBehaviour, Element::blocksMouseActivation, event);
+        mouseDownStack = defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseDown, mouseDown, Element::defaultMouseDownBehaviour, element1 -> element1.mouseHoverIntent(mouseX, mouseY) == Element.HoverIntent.INTERACT, event);
         if (event.cancellingDefault() || mouseDownStack == null) {
             return mouseDownStack != null;
         }
         for (int i = 0; i < mouseDownStack.size(); i++) {
             Element element = mouseDownStack.get(i);
-            if (element.blocksMouseActivation()) {
+            if (element.mouseHoverIntent(mouseX, mouseY) == Element.HoverIntent.INTERACT) {
                 doSweepEvent(mouseDownStack.subList(i, mouseDownStack.size()), e -> e.activation, null, Element::defaultActivationBehaviour, e -> true, new DefaultCancellableEvent.CausedEvent<>(Either.right(event)));
                 break;
             }
@@ -571,7 +574,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (mouseDownStack != null) {
             doSweepEvent(mouseDownStack, e -> e.mouseUp, mouseUp,
-                    Element::defaultMouseUpBehaviour, Element::blocksMouseActivation,
+                    Element::defaultMouseUpBehaviour, element1 -> element1.mouseHoverIntent(mouseX, mouseY) == Element.HoverIntent.INTERACT,
                     new DefaultCancellableEvent.MousePositionButtonEvent(mouseX, mouseY, button));
 
             List<Element> path = new ArrayList<>();
@@ -593,7 +596,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (mouseDownStack != null) {
             doSweepEvent(mouseDownStack, e -> e.mouseDragged, mouseDragged,
-                    Element::defaultMouseDraggedBehaviour, Element::blocksMouseActivation,
+                    Element::defaultMouseDraggedBehaviour, element -> element.mouseHoverIntent(mouseX, mouseY) == Element.HoverIntent.INTERACT,
                     new DefaultCancellableEvent.MousePositionButtonDeltaEvent(mouseX, mouseY, button, deltaX, deltaY));
             return true;
         }
@@ -603,7 +606,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         return defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseScrolled, mouseScrolled, Element::defaultMouseScrolledBehaviour,
-                Element::blocksMouseActivation,
+                element -> element.mouseHoverIntent(mouseX, mouseY) == Element.HoverIntent.INTERACT,
                 new DefaultCancellableEvent.MousePositionAmountEvent(mouseX, mouseY, amount)) != null;
     }
 

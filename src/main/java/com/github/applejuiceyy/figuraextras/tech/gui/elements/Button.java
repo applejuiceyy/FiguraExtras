@@ -27,7 +27,7 @@ public class Button extends Grid implements SetText {
         this.normal = normal;
         this.disabled = disabled;
         this.active = active;
-        activeHovering.observe(() -> this.enqueueDirtySection(false, false));
+        hoveringKind.observe(() -> this.enqueueDirtySection(false, false));
     }
 
     @Override
@@ -88,7 +88,7 @@ public class Button extends Grid implements SetText {
         // TODO: differentiate normal surfaces and background surfaces that have access to children and self renders
         // or maybe just make here also compatible
 
-        if (activeHovering.get()) {
+        if (hoveringKind.get().interact) {
             active.render(this, graphics, mouseX, mouseY, delta, null, null);
         } else {
             normal.render(this, graphics, mouseX, mouseY, delta, null, null);
@@ -103,8 +103,8 @@ public class Button extends Grid implements SetText {
     }
 
     @Override
-    public boolean blocksMouseActivation() {
-        return true;
+    public Element.HoverIntent mouseHoverIntent(double mouseX, double mouseY) {
+        return HoverIntent.INTERACT;
     }
 
     @Override

@@ -183,13 +183,13 @@ public class Observers {
 
         private void startListening() {
             preventMisfires = true;
-            startListening.run(Runnable::run);
+            startListening.getSink().run();
             preventMisfires = false;
         }
 
         private void stopListening() {
             preventMisfires = true;
-            stopListening.run(Runnable::run);
+            stopListening.getSink().run();
             preventMisfires = false;
         }
 

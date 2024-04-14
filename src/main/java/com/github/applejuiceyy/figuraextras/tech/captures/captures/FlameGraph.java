@@ -102,11 +102,6 @@ public class FlameGraph implements SecondaryCallHook {
     }
 
     @Override
-    public void lineAdvanced() {
-
-    }
-
-    @Override
     public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int i, int pc) {
         lines.add(luaClosure.p.lineinfo[pc]);
         instructions.add(i & 0x3f);

@@ -20,12 +20,12 @@ public class Hover {
     }
 
     public static void elementHoverObject(Element element, Supplier<Object> object) {
-        element.activeHovering.observe(new Consumer<>() {
+        element.hoveringKind.observe(new Consumer<>() {
             Runnable toRun = null;
 
             @Override
-            public void accept(Boolean bool) {
-                if (bool) {
+            public void accept(Element.HoverIntent bool) {
+                if (bool.look) {
                     toRun = setHovering(object.get());
                 } else {
                     if (toRun == null) return;

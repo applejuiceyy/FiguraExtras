@@ -17,7 +17,7 @@ public class Scrollbar extends Element implements NumberRangeAlike {
 
     {
         pos.observe(() -> enqueueDirtySection(false, false));
-        activeHovering.observe(() -> enqueueDirtySection(false, false));
+        hoveringKind.observe(() -> enqueueDirtySection(false, false));
     }
 
     public float getSize() {
@@ -74,7 +74,7 @@ public class Scrollbar extends Element implements NumberRangeAlike {
 
         if (enabled) {
             track.render(graphics.pose(), 0, 0, v, w);
-            (activeHovering.get() ? thumbHovered : thumb).render(graphics.pose(), 1, pos.get() / size * w + 1, v - 2, thumbSize / size * w - 2);
+            (hoveringKind.get() == HoverIntent.INTERACT ? thumbHovered : thumb).render(graphics.pose(), 1, pos.get() / size * w + 1, v - 2, thumbSize / size * w - 2);
         } else {
             trackDisabled.render(graphics.pose(), 0, 0, v, w);
         }
@@ -125,8 +125,8 @@ public class Scrollbar extends Element implements NumberRangeAlike {
     }
 
     @Override
-    public boolean blocksMouseActivation() {
-        return true;
+    public Element.HoverIntent mouseHoverIntent(double mouseX, double mouseY) {
+        return HoverIntent.INTERACT;
     }
 
     @Override
