@@ -8,6 +8,6 @@ public class LuaDuck {
     }
 
     public enum ReturnType {
-        NORMAL, ERROR
+        NORMAL, ERROR, TAIL
     }
 }

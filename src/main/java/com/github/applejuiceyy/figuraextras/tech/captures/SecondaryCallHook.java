@@ -48,12 +48,12 @@ public interface SecondaryCallHook {
 
     ;
 
-    default void intoJavaFunction(Varargs args, Method val$method) {
+    default void intoJavaFunction(Varargs args, Method val$method, LuaDuck.CallType type) {
     }
 
     ;
 
-    default void outOfJavaFunction(Varargs args, Method val$method, Object result) {
+    default void outOfJavaFunction(Varargs args, Method val$method, Object result, LuaDuck.ReturnType type) {
     }
 
     ;

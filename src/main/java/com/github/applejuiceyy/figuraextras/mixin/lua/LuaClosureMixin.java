@@ -19,6 +19,8 @@ public class LuaClosureMixin {
     @Final
     Globals globals;
 
+    LuaDuck.ReturnType currentType = LuaDuck.ReturnType.NORMAL;
+
     @Inject(method = "execute([Lorg/luaj/vm2/LuaValue;Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "INVOKE", target = "Lorg/luaj/vm2/lib/DebugLib;onCall(Lorg/luaj/vm2/LuaClosure;Lorg/luaj/vm2/Varargs;[Lorg/luaj/vm2/LuaValue;)V", ordinal = 0, shift = At.Shift.BY, by = 1))
     void a(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir) {
         LuaDuck.CallType type = LuaDuck.currentCallType;
@@ -63,6 +65,19 @@ public class LuaClosureMixin {
             // precarious situation
             // the compiler having had a mind of its own doesn't help
             at = @At(
+                    value = "NEW",
+                    target = "(Lorg/luaj/vm2/LuaValue;Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/TailcallVarargs;"
+            )
+    )
+    void tailcall(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir) {
+        currentType = LuaDuck.ReturnType.TAIL;
+    }
+
+    @Inject(
+            method = "execute([Lorg/luaj/vm2/LuaValue;Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;",
+            // precarious situation
+            // the compiler having had a mind of its own doesn't help
+            at = @At(
                     value = "INVOKE",
                     target = "Lorg/luaj/vm2/lib/DebugLib;onReturn()V",
                     ordinal = 9,
@@ -70,13 +85,14 @@ public class LuaClosureMixin {
                     by = 4
             )
     )
-    void c(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir) {
+    void errorHook(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir) {
         outOfFunction(stack, varargs, LuaDuck.ReturnType.ERROR);
     }
 
     @Inject(method = "execute([Lorg/luaj/vm2/LuaValue;Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At(value = "RETURN"))
     void i(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir) {
-        outOfFunction(stack, varargs, LuaDuck.ReturnType.NORMAL);
+        outOfFunction(stack, varargs, currentType);
+        currentType = LuaDuck.ReturnType.NORMAL;
     }
 
     @Unique

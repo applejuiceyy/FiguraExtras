@@ -17,8 +17,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
-import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.Thread;
+import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
@@ -33,7 +33,9 @@ import org.luaj.vm2.compiler.LuaC;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.*;
@@ -128,8 +130,6 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         }
     }
 
-    // now the actual inny griddy
-
     private int findSuitableLineInfo(Breakpoint breakpoint, Prototype proto, String[] lines, int preferred, int best) {
         int[] lineinfo = proto.lineinfo;
         for (int i = 0; i < lineinfo.length; i++) {
@@ -176,6 +176,15 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
         return best;
     }
+
+    private boolean isInstructionPausable(int pc, Prototype prototype) {
+        if (pc == 0) return true;
+        return prototype.lineinfo[pc] != prototype.lineinfo[pc - 1];
+    }
+
+
+    // now the actual inny griddy
+
 
     @Override
     public CompletableFuture<Void> disconnect(DisconnectArguments args) {
@@ -301,7 +310,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         StackFrame[] stackFrames = inspector.getStackTrace(startRange, endRange);
         StackTraceResponse response = new StackTraceResponse();
         response.setStackFrames(stackFrames);
-        response.setTotalFrames(stackTrace.frameList.size() + 1);  // accommodate kickstarter
+        response.setTotalFrames(inspector.getStackTraceSize());
         return CompletableFuture.completedFuture(response);
     }
 
@@ -373,9 +382,10 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         doContextualHook(new SecondaryCallHook() {
             @Override
             public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int instruction, int pc) {
+                if (!isInstructionPausable(pc, luaClosure.p)) return;
                 if (luaFrame != null) {
                     int l = luaFrame.closure.p.lineinfo[pc];
-                    if (line < l && stackTrace.frameList.size() - 1 == s) {
+                    if (line != l && stackTrace.frameList.size() - 1 == s) {
                         doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                     }
                 }
@@ -383,14 +393,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
             @Override
             public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
-                if (stackTrace.frameList.size() - 1 < s) {
-                    doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
-                }
-            }
-
-            @Override
-            public void outOfJavaFunction(Varargs args, Method val$method, Object result) {
-                if (stackTrace.frameList.size() - 1 < s) {
+                if (type == LuaDuck.ReturnType.TAIL) return;
+                if (stackTrace.frameList.size() - 1 < s && !stackTrace.frameList.isEmpty()) {
                     doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                 }
             }
@@ -413,21 +417,24 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         doContextualHook(new SecondaryCallHook() {
             @Override
             public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
+                if (stackTrace.frameList.isEmpty()) return;
                 doPause(ev -> ev.setReason(StoppedEventArgumentsReason.PAUSE));
             }
 
             @Override
             public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int instruction, int pc) {
+                if (!isInstructionPausable(pc, luaClosure.p)) return;
                 doPause(ev -> ev.setReason(StoppedEventArgumentsReason.PAUSE));
             }
 
             @Override
-            public void intoJavaFunction(Varargs args, Method val$method) {
+            public void intoJavaFunction(Varargs args, Method val$method, LuaDuck.CallType type) {
                 doPause(ev -> ev.setReason(StoppedEventArgumentsReason.PAUSE));
             }
 
             @Override
-            public void outOfJavaFunction(Varargs args, Method val$method, Object result) {
+            public void outOfJavaFunction(Varargs args, Method val$method, Object result, LuaDuck.ReturnType type) {
+                if (stackTrace.frameList.isEmpty()) return;
                 doPause(ev -> ev.setReason(StoppedEventArgumentsReason.PAUSE));
             }
         });
@@ -449,28 +456,18 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         doContextualHook(new SecondaryCallHook() {
             @Override
             public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int instruction, int pc) {
+                if (!isInstructionPausable(pc, luaClosure.p)) return;
                 Either<StackTraceTracker.JavaFrame, StackTraceTracker.LuaFrame> either = stackTrace.frameList.get(stackTrace.frameList.size() - 1);
                 StackTraceTracker.LuaFrame frame = either.right().orElseThrow();  // must be LuaFrame since we're here
-                if (frame != luaFrame || line < luaFrame.closure.p.lineinfo[pc]) {
+                if (frame != luaFrame || line != luaFrame.closure.p.lineinfo[pc]) {
                     doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                 }
-            }
-
-            @Override
-            public void intoJavaFunction(Varargs args, Method val$method) {
-                doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
             }
 
             @Override
             public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
-                if (stackTrace.frameList.size() - 1 < s) {
-                    doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
-                }
-            }
-
-            @Override
-            public void outOfJavaFunction(Varargs args, Method val$method, Object result) {
-                if (stackTrace.frameList.size() - 1 < s) {
+                if (type == LuaDuck.ReturnType.TAIL) return;
+                if (stackTrace.frameList.size() - 1 < s && !stackTrace.frameList.isEmpty()) {
                     doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                 }
             }
@@ -488,13 +485,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         doContextualHook(new SecondaryCallHook() {
             @Override
             public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
-                if (stackTrace.frameList.size() - 1 < s) {
-                    doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
-                }
-            }
-
-            @Override
-            public void outOfJavaFunction(Varargs args, Method val$method, Object result) {
+                if (type == LuaDuck.ReturnType.TAIL) return;
                 if (stackTrace.frameList.size() - 1 < s) {
                     doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                 }
@@ -627,6 +618,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                     luaFrame.closure = luaClosure;
                     luaFrame.possibleName = possibleName;
                     luaFrame.stack = stack;
+                    luaFrame.callType = type;
+                    luaFrame.varargs = varargs;
                     stackTrace.frameList.add(Either.right(luaFrame));
                 }
 
@@ -660,7 +653,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                     boolean hasPaused = false;
                     boolean triggeredBurntBreakpoint = false;
 
-                    if (breakpoints.containsKey(sourceIndex)) {
+                    if (isInstructionPausable(pc, luaClosure.p) && breakpoints.containsKey(sourceIndex)) {
                         for (BreakpointState breakpointState : breakpoints.get(sourceIndex)) {
                             Breakpoint breakpoint = breakpointState.breakpoint;
                             if (breakpoint.getLine() == p) {
@@ -689,7 +682,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 }
 
                 @Override
-                public void intoJavaFunction(Varargs args, Method val$method) {
+                public void intoJavaFunction(Varargs args, Method val$method, LuaDuck.CallType type) {
                     StackTraceTracker.JavaFrame javaFrame = new StackTraceTracker.JavaFrame();
                     javaFrame.javaFrame = val$method.getName();
                     javaFrame.arguments = args;
@@ -697,7 +690,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 }
 
                 @Override
-                public void outOfJavaFunction(Varargs args, Method val$method, Object result) {
+                public void outOfJavaFunction(Varargs args, Method val$method, Object result, LuaDuck.ReturnType type) {
                     stackTrace.frameList.remove(stackTrace.frameList.size() - 1);
                 }
 

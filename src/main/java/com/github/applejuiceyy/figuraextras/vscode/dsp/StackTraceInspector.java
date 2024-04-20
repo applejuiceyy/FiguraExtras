@@ -1,17 +1,18 @@
 package com.github.applejuiceyy.figuraextras.vscode.dsp;
 
-import com.github.applejuiceyy.figuraextras.ducks.LuaRuntimeAccess;
+import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.mojang.datafixers.util.Either;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.eclipse.lsp4j.debug.*;
 import org.figuramc.figura.math.matrix.FiguraMatrix;
 import org.figuramc.figura.math.vector.FiguraVector;
-import org.luaj.vm2.*;
+import org.luaj.vm2.LocVars;
+import org.luaj.vm2.LuaNumber;
+import org.luaj.vm2.LuaValue;
+import org.luaj.vm2.Varargs;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.WeakHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -47,6 +48,13 @@ public class StackTraceInspector {
                 stackFrame.setName(luaFrame.possibleName == null ? luaFrame.closure.name() : luaFrame.possibleName);
                 stackFrame.setLine(luaFrame.line);
                 stackFrame.setSource(owner.sourcer.toSource(luaFrame.closure.p));
+
+                if (luaFrame.callType == LuaDuck.CallType.TAIL) {
+                    StackFrame virtualFrame = new StackFrame();
+                    virtualFrame.setName("Tail call");
+                    virtualFrame.setPresentationHint(StackFramePresentationHint.LABEL);
+                    frames.add(0, virtualFrame);
+                }
             } else if (frame.left().isPresent()) {
                 StackTraceTracker.JavaFrame javaFrame = frame.left().get();
 
@@ -233,6 +241,22 @@ public class StackTraceInspector {
             return variables.toArray(new Variable[0]);
         });
 
+        if (o.closure.p.is_vararg > 0) {
+            Scope varargScope = new Scope();
+            varargScope.setName("Argument Varargs");
+            varargScope.setPresentationHint(ScopePresentationHint.ARGUMENTS);
+            varargScope.setVariablesReference(generatedVariablesReference.size());
+            generatedVariablesReference.add(() -> {
+                List<Variable> variables = new ArrayList<>();
+                for (int i = 1; i <= o.varargs.narg(); i++) {
+                    LuaValue value = o.varargs.arg(i);
+                    variables.add(processValue(value, "Position " + i));
+                }
+                return variables.toArray(new Variable[0]);
+            });
+            return new Scope[]{argumentScope, varargScope, upvalueScope, localScope, stackScope};
+        }
+
         return new Scope[]{argumentScope, upvalueScope, localScope, stackScope};
     }
 
@@ -249,5 +273,9 @@ public class StackTraceInspector {
         Variable[] out = new Variable[endRange - startRange];
         System.arraycopy(variables, startRange, out, 0, endRange - startRange);
         return out;
+    }
+
+    public int getStackTraceSize() {
+        return frames.size();
     }
 }

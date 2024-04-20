@@ -1,6 +1,5 @@
 package com.github.applejuiceyy.figuraextras.vscode.ipc;
 
-import com.github.applejuiceyy.figuraextras.vscode.ReceptionistServer;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.platform.win32.Kernel32;
@@ -12,7 +11,9 @@ import com.sun.jna.win32.W32APIOptions;
 import net.minecraft.util.Tuple;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -96,7 +97,7 @@ public class WindowsIPCFactory extends IPCFactory {
             int code = Kernel32.INSTANCE.GetLastError();
             if (code == Kernel32.ERROR_FILE_NOT_FOUND) {
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
