@@ -29,16 +29,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 @Mixin(value = FiguraLuaRuntime.class, remap = false)
 public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     @Unique
     HashMap<Object, CaptureOpportunity> captures;
     @Unique
-    boolean isInit = false;
-    @Unique
-    boolean wasInit = false;
+    int initCount = -1;
     @Unique
     Event<SourceListener> dynamicLoadEvent = Event.interfacing(SourceListener.class);
 
@@ -81,27 +82,32 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
 
     @Inject(method = "init", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;initializeScript(Ljava/lang/String;)Lorg/luaj/vm2/Varargs;"))
     void initStart(ListTag autoScripts, CallbackInfoReturnable<Boolean> cir) {
-        isInit = true;
+        initCount = 0;
     }
 
     @Inject(method = "initializeScript", at = @At(value = "INVOKE", target = "Lorg/luaj/vm2/LuaValue;invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;"))
     void initScript(String str, CallbackInfoReturnable<Varargs> cir) {
-        if (!isInit) return;
-        wasInit = true;
-        isInit = false;
-        SecondaryCallHook secondaryCallHook = ((GlobalsAccess) userGlobals).figuraExtrass$getCurrentCapture();
-        if (secondaryCallHook != null) {
-            secondaryCallHook.startInit(str);
+        if (initCount != -1) {
+            if (initCount == 0) {
+                SecondaryCallHook secondaryCallHook = ((GlobalsAccess) userGlobals).figuraExtrass$getCurrentCapture();
+                if (secondaryCallHook != null) {
+                    secondaryCallHook.startInit(str);
+                }
+            }
+            initCount++;
         }
     }
 
     @Inject(method = "initializeScript", at = @At(value = "INVOKE", target = "Lorg/luaj/vm2/LuaValue;invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", shift = At.Shift.AFTER))
     void initScriptEnd(String str, CallbackInfoReturnable<Varargs> cir) {
-        if (!wasInit) return;
-        wasInit = false;
-        SecondaryCallHook secondaryCallHook = ((GlobalsAccess) userGlobals).figuraExtrass$getCurrentCapture();
-        if (secondaryCallHook != null) {
-            secondaryCallHook.end();
+        if (initCount == -1) return;
+        initCount--;
+        if (initCount == 0) {
+            initCount = -1;
+            SecondaryCallHook secondaryCallHook = ((GlobalsAccess) userGlobals).figuraExtrass$getCurrentCapture();
+            if (secondaryCallHook != null) {
+                secondaryCallHook.end();
+            }
         }
     }
 
