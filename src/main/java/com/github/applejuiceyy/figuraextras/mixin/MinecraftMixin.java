@@ -176,6 +176,8 @@ public abstract class MinecraftMixin implements MinecraftAccess {
 
         profiler.popPush("FiguraExtras Monitor Component rendering");
         monitorHost.update();
+
+        RenderSystem.disableDepthTest();
     }
 
     @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
