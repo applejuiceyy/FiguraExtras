@@ -68,6 +68,7 @@ public class Label extends Element implements SetText {
     @Override
     public HoverIntent mouseHoverIntent(double mouseX, double mouseY) {
         Style style = getComponentAt(mouseX, mouseY);
+        if (style == null) return HoverIntent.NONE;
         if (style.getClickEvent() != null) return HoverIntent.INTERACT;
         if (style.getHoverEvent() != null) return HoverIntent.LOOK;
         return HoverIntent.NONE;
