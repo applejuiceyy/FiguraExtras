@@ -7,13 +7,13 @@ import org.luaj.vm2.Varargs;
 
 import java.lang.reflect.Method;
 
-public interface SecondaryCallHook {
+public interface Hook {
     default void intoFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.CallType type, String possibleName) {
     }
 
     ;
 
-    default void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
+    default void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, Object returns, LuaDuck.ReturnType type) {
     }
 
     ;
@@ -24,6 +24,10 @@ public interface SecondaryCallHook {
     ;
 
     default void end() {
+    }
+
+    default void endError(Object err) {
+        end();
     }
 
     ;
@@ -54,6 +58,14 @@ public interface SecondaryCallHook {
     ;
 
     default void outOfJavaFunction(Varargs args, Method val$method, Object result, LuaDuck.ReturnType type) {
+    }
+
+    default void intoPCall() {
+    }
+
+    ;
+
+    default void outOfPCall() {
     }
 
     ;

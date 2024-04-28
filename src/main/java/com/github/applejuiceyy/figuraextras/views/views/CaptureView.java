@@ -1,12 +1,10 @@
 package com.github.applejuiceyy.figuraextras.views.views;
 
 import com.github.applejuiceyy.figuraextras.ducks.GlobalsAccess;
-import com.github.applejuiceyy.figuraextras.ducks.LuaRuntimeAccess;
-import com.github.applejuiceyy.figuraextras.mixin.figura.LuaRuntimeAccessor;
+import com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor;
 import com.github.applejuiceyy.figuraextras.tech.captures.ActiveOpportunity;
-import com.github.applejuiceyy.figuraextras.tech.captures.CaptureOpportunity;
-import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
-import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
+import com.github.applejuiceyy.figuraextras.tech.captures.PossibleCapture;
+import com.github.applejuiceyy.figuraextras.tech.captures.captures.GraphBuilder;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
@@ -22,13 +20,13 @@ import java.util.Map;
 
 public class CaptureView implements Lifecycle {
     InfoViews.Context context;
-    Differential<Map.Entry<Object, CaptureOpportunity>, Object, Instance> differential;
+    Differential<Map.Entry<Object, PossibleCapture>, Object, Instance> differential;
     Flow root = new Flow();
 
     public CaptureView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
         differential = new Differential<>(
-                ((LuaRuntimeAccess) context.getAvatar().luaRuntime).figuraExtrass$getNoticedPotentialCaptures().entrySet(),
+                ((GlobalsAccess) ((LuaRuntimeAccessor) context.getAvatar().luaRuntime).getUserGlobals()).figuraExtrass$getCaptureState().getAvailableSingularCaptures().entrySet(),
                 Map.Entry::getValue,
                 o -> {
                     Instance i = new Instance(o.getValue());
@@ -58,18 +56,18 @@ public class CaptureView implements Lifecycle {
     }
 
     class Instance {
-        private final CaptureOpportunity value;
+        private final PossibleCapture value;
         public Button root;
         public Label label = new Label();
 
-        public Instance(CaptureOpportunity value) {
+        public Instance(PossibleCapture value) {
             this.value = value;
 
             root = (Button) Button.minimal().addAnd(label);
             root.mouseDown.subscribe(event -> {
                 Globals globals = ((LuaRuntimeAccessor) context.getAvatar().luaRuntime).getUserGlobals();
-                ((GlobalsAccess) globals).figuraExtrass$setCurrentlySearchingForCapture(
-                        new ActiveOpportunity<SecondaryCallHook>(value, new FlameGraph(context.getAvatar().luaRuntime.typeManager, frame -> {
+                ((GlobalsAccess) globals).figuraExtrass$getCaptureState().queueSingularCapture(
+                        new ActiveOpportunity<>(value, new GraphBuilder(context.getAvatar().luaRuntime.typeManager, frame -> {
                             context.setView((context, additionPoint) -> new FlameGraphView(context, additionPoint, frame));
                         })));
             });

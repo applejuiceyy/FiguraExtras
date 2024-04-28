@@ -1,10 +1,9 @@
 package com.github.applejuiceyy.figuraextras.mixin.lua;
 
 import com.github.applejuiceyy.figuraextras.ducks.GlobalsAccess;
-import com.github.applejuiceyy.figuraextras.tech.captures.ActiveOpportunity;
-import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
+import com.github.applejuiceyy.figuraextras.tech.captures.CaptureState;
+import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
 import com.github.applejuiceyy.figuraextras.util.Event;
-import org.jetbrains.annotations.Nullable;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaTable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,30 +12,10 @@ import org.spongepowered.asm.mixin.Unique;
 @Mixin(value = Globals.class, remap = false)
 public class GlobalsMixin implements GlobalsAccess {
     @Unique
-    ActiveOpportunity<?> currentlyLookingForCapture;
-
-    Event<SecondaryCallHook> hooks = Event.interfacing(SecondaryCallHook.class);
-
+    CaptureState captureState = new CaptureState((Globals) (Object) this);
+    Event<Hook> hooks = Event.interfacing(Hook.class);
     @Unique
     LuaTable offTheShelfDebugLib;
-
-    @Override
-    public ActiveOpportunity<?> figuraExtrass$getCurrentlySearchingForCapture() {
-        return currentlyLookingForCapture;
-    }
-
-    @Override
-    public void figuraExtrass$setCurrentlySearchingForCapture(ActiveOpportunity<?> captureOpportunity) {
-        currentlyLookingForCapture = captureOpportunity;
-    }
-
-    public @Nullable SecondaryCallHook figuraExtrass$getCurrentCapture() {
-        return hooks.hasSubscribers() ? hooks.getSink() : null;
-    }
-
-    public Event<SecondaryCallHook>.Source figuraExtrass$getCaptureEventSource() {
-        return hooks.getSource();
-    }
 
     @Override
     public LuaTable figuraExtrass$getOffTheShelfDebugLib() {
@@ -48,5 +27,8 @@ public class GlobalsMixin implements GlobalsAccess {
         offTheShelfDebugLib = table;
     }
 
-
+    @Override
+    public CaptureState figuraExtrass$getCaptureState() {
+        return captureState;
+    }
 }

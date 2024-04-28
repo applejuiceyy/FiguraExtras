@@ -5,7 +5,7 @@ import com.github.applejuiceyy.figuraextras.components.SoundComponent;
 import com.github.applejuiceyy.figuraextras.ducks.SoundBufferAccess;
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
 import com.github.applejuiceyy.figuraextras.mixin.SoundBufferAccessor;
-import com.github.applejuiceyy.figuraextras.mixin.figura.LuaSoundAccessor;
+import com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaSoundAccessor;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;

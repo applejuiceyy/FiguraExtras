@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.mixin.figura;
+package com.github.applejuiceyy.figuraextras.mixin.figura.lua;
 
 import com.github.applejuiceyy.figuraextras.ducks.InstructionsAccess;
 import org.figuramc.figura.avatar.Avatar;

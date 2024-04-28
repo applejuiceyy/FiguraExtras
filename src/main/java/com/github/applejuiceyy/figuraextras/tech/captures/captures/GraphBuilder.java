@@ -3,7 +3,7 @@ package com.github.applejuiceyy.figuraextras.tech.captures.captures;
 import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.github.applejuiceyy.figuraextras.mixin.figura.printer.FiguraLuaPrinterAccessor;
-import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
+import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -18,14 +18,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class FlameGraph implements SecondaryCallHook {
+public class GraphBuilder implements Hook {
     private final Consumer<Frame> after;
     private final LuaTypeManager manager;
     private Frame currentFrame = new Frame(null, LuaDuck.CallType.NORMAL, null, null, null);
     private IntArrayList instructions = new IntArrayList();
     private IntArrayList lines = new IntArrayList();
 
-    public FlameGraph(LuaTypeManager manager, Consumer<Frame> after) {
+    public GraphBuilder(LuaTypeManager manager, Consumer<Frame> after) {
         this.after = after;
         this.manager = manager;
     }
@@ -83,7 +83,7 @@ public class FlameGraph implements SecondaryCallHook {
     }
 
     @Override
-    public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
+    public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, Object returns, LuaDuck.ReturnType type) {
         flushInstructions();
         if (currentFrame.currentlyConstructingRegion != null) {
             currentFrame.regions.add(

@@ -97,7 +97,7 @@ public class RangeSliderComponent extends Element {
 
     @Override
     protected boolean renders() {
-        return super.renders();
+        return true;
     }
 
     @Override

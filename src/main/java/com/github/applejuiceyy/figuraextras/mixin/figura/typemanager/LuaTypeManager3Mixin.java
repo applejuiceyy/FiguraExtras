@@ -3,8 +3,8 @@ package com.github.applejuiceyy.figuraextras.mixin.figura.typemanager;
 import com.github.applejuiceyy.figuraextras.ducks.GlobalsAccess;
 import com.github.applejuiceyy.figuraextras.ducks.LuaTypeManagerAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
-import com.github.applejuiceyy.figuraextras.mixin.figura.LuaRuntimeAccessor;
-import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
+import com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor;
+import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.lua.LuaTypeManager;
 import org.luaj.vm2.LuaError;
@@ -36,15 +36,16 @@ public abstract class LuaTypeManager3Mixin {
     @Shadow
     public abstract Varargs invoke(Varargs args);
 
+    @SuppressWarnings("InvalidInjectorMethodSignature")
     @Inject(method = "invoke", at = @At(value = "RETURN"), locals = LocalCapture.CAPTURE_FAILHARD)
     void outOfJava(Varargs args, CallbackInfoReturnable<Varargs> cir, int i, Object result) {
         Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtrass$getAvatar();
         if (avatar != null) {
-            SecondaryCallHook secondaryCallHook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
-                    .figuraExtrass$getCurrentCapture();
+            Hook hook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
+                    .figuraExtrass$getCaptureState().getSink();
 
-            if (secondaryCallHook != null) {
-                secondaryCallHook.outOfJavaFunction(args, val$method, result, LuaDuck.ReturnType.NORMAL);
+            if (hook != null) {
+                hook.outOfJavaFunction(args, val$method, result, LuaDuck.ReturnType.NORMAL);
             }
         }
     }
@@ -58,11 +59,11 @@ public abstract class LuaTypeManager3Mixin {
             } catch (Throwable e) {
                 Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtrass$getAvatar();
                 if (avatar != null) {
-                    SecondaryCallHook secondaryCallHook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
-                            .figuraExtrass$getCurrentCapture();
+                    Hook hook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
+                            .figuraExtrass$getCaptureState().getSink();
 
-                    if (secondaryCallHook != null) {
-                        secondaryCallHook.outOfJavaFunction(args,
+                    if (hook != null) {
+                        hook.outOfJavaFunction(args,
                                 val$method,
                                 e.getCause() instanceof LuaError l ? l : new LuaError(e.getCause()),
                                 LuaDuck.ReturnType.ERROR
@@ -79,11 +80,11 @@ public abstract class LuaTypeManager3Mixin {
 
             Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtrass$getAvatar();
             if (avatar != null) {
-                SecondaryCallHook secondaryCallHook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
-                        .figuraExtrass$getCurrentCapture();
+                Hook hook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
+                        .figuraExtrass$getCaptureState().getSink();
 
-                if (secondaryCallHook != null) {
-                    secondaryCallHook.intoJavaFunction(args, val$method, type);
+                if (hook != null) {
+                    hook.intoJavaFunction(args, val$method, type);
                 }
             }
         }

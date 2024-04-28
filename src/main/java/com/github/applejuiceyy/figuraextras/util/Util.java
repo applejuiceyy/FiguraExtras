@@ -8,13 +8,17 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.Tuple;
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
 import org.figuramc.figura.lua.LuaTypeManager;
 import org.joml.Matrix4f;
 import org.luaj.vm2.LuaValue;
+import org.luaj.vm2.Varargs;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -111,6 +115,27 @@ public class Util {
             return in.get();
         }
         return () -> {
+        };
+    }
+
+    public static Iterable<Tuple<LuaValue, LuaValue>> iterateLua(LuaValue value) {
+        return () -> new Iterator<>() {
+            LuaValue k = LuaValue.NIL;
+
+            @Override
+            public boolean hasNext() {
+                Varargs n = value.next(k);
+                return !n.arg1().isnil();
+            }
+
+            @Override
+            public Tuple<LuaValue, LuaValue> next() {
+                Varargs n = value.next(k);
+                if ((k = n.arg1()).isnil())
+                    throw new NoSuchElementException();
+                LuaValue v = n.arg(2);
+                return new Tuple<>(k, v);
+            }
         };
     }
 

@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.mixin.figura;
+package com.github.applejuiceyy.figuraextras.mixin.figura.lua;
 
 
 import org.figuramc.figura.lua.FiguraLuaRuntime;

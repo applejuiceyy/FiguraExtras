@@ -1,20 +1,19 @@
 package com.github.applejuiceyy.figuraextras.util;
 
 import org.apache.logging.log4j.util.TriConsumer;
+import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 public class Event<T> {
     private final Source source = new Source();
     private final T sink;
-    Function<List<T>, T> dispatcher;
 
     ArrayList<T> subscribers = new ArrayList<>();
 
@@ -26,6 +25,9 @@ public class Event<T> {
         sink = dispatcher.apply(subscribers, new Firing() {
             @Override
             public void startFiring() {
+                if (isFiring) {
+                    throw new IllegalStateException("Already firing");
+                }
                 isFiring = true;
             }
 
@@ -87,17 +89,17 @@ public class Event<T> {
     }
 
     public static <T> Event<T> interfacing(Class<T> cls) {
-        return interfacing(cls, m -> {
-            if (m.getName().equals("toString")) {
-                return p -> "Event Proxy";
-            }
+        return interfacing(cls, (m, obj) -> {
             throw new RuntimeException("Cannot call method that returns");
         });
     }
 
-    public static <T> Event<T> interfacing(Class<T> cls, Function<Method, Function<Object[], Object>> clashing) {
+    public static <T> Event<T> interfacing(Class<T> cls, BiFunction<Method, Object[], Object> clashing) {
         //noinspection unchecked
         return new Event<>((v, b) -> (T) Proxy.newProxyInstance(cls.getClassLoader(), new Class[]{cls}, (proxy, method, args) -> {
+            if (method.getName().equals("toString")) {
+                return "Event Proxy";
+            }
             if (v.isEmpty()) {
                 return null;
             }
@@ -106,7 +108,7 @@ public class Event<T> {
             try {
                 if (v.size() == 1) {
                     if (method.getReturnType() != void.class) {
-                        return clashing.apply(method).apply(new Object[]{method.invoke(v.get(0), args)});
+                        return clashing.apply(method, new Object[]{method.invoke(v.get(0), args)});
                     } else {
                         method.invoke(v.get(0), args);
                         return null;
@@ -114,12 +116,12 @@ public class Event<T> {
                 }
 
                 if (method.getReturnType() != void.class) {
-                    Function<Object[], Object> solver = clashing.apply(method);
-                    List<Object> objects = new ArrayList<>();
-                    for (T t : v) {
-                        objects.add(method.invoke(t, args));
+                    Object[] objects = new Object[v.size()];
+                    for (int i = 0; i < v.size(); i++) {
+                        T t = v.get(i);
+                        objects[i] = method.invoke(t, args);
                     }
-                    return solver.apply(objects.toArray());
+                    return clashing.apply(method, objects);
                 }
                 for (T t : v) {
                     method.invoke(t, args);
@@ -134,6 +136,14 @@ public class Event<T> {
 
     public T getSink() {
         return sink;
+    }
+
+    public @Nullable T getNullableSink() {
+        return hasSubscribers() ? sink : null;
+    }
+
+    public boolean isActive() {
+        return isFiring;
     }
 
     public Iterable<T> iterateSink() {
@@ -157,12 +167,11 @@ public class Event<T> {
 
     public class Source {
         public Runnable subscribe(T subscriber) {
-            doWhenAppropriate(() -> subscribers.add(subscriber));
-            return () -> doWhenAppropriate(() -> subscribers.remove(subscriber));
+            return Event.this.subscribe(subscriber);
         }
 
         public void unsubscribe(T subscriber) {
-            doWhenAppropriate(() -> subscribers.remove(subscriber));
+            Event.this.unsubscribe(subscriber);
         }
     }
 }

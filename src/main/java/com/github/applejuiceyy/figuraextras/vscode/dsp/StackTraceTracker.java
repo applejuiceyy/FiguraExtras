@@ -13,6 +13,9 @@ import java.util.List;
 public class StackTraceTracker {
     String kickstarter;
     boolean isActive = false;
+    int pcall = 0;
+
+    boolean errorUnwrapping = false;
     List<Either<JavaFrame, LuaFrame>> frameList = new ArrayList<>();
 
     static class JavaFrame {

@@ -1,13 +1,11 @@
-package com.github.applejuiceyy.figuraextras.mixin.figura;
+package com.github.applejuiceyy.figuraextras.mixin.figura.lua;
 
 import com.github.applejuiceyy.figuraextras.ducks.GlobalsAccess;
 import com.github.applejuiceyy.figuraextras.ducks.LuaRuntimeAccess;
 import com.github.applejuiceyy.figuraextras.ducks.LuaTypeManagerAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaRuntimeDuck;
 import com.github.applejuiceyy.figuraextras.lua.DebuggerAPI;
-import com.github.applejuiceyy.figuraextras.tech.captures.ActiveOpportunity;
-import com.github.applejuiceyy.figuraextras.tech.captures.CaptureOpportunity;
-import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
+import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.vscode.dsp.SourceListener;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
@@ -16,6 +14,7 @@ import net.minecraft.util.Tuple;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.lua.FiguraLuaRuntime;
 import org.figuramc.figura.lua.LuaTypeManager;
+import org.figuramc.figura.lua.api.event.EventsAPI;
 import org.figuramc.figura.lua.api.event.LuaEvent;
 import org.luaj.vm2.*;
 import org.spongepowered.asm.mixin.Final;
@@ -37,8 +36,6 @@ import java.util.WeakHashMap;
 @Mixin(value = FiguraLuaRuntime.class, remap = false)
 public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     @Unique
-    HashMap<Object, CaptureOpportunity> captures;
-    @Unique
     int initCount = -1;
     @Unique
     Event<SourceListener> dynamicLoadEvent = Event.interfacing(SourceListener.class);
@@ -52,26 +49,20 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     @Shadow
     @Final
     private Globals userGlobals;
+    @Shadow
+    public EventsAPI events;
     @Unique
     private WeakHashMap<Prototype, Integer> prototypesMarkedAsLoadStringed;
     @Unique
     private HashMap<Integer, Tuple<String, String>> sourceName;
     @Unique
-    private SecondaryCallHook currentCapture;
-    @Unique
     private int nextSource = 1;
-
-    @Override
-    public HashMap<Object, CaptureOpportunity> figuraExtrass$getNoticedPotentialCaptures() {
-        return captures;
-    }
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Ljava/util/Map;putAll(Ljava/util/Map;)V"))
     void init(Avatar avatar, Map<String, String> scripts, CallbackInfo ci) {
         ((LuaTypeManagerAccess) typeManager).figuraExtrass$setAvatar(avatar);
         prototypesMarkedAsLoadStringed = new WeakHashMap<>();
         sourceName = new HashMap<>();
-        captures = new HashMap<>();
         nextSource = 1;
     }
 
@@ -85,13 +76,21 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
         initCount = 0;
     }
 
+    @Inject(method = "init", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;error(Ljava/lang/Throwable;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
+    void initError(ListTag autoScripts, CallbackInfoReturnable<Boolean> cir, Throwable e) {
+        Hook hook = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+        if (hook != null) {
+            hook.endError(e);
+        }
+    }
+
     @Inject(method = "initializeScript", at = @At(value = "INVOKE", target = "Lorg/luaj/vm2/LuaValue;invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;"))
     void initScript(String str, CallbackInfoReturnable<Varargs> cir) {
         if (initCount != -1) {
             if (initCount == 0) {
-                SecondaryCallHook secondaryCallHook = ((GlobalsAccess) userGlobals).figuraExtrass$getCurrentCapture();
-                if (secondaryCallHook != null) {
-                    secondaryCallHook.startInit(str);
+                Hook hook = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+                if (hook != null) {
+                    hook.startInit(str);
                 }
             }
             initCount++;
@@ -104,9 +103,9 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
         initCount--;
         if (initCount == 0) {
             initCount = -1;
-            SecondaryCallHook secondaryCallHook = ((GlobalsAccess) userGlobals).figuraExtrass$getCurrentCapture();
-            if (secondaryCallHook != null) {
-                secondaryCallHook.end();
+            Hook hook = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+            if (hook != null) {
+                hook.end();
             }
         }
     }
@@ -114,51 +113,46 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     @Inject(method = "run", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;setInstructionLimit(I)V", shift = At.Shift.AFTER), locals = LocalCapture.CAPTURE_FAILHARD)
     void e(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir, LuaValue[] values, Varargs val) {
 
-        CaptureOpportunity current;
-        if (!captures.containsKey(toRun)) {
-            current = new CaptureOpportunity();
-            current.name = toRun.toString();
-            captures.put(toRun, current);
-        } else {
-            current = captures.get(toRun);
-            Globals globals = userGlobals;
-            SecondaryCallHook capture = ((GlobalsAccess) globals).figuraExtrass$getCurrentCapture();
-            ActiveOpportunity<?> thing = ((GlobalsAccess) globals).figuraExtrass$getCurrentlySearchingForCapture();
+        ((GlobalsAccess) userGlobals)
+                .figuraExtrass$getCaptureState()
+                .startEvent(toRun);
 
-
-            if (capture == null && thing != null) {
-                CaptureOpportunity opportunity = thing.opportunity();
-                if (opportunity == current) {
-                    this.currentCapture = thing.thing();
-                    ((GlobalsAccess) globals).figuraExtrass$getCaptureEventSource().subscribe(this.currentCapture);
-                    ((GlobalsAccess) globals).figuraExtrass$setCurrentlySearchingForCapture(null);
-                }
-            }
-        }
-        captures.get(toRun).mostRecentCallMillis = System.currentTimeMillis();
-
-        SecondaryCallHook secondaryCallHook = ((GlobalsAccess) userGlobals).figuraExtrass$getCurrentCapture();
-        if (secondaryCallHook != null) {
+        Hook hook = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+        if (hook != null) {
             String reason = "Unknown";
             if (LuaRuntimeDuck.runReason != null) {
                 reason = LuaRuntimeDuck.runReason;
+                LuaRuntimeDuck.runReason = null;
             } else if (toRun instanceof String str) {
                 reason = str.toLowerCase().replace('_', ' ');
             } else if (toRun instanceof LuaEvent ev) {
-                reason = "Event";
+                reason = events.getEvents()
+                        .entrySet()
+                        .stream()
+                        .filter(e -> e.getValue() == ev)
+                        .findFirst()
+                        .map(e -> "Event " + e.getKey())
+                        .orElse("Event");
             } else if (toRun instanceof LuaValue ev) {
                 reason = "Execution of " + ev;
             }
-            secondaryCallHook.startEvent(reason, toRun, val);
+            hook.startEvent(reason, toRun, val);
         }
     }
 
-    @Inject(method = "run", at = @At(value = "RETURN"))
-    void i(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir) {
-        SecondaryCallHook capture = ((GlobalsAccess) userGlobals).figuraExtrass$getCurrentCapture();
+    @Inject(method = "run", at = @At(value = "RETURN", ordinal = 0))
+    void runNormal(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir) {
+        Hook capture = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
         if (capture != null) {
             capture.end();
-            ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureEventSource().unsubscribe(currentCapture);
+        }
+    }
+
+    @Inject(method = "run", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;error(Ljava/lang/Throwable;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
+    void runFail(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir, LuaValue[] values, Varargs val, Throwable e) {
+        Hook capture = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+        if (capture != null) {
+            capture.endError(e);
         }
     }
 

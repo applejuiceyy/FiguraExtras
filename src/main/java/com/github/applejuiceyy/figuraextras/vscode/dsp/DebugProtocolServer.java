@@ -7,10 +7,11 @@ import com.github.applejuiceyy.figuraextras.ducks.LuaRuntimeAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura.LuaRuntimeAccessor;
-import com.github.applejuiceyy.figuraextras.tech.captures.SecondaryCallHook;
+import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.github.applejuiceyy.figuraextras.vscode.DisconnectAware;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -53,12 +54,21 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         capabilities.setSupportsDelayedStackTraceLoading(true);
         ExceptionBreakpointsFilter breakpointsFilter = new ExceptionBreakpointsFilter();
         breakpointsFilter.setFilter("debuggerAPI");
-        breakpointsFilter.setLabel("breakpoint call");
-        capabilities.setExceptionBreakpointFilters(new ExceptionBreakpointsFilter[]{breakpointsFilter});
+        breakpointsFilter.setLabel("Breakpoint Calls");
+        ExceptionBreakpointsFilter caught = new ExceptionBreakpointsFilter();
+        caught.setFilter("caught");
+        caught.setLabel("Caught Exceptions");
+        caught.setSupportsCondition(true);
+        ExceptionBreakpointsFilter uncaught = new ExceptionBreakpointsFilter();
+        uncaught.setFilter("uncaught");
+        uncaught.setLabel("Uncaught Exceptions");
+        uncaught.setSupportsCondition(true);
+        capabilities.setExceptionBreakpointFilters(new ExceptionBreakpointsFilter[]{breakpointsFilter, caught, uncaught});
         capabilities.setSupportsLoadedSourcesRequest(true);
         capabilities.setSupportsHitConditionalBreakpoints(true);
         capabilities.setSupportsConditionalBreakpoints(true);
         capabilities.setSupportsLogPoints(true);
+        capabilities.setSupportsExceptionFilterOptions(true);
     }
 
     final Sourcer sourcer = new Sourcer(this);
@@ -68,14 +78,15 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     InitializeRequestArguments clientCapabilities;
     Map<String, Object> launchArgs;
     IDebugProtocolClient client;
+    LuaExecutor executor = new LuaExecutor(this);
     private int breakpointNextId = 0;
     private CompletableFuture<Void> paused = CompletableFuture.completedFuture(null);
     private int burntBreakpoint = -1;
     private @Nullable StackTraceInspector inspector;
     private Event<Runnable> destroyers = Event.runnable();
     private @Nullable Runnable situationalBreakpointRemover;
-    private boolean canBeStoppedByBreakpointCall = false;
     private boolean isInBreakpoint = false;
+    private HashMap<String, ExceptionFilterOptions> exceptionBreakpoints = new HashMap<>();
 
     /***
      * Almost all of these methods are not for public consumption, refer to getInternalInterface
@@ -102,9 +113,14 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     @Override
     public void onDisconnect() {
         INSTANCE = null;
+        detach();
+        FiguraExtras.updateInformation();
+    }
+
+    private void detach() {
         destroyers.getSink().run();
         paused.complete(null);
-        FiguraExtras.updateInformation();
+        destroyers = Event.runnable();
     }
 
     public void connect(IDebugProtocolClient client) {
@@ -192,8 +208,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
             Minecraft.getInstance().stop();
         }
         INSTANCE = null;
-        destroyers.getSink().run();
-        paused.complete(null);
+        detach();
         FiguraExtras.updateInformation();
         return CompletableFuture.completedFuture(null);
     }
@@ -201,14 +216,6 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     @Override
     public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
         clientCapabilities = args;
-        FiguraExtras.sendBrandedMessage(Component.literal("We have liftoff!").withStyle(ChatFormatting.GOLD));
-        if (new Random().nextFloat() < 0.3) {
-            FiguraExtras.sendBrandedMessage(Component.literal("There's also a ko-fi! Just a fun fact really")
-                    .withStyle(ChatFormatting.GREEN)
-                    .withStyle(ChatFormatting.UNDERLINE)
-                    .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://ko-fi.com/theapplejuice")))
-            );
-        }
         Util.after(client::initialized, 1000);
         return CompletableFuture.completedFuture(capabilities);
     }
@@ -216,6 +223,16 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     @Override
     public CompletableFuture<Void> attach(Map<String, Object> args) {
         launchArgs = args;
+        if (launchArgs.get("__restart") != Boolean.TRUE) {
+            FiguraExtras.sendBrandedMessage(Component.literal("We have liftoff!").withStyle(ChatFormatting.GOLD));
+            if (new Random().nextFloat() < 0.3) {
+                FiguraExtras.sendBrandedMessage(Component.literal("There's also a ko-fi! Just a fun fact really")
+                        .withStyle(ChatFormatting.GREEN)
+                        .withStyle(ChatFormatting.UNDERLINE)
+                        .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://ko-fi.com/theapplejuice")))
+                );
+            }
+        }
         AvatarManager.clearAvatars(FiguraMod.getLocalPlayerUUID());
         if (!args.containsKey("avatarPath") || !(args.get("avatarPath") instanceof String)) {
             return Util.fail(ResponseErrorCode.InvalidParams, "avatarPath is not an argument");
@@ -278,13 +295,23 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
     @Override
     public CompletableFuture<SetExceptionBreakpointsResponse> setExceptionBreakpoints(SetExceptionBreakpointsArguments args) {
-        canBeStoppedByBreakpointCall = Arrays.asList(args.getFilters()).contains("debuggerAPI");
+        exceptionBreakpoints.clear();
+        for (String filter : args.getFilters()) {
+            ExceptionFilterOptions option = new ExceptionFilterOptions();
+            option.setFilterId(filter);
+            exceptionBreakpoints.put(filter, option);
+        }
+        for (ExceptionFilterOptions filterOption : args.getFilterOptions()) {
+            exceptionBreakpoints.put(filterOption.getFilterId(), filterOption);
+        }
         return CompletableFuture.completedFuture(new SetExceptionBreakpointsResponse());
     }
 
     @Override
     public CompletableFuture<Void> configurationDone(ConfigurationDoneArguments args) {
-        FiguraExtras.sendBrandedMessage("Setting avatar to conform to debug session");
+        if (launchArgs.get("__restart") != Boolean.TRUE) {
+            FiguraExtras.sendBrandedMessage("Setting avatar to conform to debug session");
+        }
         AvatarManager.loadLocalAvatar(new File((String) launchArgs.get("avatarPath")).toPath());
         return CompletableFuture.completedFuture(null);
     }
@@ -379,7 +406,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
             line = 0;
             s = 0;
         }
-        doContextualHook(new SecondaryCallHook() {
+        doContextualHook(new Hook() {
             @Override
             public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int instruction, int pc) {
                 if (!isInstructionPausable(pc, luaClosure.p)) return;
@@ -392,8 +419,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
             }
 
             @Override
-            public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
-                if (type == LuaDuck.ReturnType.TAIL) return;
+            public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, Object returns, LuaDuck.ReturnType type) {
+                if (type != LuaDuck.ReturnType.NORMAL) return;
                 if (stackTrace.frameList.size() - 1 < s && !stackTrace.frameList.isEmpty()) {
                     doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                 }
@@ -414,9 +441,9 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
     @Override
     public synchronized CompletableFuture<Void> pause(PauseArguments args) {
-        doContextualHook(new SecondaryCallHook() {
+        doContextualHook(new Hook() {
             @Override
-            public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
+            public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, Object returns, LuaDuck.ReturnType type) {
                 if (stackTrace.frameList.isEmpty()) return;
                 doPause(ev -> ev.setReason(StoppedEventArgumentsReason.PAUSE));
             }
@@ -453,7 +480,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
         line = luaFrame != null ? luaFrame.line : 0;
         s = stackTrace.frameList.size() - 1;
-        doContextualHook(new SecondaryCallHook() {
+        doContextualHook(new Hook() {
             @Override
             public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int instruction, int pc) {
                 if (!isInstructionPausable(pc, luaClosure.p)) return;
@@ -465,8 +492,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
             }
 
             @Override
-            public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
-                if (type == LuaDuck.ReturnType.TAIL) return;
+            public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, Object returns, LuaDuck.ReturnType type) {
+                if (type != LuaDuck.ReturnType.NORMAL) return;
                 if (stackTrace.frameList.size() - 1 < s && !stackTrace.frameList.isEmpty()) {
                     doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                 }
@@ -482,10 +509,10 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
             return Util.fail(ResponseErrorCode.InvalidParams, "Unknown thread");
         }
         int s = stackTrace.frameList.size() - 1;
-        doContextualHook(new SecondaryCallHook() {
+        doContextualHook(new Hook() {
             @Override
-            public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
-                if (type == LuaDuck.ReturnType.TAIL) return;
+            public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, Object returns, LuaDuck.ReturnType type) {
+                if (type != LuaDuck.ReturnType.NORMAL) return;
                 if (stackTrace.frameList.size() - 1 < s) {
                     doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                 }
@@ -498,6 +525,10 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     @Blocking
     public void doPause(Consumer<StoppedEventArguments> filler) {
         if (isInBreakpoint) return;
+        if (!paused.isDone()) return;
+        if (!RenderSystem.isOnRenderThread()) {
+            throw new IllegalStateException("Not on Render Thread");
+        }
         if (situationalBreakpointRemover != null) {
             situationalBreakpointRemover.run();
         }
@@ -507,6 +538,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         inspector = new StackTraceInspector(this, stackTrace);
         client.stopped(arguments);
         paused = new CompletableFuture<>();
+        Minecraft.getInstance().mouseHandler.releaseMouse();
         paused.join();
     }
 
@@ -518,16 +550,14 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         paused.complete(null);
     }
 
-    private void doContextualHook(SecondaryCallHook hook) {
-        com.github.applejuiceyy.figuraextras.mixin.figura.LuaRuntimeAccessor luaRuntime = (com.github.applejuiceyy.figuraextras.mixin.figura.LuaRuntimeAccessor) getCurrentAvatar().luaRuntime;
+    private void doContextualHook(Hook hook) {
+        com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor luaRuntime = (com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor) getCurrentAvatar().luaRuntime;
         GlobalsAccess globals = ((GlobalsAccess) luaRuntime.getUserGlobals());
-        situationalBreakpointRemover = globals.figuraExtrass$getCaptureEventSource().subscribe(hook);
+        situationalBreakpointRemover = globals.figuraExtrass$getCaptureState().getEvent().subscribe(hook);
     }
 
     // it's better to separate what is DA and internal state and just internal talking to eachother
     public class DAInternalInterface {
-        List<Either<StackTraceTracker.JavaFrame, StackTraceTracker.LuaFrame>> copyOnError;
-
         public void scriptInitializing(String str) {
             sourcer.regularSourceRegistered(str);
             Either<String, Integer> left = Either.left(str);
@@ -562,8 +592,25 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
             return avatar == AvatarManager.getLoadedAvatar(FiguraMod.getLocalPlayerUUID());
         }
 
-        public boolean shouldBeStoppedByDebuggerAPI() {
-            return canBeStoppedByBreakpointCall;
+        public boolean doCallStop() {
+            if (!exceptionBreakpoints.containsKey("debuggerAPI")) {
+                return false;
+            }
+            String con = exceptionBreakpoints.get("debuggerAPI").getCondition();
+
+            if (con != null && !executor.composeAndCall(con, stackTrace.frameList.get(stackTrace.frameList.size() - 1), args -> {
+                args.setOutput("Error whilst running debugger api call condition");
+                return LuaValue.TRUE;
+            }).toboolean()) {
+                return false;
+            }
+
+            doPause(ev -> {
+                ev.setReason(StoppedEventArgumentsReason.PAUSE);
+                ev.setDescription("Paused by calling breakpoint");
+            });
+
+            return true;
         }
 
         public boolean isPaused() {
@@ -591,14 +638,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 outputEventArguments.setCategory(category);
                 outputEventArguments.setOutput(component.getString());
                 if (stackTrace.isActive) {
-                    List<Either<StackTraceTracker.JavaFrame, StackTraceTracker.LuaFrame>> toUse;
-                    if (kind == FiguraLuaPrinterDuck.Kind.ERRORS && copyOnError != null) {
-                        toUse = copyOnError;
-                    } else {
-                        toUse = stackTrace.frameList;
-                    }
-                    if (toUse.size() > 0) {
-                        Either<StackTraceTracker.JavaFrame, StackTraceTracker.LuaFrame> last = toUse.get(toUse.size() - 1);
+                    if (stackTrace.frameList.size() > 0) {
+                        Either<StackTraceTracker.JavaFrame, StackTraceTracker.LuaFrame> last = stackTrace.frameList.get(stackTrace.frameList.size() - 1);
                         if (last.right().isPresent()) {
                             StackTraceTracker.LuaFrame luaFrame = last.right().get();
                             outputEventArguments.setLine(luaFrame.closure.p.lineinfo[luaFrame.pc]);
@@ -609,7 +650,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 client.output(outputEventArguments);
                 return true;
             }));
-            Runnable runnable = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureEventSource().subscribe(new SecondaryCallHook() {
+            Runnable runnable = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getEvent().subscribe(new Hook() {
                 int reentrantCount = 0;
 
                 @Override
@@ -624,16 +665,15 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 }
 
                 @Override
-                public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.ReturnType type) {
-                    if (type == LuaDuck.ReturnType.ERROR && copyOnError == null) {
-                        copyOnError = new ArrayList<>(stackTrace.frameList);
+                public void outOfFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, Object returns, LuaDuck.ReturnType type) {
+                    if (type == LuaDuck.ReturnType.ERROR) {
+                        handleError((LuaError) returns);
                     }
                     stackTrace.frameList.remove(stackTrace.frameList.size() - 1);
                 }
 
                 @Override
                 public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int instruction, int pc) {
-                    copyOnError = null;
                     int p = luaClosure.p.lineinfo[pc];
 
                     WeakHashMap<Prototype, Integer> markedAsLoadStringed = ((LuaRuntimeAccess) getCurrentAvatar().luaRuntime)
@@ -691,6 +731,9 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
                 @Override
                 public void outOfJavaFunction(Varargs args, Method val$method, Object result, LuaDuck.ReturnType type) {
+                    if (type == LuaDuck.ReturnType.ERROR) {
+                        handleError((LuaError) result);
+                    }
                     stackTrace.frameList.remove(stackTrace.frameList.size() - 1);
                 }
 
@@ -721,12 +764,66 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                         return;
                     }
                     if (!stackTrace.frameList.isEmpty()) {
-                        logger.warn("frame list is not empty");
+                        throw new IllegalStateException("Framelist not empty");
                     }
                     stackTrace.isActive = false;
+                    stackTrace.errorUnwrapping = false;
+                }
+
+                @Override
+                public void endError(Object err) {
+                    Hook.super.endError(err);
+                }
+
+                @Override
+                public void intoPCall() {
+                    stackTrace.pcall++;
+                }
+
+                @Override
+                public void outOfPCall() {
+                    stackTrace.pcall--;
+                    stackTrace.errorUnwrapping = false;
+                }
+
+                void handleError(LuaError err) {
+                    if (stackTrace.errorUnwrapping) {
+                        return;
+                    }
+                    stackTrace.errorUnwrapping = true;
+                    boolean handled = stackTrace.pcall > 0;
+                    String id = handled ? "caught" : "uncaught";
+
+                    if (!exceptionBreakpoints.containsKey(id)) {
+                        return;
+                    }
+                    String con = exceptionBreakpoints.get(id).getCondition();
+
+                    if (con != null && !executor.composeAndCall(con, stackTrace.frameList.get(stackTrace.frameList.size() - 1), args -> {
+                        args.setOutput("Error whilst running exception condition");
+                        return LuaValue.TRUE;
+                    }).toboolean()) {
+                        return;
+                    }
+
+                    doPause(args -> {
+                        args.setReason(StoppedEventArgumentsReason.EXCEPTION);
+                        args.setText(err.getMessage());
+                    });
                 }
             });
             destroyers.subscribe(runnable);
+        }
+
+        public void avatarReloading() {
+            FiguraExtras.sendBrandedMessage("-------------");
+            TerminatedEventArguments args = new TerminatedEventArguments();
+            args.setRestart(true);
+            client.terminated(args);
+            onDisconnect();
+            create();
+            INSTANCE.connect(client);
+            FiguraExtras.updateInformation();
         }
     }
 }

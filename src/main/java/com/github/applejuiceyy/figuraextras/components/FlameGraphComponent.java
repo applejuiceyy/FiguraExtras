@@ -1,7 +1,7 @@
 package com.github.applejuiceyy.figuraextras.components;
 
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
-import com.github.applejuiceyy.figuraextras.tech.captures.captures.FlameGraph;
+import com.github.applejuiceyy.figuraextras.tech.captures.captures.GraphBuilder;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.util.Observers;
@@ -51,7 +51,7 @@ public class FlameGraphComponent extends Element {
         }
     }
 
-    private final FlameGraph.Frame frame;
+    private final GraphBuilder.Frame frame;
     public Observers.WritableObserver<Integer> viewStart = Observers.of(0);
     public Observers.WritableObserver<Integer> viewEnd = Observers.of(10);
     private DefaultCancellableEvent.ToolTipEvent toolTipEvent;
@@ -60,14 +60,14 @@ public class FlameGraphComponent extends Element {
         viewStart.merge(viewEnd).observe(() -> enqueueDirtySection(false, false));
     }
 
-    public FlameGraphComponent(FlameGraph.Frame frame) {
+    public FlameGraphComponent(GraphBuilder.Frame frame) {
         this.frame = frame;
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        Tuple<FlameGraph.Frame, Integer> thing = getFrameInPos(mouseX - x.get(), mouseY - y.get());
-        FlameGraph.Frame selectedFrame = thing == null ? null : thing.getA();
+        Tuple<GraphBuilder.Frame, Integer> thing = getFrameInPos(mouseX - x.get(), mouseY - y.get());
+        GraphBuilder.Frame selectedFrame = thing == null ? null : thing.getA();
 
         RenderSystem.setShader(GameRenderer::getRendertypeGuiShader);
         BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
@@ -99,7 +99,7 @@ public class FlameGraphComponent extends Element {
 
     @Override
     protected boolean renders() {
-        return super.renders();
+        return true;
     }
 
     @Override
@@ -115,7 +115,7 @@ public class FlameGraphComponent extends Element {
         return ((0xaa / pos) << 16) + (Math.min(0xff, Math.max(0x55 / pos, pos * 5)) << 8) + Math.min(0xff, Math.max(0x22 / pos, pos * 2));
     }
 
-    private void populate(Matrix4f stack, BufferBuilder bufferBuilder, int mouseX, int mouseY, FlameGraph.Frame frame, FlameGraph.Frame selectedFrame, int offset, int y, int pos) {
+    private void populate(Matrix4f stack, BufferBuilder bufferBuilder, int mouseX, int mouseY, GraphBuilder.Frame frame, GraphBuilder.Frame selectedFrame, int offset, int y, int pos) {
         int startOffset = toView(offset);
         int endOffset = toView(offset + frame.getInstructions());
         int nonAlpha = getColor(pos);
@@ -185,7 +185,7 @@ public class FlameGraphComponent extends Element {
             }
         }
 
-        for (FlameGraph.Marker child : frame.getMarkers()) {
+        for (GraphBuilder.Marker child : frame.getMarkers()) {
             int toView = toView(offset + child.instruction());
 
             bufferBuilder.vertex(stack, toView, y + 17, 0).color(selectionColor).endVertex();
@@ -199,7 +199,7 @@ public class FlameGraphComponent extends Element {
             bufferBuilder.vertex(stack, toView + 2, y + 20, 0).color(0xff00aa00).endVertex();
         }
 
-        for (FlameGraph.Region child : frame.getRegions()) {
+        for (GraphBuilder.Region child : frame.getRegions()) {
             int start = toView(offset + child.instruction());
             int finish = toView(offset + child.instruction() + child.duration());
 
@@ -215,11 +215,11 @@ public class FlameGraphComponent extends Element {
         }
 
         int i = 1;
-        for (FlameGraph.Child child : frame.getChildren()) {
+        for (GraphBuilder.Child child : frame.getChildren()) {
             int instructions = child.getInstructions();
-            if (child instanceof FlameGraph.Frame f) {
+            if (child instanceof GraphBuilder.Frame f) {
                 populate(stack, bufferBuilder, mouseX, mouseY, f, selectedFrame, offset, y + 20, i++);
-            } else if (child instanceof FlameGraph.Space space) {
+            } else if (child instanceof GraphBuilder.Space space) {
                 int prev = toView(offset);
                 int end = toView(offset + space.getInstructions());
                 if (space.instructions.size() > 0 && ((end - prev) / space.getInstructions()) > 1) {
@@ -264,7 +264,7 @@ public class FlameGraphComponent extends Element {
         }
     }
 
-    private String figureOutFrameName(FlameGraph.Frame frame) {
+    private String figureOutFrameName(GraphBuilder.Frame frame) {
         if (frame.possibleName != null) {
             return "function " + frame.possibleName;
         }
@@ -274,7 +274,7 @@ public class FlameGraphComponent extends Element {
         return "[JAVA]";
     }
 
-    private String figureOutSmallFrameName(FlameGraph.Frame frame) {
+    private String figureOutSmallFrameName(GraphBuilder.Frame frame) {
         if (frame.possibleName != null) {
             return frame.possibleName;
         }
@@ -284,7 +284,7 @@ public class FlameGraphComponent extends Element {
         return "[JAVA]";
     }
 
-    private void renderOthers(GuiGraphics context, FlameGraph.Frame frame, int offset, int y) {
+    private void renderOthers(GuiGraphics context, GraphBuilder.Frame frame, int offset, int y) {
         int start = toView(offset);
         if (start < 0) {
             start = 0;
@@ -317,11 +317,11 @@ public class FlameGraphComponent extends Element {
                 0xffffffff
         );
 
-        for (FlameGraph.Child child : frame.getChildren()) {
+        for (GraphBuilder.Child child : frame.getChildren()) {
             int instructions = child.getInstructions();
-            if (viewStart.get() < offset + instructions && child instanceof FlameGraph.Frame f) {
+            if (viewStart.get() < offset + instructions && child instanceof GraphBuilder.Frame f) {
                 renderOthers(context, f, offset, y + 20);
-            } else if (child instanceof FlameGraph.Space space) {
+            } else if (child instanceof GraphBuilder.Space space) {
                 int prev = toView(offset);
                 int ee = toView(offset + space.getInstructions());
                 int prevLine = prev;
@@ -392,9 +392,9 @@ public class FlameGraphComponent extends Element {
         }
     }
 
-    public FlameGraph.Marker getMarkerInPos(FlameGraph.Frame frame, int offset, int x, int y) {
+    public GraphBuilder.Marker getMarkerInPos(GraphBuilder.Frame frame, int offset, int x, int y) {
         if ((y - 1) % 20 > 16) {
-            for (FlameGraph.Marker marker : frame.getMarkers()) {
+            for (GraphBuilder.Marker marker : frame.getMarkers()) {
                 int thisX = toView(offset + marker.instruction());
                 if (thisX < x + 4 && thisX > x - 4) {
                     return marker;
@@ -404,9 +404,9 @@ public class FlameGraphComponent extends Element {
         return null;
     }
 
-    public FlameGraph.Region getRegionInPos(FlameGraph.Frame frame, int offset, int x, int y) {
+    public GraphBuilder.Region getRegionInPos(GraphBuilder.Frame frame, int offset, int x, int y) {
         if ((y - 1) % 20 < 3) {
-            for (FlameGraph.Region region : frame.getRegions()) {
+            for (GraphBuilder.Region region : frame.getRegions()) {
                 int start = toView(offset + region.instruction());
                 int end = toView(offset + region.instruction() + region.duration());
                 if (x > start && x < end) {
@@ -417,15 +417,15 @@ public class FlameGraphComponent extends Element {
         return null;
     }
 
-    public Tuple<FlameGraph.Frame, Integer> getFrameInPos(int x, int y) {
+    public Tuple<GraphBuilder.Frame, Integer> getFrameInPos(int x, int y) {
         return getFrameInPos(frame, 0, x, y);
     }
 
-    private Tuple<FlameGraph.Frame, Integer> getFrameInPos(FlameGraph.Frame frame, int offset, int x, int y) {
+    private Tuple<GraphBuilder.Frame, Integer> getFrameInPos(GraphBuilder.Frame frame, int offset, int x, int y) {
         if (y > 20) {
-            for (FlameGraph.Child child : frame.getChildren()) {
-                if (child instanceof FlameGraph.Frame f) {
-                    Tuple<FlameGraph.Frame, Integer> r;
+            for (GraphBuilder.Child child : frame.getChildren()) {
+                if (child instanceof GraphBuilder.Frame f) {
+                    Tuple<GraphBuilder.Frame, Integer> r;
                     if ((r = getFrameInPos(f, offset, x, y - 20)) != null) {
                         return r;
                     }
@@ -444,7 +444,7 @@ public class FlameGraphComponent extends Element {
 
     @Override
     protected void defaultMouseDownBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
-        Tuple<FlameGraph.Frame, Integer> frame = getFrameInPos((int) event.x - getX(), (int) event.y - getY());
+        Tuple<GraphBuilder.Frame, Integer> frame = getFrameInPos((int) event.x - getX(), (int) event.y - getY());
 
         if (frame != null) {
             viewStart.set(frame.getB() - 10);
@@ -459,21 +459,21 @@ public class FlameGraphComponent extends Element {
         int mouseX = (int) (event.x - x.get());
         int mouseY = (int) (event.y - y.get());
 
-        Tuple<FlameGraph.Frame, Integer> thing = getFrameInPos(mouseX, mouseY);
+        Tuple<GraphBuilder.Frame, Integer> thing = getFrameInPos(mouseX, mouseY);
 
         if (thing != null) {
-            FlameGraph.Frame frame = thing.getA();
+            GraphBuilder.Frame frame = thing.getA();
 
 
             Component component = null;
 
-            FlameGraph.Marker marker = getMarkerInPos(frame, thing.getB(), mouseX, mouseY);
+            GraphBuilder.Marker marker = getMarkerInPos(frame, thing.getB(), mouseX, mouseY);
             if (marker != null) {
                 component = Component.literal(marker.name() + " (" + marker.instruction() + " instructions into the function)");
             }
 
             if (component == null) {
-                FlameGraph.Region region = getRegionInPos(frame, thing.getB(), mouseX, mouseY);
+                GraphBuilder.Region region = getRegionInPos(frame, thing.getB(), mouseX, mouseY);
                 if (region != null) {
                     component = Component.literal(region.name() + " (" + region.instruction() + " instructions into the function taking " + region.duration() + " instructions)");
                 }

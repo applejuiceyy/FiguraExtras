@@ -70,7 +70,7 @@ public class AvatarInfoDisplay {
         flow.add(hook(Button.minimal().addAnd("Output"), ChatLikeView::new));
         flow.add(hook(Button.minimal().addAnd("Network"), NetworkView::new));
         flow.add(Elements.separator());
-        flow.add(hook(Button.minimal().addAnd("Capture"), CaptureView::new));
+        flow.add(hook(Button.minimal().addAnd("Capturer"), CaptureView::new));
         flow.add(Elements.separator());
         flow.add(Button.minimal().addAnd("Download Avatar"));
 

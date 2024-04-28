@@ -3,13 +3,12 @@ package com.github.applejuiceyy.figuraextras.vscode.dsp;
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaDuck;
 import com.mojang.datafixers.util.Either;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import net.minecraft.util.Tuple;
 import org.eclipse.lsp4j.debug.*;
-import org.figuramc.figura.math.matrix.FiguraMatrix;
-import org.figuramc.figura.math.vector.FiguraVector;
 import org.luaj.vm2.LocVars;
+import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaNumber;
 import org.luaj.vm2.LuaValue;
-import org.luaj.vm2.Varargs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,39 +96,51 @@ public class StackTraceInspector {
     private Variable processValue(LuaValue value, String varName) {
         Variable variable = new Variable();
         variable.setName(varName);
-        variable.setValue(reasonableTypeName(value));
+        return processValue(value, variable);
+    }
+
+    private Variable processValue(LuaValue value, Variable variable) {
+        String interpreted = value.toString();
+        try {
+            interpreted = VariableRenderer.interpret(value);
+        } catch (LuaError err) {
+            OutputEventArguments outputEventArguments = new OutputEventArguments();
+            outputEventArguments.setCategory(OutputEventArgumentsCategory.IMPORTANT);
+            outputEventArguments.setOutput("Error while evaluating: " + err.getMessage());
+            owner.client.output(outputEventArguments);
+        }
+
+        variable.setValue(interpreted);
         VariablePresentationHint variablePresentationHint = new VariablePresentationHint();
         variable.setPresentationHint(variablePresentationHint);
 
         if (owner.clientCapabilities.getSupportsVariableType()) {
-            String type;
-            if (value.isuserdata()) {
-                Class<?> cls = value.checkuserdata().getClass();
-                if (FiguraMatrix.class.isAssignableFrom(cls) || FiguraVector.class.isAssignableFrom(cls)) {
-                    variablePresentationHint.setKind(VariablePresentationHintKind.DATA);
-                }
-                type = owner.getCurrentAvatar().luaRuntime.typeManager.getTypeName(cls);
-            } else {
-                type = value.typename();
-            }
-            variable.setType(type);
+            variable.setType(VariableRenderer.getType(owner.getCurrentAvatar(), value));
+        }
+        Supplier<List<Tuple<Variable, LuaValue>>> expander = null;
+        try {
+            expander = VariableRenderer.expand(owner.getCurrentAvatar(), value);
+        } catch (LuaError err) {
+            OutputEventArguments outputEventArguments = new OutputEventArguments();
+            outputEventArguments.setCategory(OutputEventArgumentsCategory.IMPORTANT);
+            outputEventArguments.setOutput("Error while evaluating: " + err.getMessage());
+            owner.client.output(outputEventArguments);
         }
 
-        if (value.istable()) {
+        if (expander != null) {
             variable.setVariablesReference(generatedVariablesReference.size());
+            Supplier<List<Tuple<Variable, LuaValue>>> finalExpander = expander;
             generatedVariablesReference.add(() -> {
+                List<Tuple<Variable, LuaValue>> list = finalExpander.get();
                 List<Variable> variables = new ArrayList<>();
-                LuaValue k = LuaValue.NIL;
-                while (true) {
-                    Varargs n = value.next(k);
-                    if ((k = n.arg1()).isnil())
-                        break;
-                    LuaValue v = n.arg(2);
-                    variables.add(processValue(v, k.toString()));
-                }
+                list.forEach(tuple -> {
+                    variables.add(tuple.getA());
+                    processValue(tuple.getB(), tuple.getA());
+                });
                 return variables.toArray(new Variable[0]);
             });
         }
+
         return variable;
     }
 
