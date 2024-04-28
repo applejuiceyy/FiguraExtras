@@ -4,6 +4,7 @@
   "package": "com.github.applejuiceyy.figuraextras.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "debugadapter.figura.AvatarManagerMixin",
     "debugadapter.figura.LocalAvatarLoaderAccessor",
     "debugadapter.figura.LocalAvatarLoaderMixin",
     "debugadapter.figura.LuaRuntime6Mixin",

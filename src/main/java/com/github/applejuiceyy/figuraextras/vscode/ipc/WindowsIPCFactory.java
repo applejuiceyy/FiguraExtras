@@ -217,7 +217,7 @@ public class WindowsIPCFactory extends IPCFactory {
         private final WinNT.HANDLE handle;
         private boolean closed = false;
 
-        private AtomicInteger refs;
+        private final AtomicInteger refs;
 
         public NamedPipeOutputStream(WinNT.HANDLE handle) {
             this(handle, new AtomicInteger(1));

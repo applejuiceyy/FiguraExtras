@@ -86,7 +86,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     private Event<Runnable> destroyers = Event.runnable();
     private @Nullable Runnable situationalBreakpointRemover;
     private boolean isInBreakpoint = false;
-    private HashMap<String, ExceptionFilterOptions> exceptionBreakpoints = new HashMap<>();
+    private final HashMap<String, ExceptionFilterOptions> exceptionBreakpoints = new HashMap<>();
 
     /***
      * Almost all of these methods are not for public consumption, refer to getInternalInterface
@@ -558,6 +558,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
     // it's better to separate what is DA and internal state and just internal talking to eachother
     public class DAInternalInterface {
+        private boolean reloading = false;
+
         public void scriptInitializing(String str) {
             sourcer.regularSourceRegistered(str);
             Either<String, Integer> left = Either.left(str);
@@ -586,6 +588,10 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                     client.breakpoint(breakpointEventArguments);
                 }
             }
+
+            ExitedEventArguments args = new ExitedEventArguments();
+            args.setExitCode(1);
+            client.exited(args);
         }
 
         public boolean cares(Avatar avatar) {
@@ -816,14 +822,27 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         }
 
         public void avatarReloading() {
+            if (reloading) return;
+            reloading = true;
+            AvatarManager.clearAvatars(FiguraMod.getLocalPlayerUUID());
             FiguraExtras.sendBrandedMessage("-------------");
             TerminatedEventArguments args = new TerminatedEventArguments();
             args.setRestart(true);
             client.terminated(args);
+            detach();
+            paused.complete(null);
+            breakpoints.clear();
+            exceptionBreakpoints.clear();
+        }
+
+        public void avatarClearing() {
+            if (reloading) return;
+            reloading = true;
+            FiguraExtras.sendBrandedMessage("Terminating");
+            client.exited(new ExitedEventArguments());
+            TerminatedEventArguments args = new TerminatedEventArguments();
+            client.terminated(args);
             onDisconnect();
-            create();
-            INSTANCE.connect(client);
-            FiguraExtras.updateInformation();
         }
     }
 }
