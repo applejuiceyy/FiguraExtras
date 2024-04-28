@@ -86,6 +86,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     private Event<Runnable> destroyers = Event.runnable();
     private @Nullable Runnable situationalBreakpointRemover;
     private boolean isInBreakpoint = false;
+
+    private boolean reloadsAreInvalid = false;
     private final HashMap<String, ExceptionFilterOptions> exceptionBreakpoints = new HashMap<>();
 
     /***
@@ -233,7 +235,9 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 );
             }
         }
+        reloadsAreInvalid = true;
         AvatarManager.clearAvatars(FiguraMod.getLocalPlayerUUID());
+        reloadsAreInvalid = false;
         if (!args.containsKey("avatarPath") || !(args.get("avatarPath") instanceof String)) {
             return Util.fail(ResponseErrorCode.InvalidParams, "avatarPath is not an argument");
         }
@@ -312,7 +316,9 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         if (launchArgs.get("__restart") != Boolean.TRUE) {
             FiguraExtras.sendBrandedMessage("Setting avatar to conform to debug session");
         }
+        reloadsAreInvalid = true;
         AvatarManager.loadLocalAvatar(new File((String) launchArgs.get("avatarPath")).toPath());
+        reloadsAreInvalid = false;
         return CompletableFuture.completedFuture(null);
     }
 
@@ -558,7 +564,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
     // it's better to separate what is DA and internal state and just internal talking to eachother
     public class DAInternalInterface {
-        private boolean reloading = false;
+
 
         public void scriptInitializing(String str) {
             sourcer.regularSourceRegistered(str);
@@ -822,8 +828,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         }
 
         public void avatarReloading() {
-            if (reloading) return;
-            reloading = true;
+            if (reloadsAreInvalid) return;
+            reloadsAreInvalid = true;
             AvatarManager.clearAvatars(FiguraMod.getLocalPlayerUUID());
             FiguraExtras.sendBrandedMessage("-------------");
             TerminatedEventArguments args = new TerminatedEventArguments();
@@ -836,8 +842,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         }
 
         public void avatarClearing() {
-            if (reloading) return;
-            reloading = true;
+            if (reloadsAreInvalid) return;
+            reloadsAreInvalid = true;
             FiguraExtras.sendBrandedMessage("Terminating");
             client.exited(new ExitedEventArguments());
             TerminatedEventArguments args = new TerminatedEventArguments();
