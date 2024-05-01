@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { Receptionist } from './discovery/receptionist';
 import { doInformedPicking } from './lifecycles';
 import * as net from "net";
-import { pathContainsPath, realPath } from './util';
+import { pathContainsPath, realPath, IPCPath } from './util';
 import path from 'path';
 
 async function getAvatarFolder(): Promise<{type: "OK", value: vscode.WorkspaceFolder} | {type: "ERROR", value: string}> {
@@ -182,7 +182,7 @@ export function activate(context: vscode.ExtensionContext) {
 					throw new Error("No minecraft clients");
 				}
 				let dapPath = await receptionist.startDAP(session.configuration.id, path.uri.path);
-				return new vscode.DebugAdapterNamedPipeServer("\\\\.\\pipe\\" + dapPath);
+				return new vscode.DebugAdapterNamedPipeServer(IPCPath(dapPath));
 			}
 		}
 	}));

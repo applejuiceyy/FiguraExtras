@@ -1,11 +1,12 @@
 import z from "zod";
 import * as rpc from 'vscode-jsonrpc/node';
 import * as net from "net";
+import * as os from "os";
+import { IPCPath } from "../util";
 
 let receptionist: Receptionist | null = null;
 
-
-const PIPE_PATH = "\\\\.\\pipe\\figuraextras\\receptionist";
+const PIPE_PATH = IPCPath("figuraextras\\receptionist");
 
 const world = z.object({
     name: z.string(),
