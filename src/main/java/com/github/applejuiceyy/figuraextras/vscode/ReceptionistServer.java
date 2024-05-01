@@ -6,14 +6,14 @@ import com.github.applejuiceyy.figuraextras.vscode.protocol.*;
 import com.google.gson.GsonBuilder;
 import net.minecraft.util.Tuple;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
-import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
-import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +25,8 @@ import java.util.function.Consumer;
 public class ReceptionistServer {
     public static Logger logger = LoggerFactory.getLogger("FiguraExtras:ReceptionistServer");
     private static C2CClientImpl currentClient;
+    private static IPCFactory.IPC receptionistPipeServer;
+    private static IPCFactory.IPC otherClientServer;
     ArrayList<ServerClientInterface> eligibleToSuccession = new ArrayList<>();
     ArrayList<ServerClientInterface> allClients = new ArrayList<>();
     ArrayList<ReceptionistVSCInterface> vscInterfaces = new ArrayList<>();
@@ -46,8 +48,23 @@ public class ReceptionistServer {
         if (!ipcFactory.exists(OTHER2HOST_PATH)) {
             succession = false;
             ReceptionistServer receptionistServer = new ReceptionistServer();
-            IPCFactory.IPC otherClientServer = ipcFactory.createServer(OTHER2HOST_PATH);
-            IPCFactory.IPC receptionistPipeServer = ipcFactory.createServer(RECEPTIONIST_PATH);
+
+            try {
+                otherClientServer = ipcFactory.createServer(OTHER2HOST_PATH);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                receptionistPipeServer = ipcFactory.createServer(RECEPTIONIST_PATH);
+            } catch (IOException e) {
+                try {
+                    otherClientServer.close();
+                } catch (IOException ignored) {
+                }
+                otherClientServer = null;
+                throw new RuntimeException(e);
+            }
+
             otherClientServer.continuousConnect(receptionistServer::otherClientConnection);
             receptionistPipeServer.continuousConnect(receptionistServer::vscodeConnection);
         }
@@ -63,6 +80,21 @@ public class ReceptionistServer {
         return currentClient;
     }
 
+    public static void close() throws IOException {
+        if (otherClientServer == null) return;
+        try {
+            otherClientServer.close();
+        } catch (IOException e) {
+            try {
+                receptionistPipeServer.close();
+            } catch (IOException ignored) {
+                throw new IOException("Failed to close both servers");
+            }
+            throw e;
+        }
+        receptionistPipeServer.close();
+    }
+
     private static C2CClientImpl createLauncher(InputStream i, OutputStream o) {
         C2CClientImpl client = new C2CClientImpl();
         configureLauncher(client, C2CServer.class, i, o, client::setServer);
@@ -75,7 +107,8 @@ public class ReceptionistServer {
             try {
                 return fut.get();
             } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
+                Throwable cause = e.getCause();
+                throw cause instanceof RuntimeException r ? r : new RuntimeException(cause);
             }
         });
         return cfut;
@@ -92,11 +125,12 @@ public class ReceptionistServer {
 
         T remoteProxy = launcher.getRemoteProxy();
         backwardsSetter.accept(remoteProxy);
-        startWithTermination(local, i, o, launcher);
+        startWithTermination(local, i, o, launcher, () -> {
+        });
         return launcher.getRemoteProxy();
     }
 
-    public static <T> void startWithTermination(Object local, InputStream i, OutputStream o, Launcher<T> launcher) {
+    public static <T> void startWithTermination(Object local, InputStream i, OutputStream o, Launcher<T> launcher, Runnable closer) {
         listenForCompletion(launcher.startListening()).thenRun(() -> {
             if (local instanceof DisconnectAware da) {
                 da.onDisconnect();
@@ -109,6 +143,7 @@ public class ReceptionistServer {
                 o.close();
             } catch (IOException ignored) {
             }
+            closer.run();
         });
     }
 

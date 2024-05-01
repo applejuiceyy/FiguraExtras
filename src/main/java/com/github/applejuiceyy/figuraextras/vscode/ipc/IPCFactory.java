@@ -1,6 +1,8 @@
 package com.github.applejuiceyy.figuraextras.vscode.ipc;
 
 import com.github.applejuiceyy.figuraextras.util.Util;
+import net.minecraft.util.Tuple;
+import org.apache.commons.lang3.SystemUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,21 +11,22 @@ import java.util.function.BiConsumer;
 
 public abstract class IPCFactory {
     static public IPCFactory getIPCFactory() {
-        if (net.minecraft.Util.getPlatform() == net.minecraft.Util.OS.WINDOWS) {
+        if (SystemUtils.IS_OS_WINDOWS) {
             return new WindowsIPCFactory();
+        }
+        if (SystemUtils.IS_OS_UNIX) {
+            return new UNIXIPCFactory();
         }
         throw new UnsupportedOperationException();
     }
 
     public abstract boolean exists(String path);
 
-    public abstract IPC createServer(String path);
+    public abstract IPC createServer(String path) throws IOException;
 
     public abstract net.minecraft.util.Tuple<InputStream, OutputStream> connectAsClient(String path) throws IOException;
 
-    public static abstract class IPC {
-
-        private net.minecraft.util.Tuple<InputStream, OutputStream> connect;
+    public static abstract class IPC implements AutoCloseable {
 
         public net.minecraft.util.Tuple<InputStream, OutputStream> connect() throws IOException {
             return connect(false);
@@ -34,14 +37,23 @@ public abstract class IPCFactory {
         public void continuousConnect(BiConsumer<InputStream, OutputStream> consumer) {
             Util.thread(() -> {
                 try {
-                    while (true) {
-                        connect = connect(true);
-                        consumer.accept(connect.getA(), connect.getB());
-                    }
+                    _continuousConnect(consumer);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             });
+        }
+
+        protected void _continuousConnect(BiConsumer<InputStream, OutputStream> consumer) throws IOException {
+            while (true) {
+                Tuple<InputStream, OutputStream> connect = connect(true);
+                consumer.accept(connect.getA(), connect.getB());
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+
         }
     }
 }

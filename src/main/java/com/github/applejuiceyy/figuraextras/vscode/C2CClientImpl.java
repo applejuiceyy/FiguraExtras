@@ -1,6 +1,5 @@
 package com.github.applejuiceyy.figuraextras.vscode;
 
-import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.vscode.ipc.IPCFactory;
@@ -8,15 +7,10 @@ import com.github.applejuiceyy.figuraextras.vscode.protocol.C2CClient;
 import com.github.applejuiceyy.figuraextras.vscode.protocol.C2CServer;
 import com.github.applejuiceyy.figuraextras.vscode.protocol.ClientInformation;
 import com.github.applejuiceyy.figuraextras.vscode.protocol.WorldInformation;
-import com.sun.jna.platform.win32.Msi;
-import net.minecraft.ChatFormatting;
-import net.minecraft.CrashReport;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
@@ -26,19 +20,14 @@ import net.minecraft.world.level.storage.LevelStorageSource;
 import org.eclipse.lsp4j.debug.launch.DSPLauncher;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
-import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
-import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
 import org.figuramc.figura.FiguraMod;
-import org.figuramc.figura.avatar.AvatarManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -115,13 +104,18 @@ public class C2CClientImpl implements C2CClient {
 
         Util.thread(() -> {
             try {
-                Tuple<InputStream, OutputStream> connect = IPCFactory.getIPCFactory()
-                        .createServer(path)
-                        .connect();
+                IPCFactory.IPC ipc = IPCFactory.getIPCFactory().createServer(path);
+                Tuple<InputStream, OutputStream> connect = ipc.connect();
                 DebugProtocolServer.create();
                 DebugProtocolServer instance = DebugProtocolServer.getInstance();
                 Launcher<IDebugProtocolClient> serverLauncher = DSPLauncher.createServerLauncher(instance, connect.getA(), connect.getB());
-                ReceptionistServer.startWithTermination(instance, connect.getA(), connect.getB(), serverLauncher);
+                ReceptionistServer.startWithTermination(instance, connect.getA(), connect.getB(), serverLauncher, () -> {
+                    try {
+                        ipc.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
                 assert instance != null;
                 instance.connect(serverLauncher.getRemoteProxy());
             } catch (IOException e) {

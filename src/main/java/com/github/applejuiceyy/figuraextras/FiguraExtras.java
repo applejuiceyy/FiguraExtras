@@ -2,35 +2,27 @@ package com.github.applejuiceyy.figuraextras;
 
 
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
-import com.github.applejuiceyy.figuraextras.vscode.C2CClientImpl;
 import com.github.applejuiceyy.figuraextras.vscode.ReceptionistServer;
-import com.github.applejuiceyy.figuraextras.vscode.ipc.IPCFactory;
-import com.github.applejuiceyy.figuraextras.vscode.protocol.C2CServer;
-import com.github.applejuiceyy.figuraextras.vscode.protocol.ClientInformation;
-import com.github.applejuiceyy.figuraextras.vscode.protocol.WorldInformation;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.ChatFormatting;
-import net.minecraft.SharedConstants;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.phys.Vec3;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Badges;
 import org.figuramc.figura.config.ConfigType;
-import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.ducks.ChannelHandleAccessor;
 import org.figuramc.figura.lua.api.sound.LuaSound;
 import org.figuramc.figura.lua.api.sound.SoundAPI;
@@ -39,8 +31,6 @@ import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
@@ -126,6 +116,14 @@ public class FiguraExtras implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         updateInformation();
+
+        ClientLifecycleEvents.CLIENT_STOPPING.register(minecraft -> {
+            try {
+                ReceptionistServer.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
             if (showSoundPositions.isEmpty()) return;

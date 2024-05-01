@@ -210,6 +210,11 @@ public class WindowsIPCFactory extends IPCFactory {
             NamedPipeOutputStream namedPipeOutputStream = new NamedPipeOutputStream(handle, refs);
             return new Tuple<>(namedPipeInputStream, namedPipeOutputStream);
         }
+
+        @Override
+        public void close() {
+
+        }
     }
 
     static class NamedPipeOutputStream extends OutputStream {
