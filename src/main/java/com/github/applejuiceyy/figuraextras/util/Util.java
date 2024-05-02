@@ -139,6 +139,31 @@ public class Util {
         };
     }
 
+    static public void closeMultiple(AutoCloseable... closers) {
+        int fails = 0;
+        RuntimeException exception = null;
+        Exception last = null;
+        for (AutoCloseable closer : closers) {
+            try {
+                closer.close();
+            } catch (Exception e) {
+                if (fails == 0) {
+                    exception = new RuntimeException(e);
+                } else {
+                    if (fails == 1) {
+                        exception = new RuntimeException("Failed to close multiple things");
+                    }
+                    exception.addSuppressed(last);
+                }
+                last = e;
+                fails++;
+            }
+        }
+        if (exception != null) {
+            throw exception;
+        }
+    }
+
     public interface SetterGetter<T> {
         void set(T value);
 

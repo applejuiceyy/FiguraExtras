@@ -135,15 +135,7 @@ public class ReceptionistServer {
             if (local instanceof DisconnectAware da) {
                 da.onDisconnect();
             }
-            try {
-                i.close();
-            } catch (IOException ignored) {
-            }
-            try {
-                o.close();
-            } catch (IOException ignored) {
-            }
-            closer.run();
+            Util.closeMultiple(i, o, closer::run);
         });
     }
 

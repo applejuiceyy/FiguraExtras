@@ -11,6 +11,7 @@ import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.github.applejuiceyy.figuraextras.vscode.DisconnectAware;
+import com.github.applejuiceyy.figuraextras.vscode.ipc.IPCFactory;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.ChatFormatting;
@@ -75,6 +76,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     final StackTraceTracker stackTrace = new StackTraceTracker();
     private final HashMap<Either<String, Integer>, List<BreakpointState>> breakpoints = new HashMap<>();
     private final DAInternalInterface internalInterface = new DAInternalInterface();
+    private final IPCFactory.IPC ipc;
     InitializeRequestArguments clientCapabilities;
     Map<String, Object> launchArgs;
     IDebugProtocolClient client;
@@ -90,6 +92,10 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     private boolean reloadsAreInvalid = false;
     private final HashMap<String, ExceptionFilterOptions> exceptionBreakpoints = new HashMap<>();
 
+    public DebugProtocolServer(IPCFactory.IPC ipc) {
+        this.ipc = ipc;
+    }
+
     /***
      * Almost all of these methods are not for public consumption, refer to getInternalInterface
      */
@@ -101,15 +107,21 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         return INSTANCE == null ? null : INSTANCE.internalInterface;
     }
 
-    public static void create() {
+    public static void create(IPCFactory.IPC ipc) {
         if (INSTANCE != null) {
             throw new RuntimeException("There's already a debug protocol server running");
         }
-        INSTANCE = new DebugProtocolServer();
+        INSTANCE = new DebugProtocolServer(ipc);
     }
 
     private static boolean isChild(Path child, Path parent) {
         return child.startsWith(parent);
+    }
+
+    public static void close() throws IOException {
+        if (INSTANCE != null) {
+            INSTANCE.onDisconnect();
+        }
     }
 
     @Override
@@ -117,6 +129,11 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         INSTANCE = null;
         detach();
         FiguraExtras.updateInformation();
+        try {
+            close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void detach() {

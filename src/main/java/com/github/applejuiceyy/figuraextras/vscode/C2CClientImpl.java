@@ -106,7 +106,7 @@ public class C2CClientImpl implements C2CClient {
             try {
                 IPCFactory.IPC ipc = IPCFactory.getIPCFactory().createServer(path);
                 Tuple<InputStream, OutputStream> connect = ipc.connect();
-                DebugProtocolServer.create();
+                DebugProtocolServer.create(ipc);
                 DebugProtocolServer instance = DebugProtocolServer.getInstance();
                 Launcher<IDebugProtocolClient> serverLauncher = DSPLauncher.createServerLauncher(instance, connect.getA(), connect.getB());
                 ReceptionistServer.startWithTermination(instance, connect.getA(), connect.getB(), serverLauncher, () -> {

@@ -3,6 +3,7 @@ package com.github.applejuiceyy.figuraextras;
 
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
 import com.github.applejuiceyy.figuraextras.vscode.ReceptionistServer;
+import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
@@ -30,7 +31,6 @@ import org.figuramc.figura.math.vector.FiguraVec3;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
@@ -118,11 +118,7 @@ public class FiguraExtras implements ClientModInitializer {
         updateInformation();
 
         ClientLifecycleEvents.CLIENT_STOPPING.register(minecraft -> {
-            try {
-                ReceptionistServer.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            com.github.applejuiceyy.figuraextras.util.Util.closeMultiple(ReceptionistServer::close, DebugProtocolServer::close);
         });
 
         WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
