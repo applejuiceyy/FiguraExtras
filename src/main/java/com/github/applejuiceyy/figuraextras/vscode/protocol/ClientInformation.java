@@ -5,8 +5,7 @@ public class ClientInformation {
     String version;
     String minecraftPath;
     String figuraPath;
-
-    boolean isConnected = false;
+    boolean isConnected;
     WorldInformation world;
 
     public ClientInformation(String version, String minecraftPath, String figuraPath, String id, boolean isConnected, WorldInformation world) {

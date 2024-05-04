@@ -18,6 +18,7 @@ import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.RenderTaskInter
 import com.github.applejuiceyy.figuraextras.tech.trees.objects.ObjectScraperExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
+import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
 import com.mojang.blaze3d.audio.OggAudioStream;
 import com.mojang.blaze3d.audio.SoundBuffer;
 import net.minecraft.network.chat.Component;
@@ -106,6 +107,10 @@ public class AvatarMixin implements AvatarAccess {
     @Inject(method = "clean", at = @At("HEAD"))
     void b(CallbackInfo ci) {
         cleaned = true;
+        DebugProtocolServer.DAInternalInterface internalInterface = DebugProtocolServer.getInternalInterface();
+        if (internalInterface != null && internalInterface.cares((Avatar) (Object) this)) {
+            internalInterface.avatarClearing();
+        }
     }
 
     @Inject(method = "run", at = @At("RETURN"))

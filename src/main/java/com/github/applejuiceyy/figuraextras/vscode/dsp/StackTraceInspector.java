@@ -171,6 +171,37 @@ public class StackTraceInspector {
     }
 
     private Scope[] getLuaScopes(StackTraceTracker.LuaFrame o) {
+        Scope globalsScope = new Scope();
+        globalsScope.setName("Globals");
+        globalsScope.setExpensive(true);
+        globalsScope.setVariablesReference(generatedVariablesReference.size());
+        generatedVariablesReference.add(() -> {
+            if (o.closure.upValues == null || o.closure.upValues.length == 0) {
+                return new Variable[0];
+            }
+            LuaValue globals = o.closure.upValues[0].getValue();
+            Supplier<List<Tuple<Variable, LuaValue>>> expander = null;
+            try {
+                expander = VariableRenderer.expand(owner.getCurrentAvatar(), globals);
+            } catch (LuaError err) {
+                OutputEventArguments outputEventArguments = new OutputEventArguments();
+                outputEventArguments.setCategory(OutputEventArgumentsCategory.IMPORTANT);
+                outputEventArguments.setOutput("Error while evaluating: " + err.getMessage());
+                owner.client.output(outputEventArguments);
+            }
+            if (expander != null) {
+                List<Tuple<Variable, LuaValue>> list = expander.get();
+                List<Variable> vars = new ArrayList<>();
+                list.forEach(tuple -> {
+                    vars.add(tuple.getA());
+                    processValue(tuple.getB(), tuple.getA());
+                });
+                return vars.toArray(new Variable[0]);
+            } else {
+                return new Variable[0];
+            }
+        });
+
         Scope argumentScope = new Scope();
         argumentScope.setName("Arguments");
         argumentScope.setPresentationHint(ScopePresentationHint.ARGUMENTS);
@@ -189,7 +220,7 @@ public class StackTraceInspector {
         upvalueScope.setVariablesReference(generatedVariablesReference.size());
         generatedVariablesReference.add(() -> {
             List<Variable> variables = new ArrayList<>();
-            for (int i = 0; i < o.closure.p.upvalues.length; i++) {
+            for (int i = 1; i < o.closure.p.upvalues.length; i++) {
                 LuaValue value = o.closure.upValues[i].getValue();
                 variables.add(processValue(value, o.closure.p.upvalues[i].name.tojstring()));
             }
@@ -265,10 +296,10 @@ public class StackTraceInspector {
                 }
                 return variables.toArray(new Variable[0]);
             });
-            return new Scope[]{argumentScope, varargScope, upvalueScope, localScope, stackScope};
+            return new Scope[]{globalsScope, argumentScope, varargScope, upvalueScope, localScope, stackScope};
         }
 
-        return new Scope[]{argumentScope, upvalueScope, localScope, stackScope};
+        return new Scope[]{globalsScope, argumentScope, upvalueScope, localScope, stackScope};
     }
 
     public Variable[] getVariables(int variablesReference, int startRange, int endRange) {
@@ -284,6 +315,19 @@ public class StackTraceInspector {
         Variable[] out = new Variable[endRange - startRange];
         System.arraycopy(variables, startRange, out, 0, endRange - startRange);
         return out;
+    }
+
+    public EvaluateResponse evaluateExpression(EvaluateArguments args) {
+        LuaValue value = owner.executor.composeAndCall(args.getExpression(), stackTrace.frameList.get(stackTrace.frameList.size() - 1), a -> {
+            a.setOutput("Error while evaluating");
+            return LuaValue.NIL;
+        });
+        Variable var = processValue(value, "");
+        EvaluateResponse evaluateResponse = new EvaluateResponse();
+        evaluateResponse.setResult(var.getValue());
+        evaluateResponse.setType(var.getType());
+        evaluateResponse.setVariablesReference(var.getVariablesReference());
+        return evaluateResponse;
     }
 
     public int getStackTraceSize() {

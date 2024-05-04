@@ -11,7 +11,9 @@ import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -19,6 +21,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.phys.Vec3;
 import org.figuramc.figura.FiguraMod;
@@ -31,6 +34,13 @@ import org.figuramc.figura.math.vector.FiguraVec3;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
@@ -45,6 +55,7 @@ public class FiguraExtras implements ClientModInitializer {
     public static final ConfigType.BoolConfig disableCachedRendering;
     public static final ConfigType.StringConfig progCmd;
     private static final ConfigType.Category category;
+    private static String id;
 
     public static Logger logger = LogUtils.getLogger();
 
@@ -72,6 +83,9 @@ public class FiguraExtras implements ClientModInitializer {
         disableServerToasts.name = Component.literal("Disable Backend Toasts");
         disableCachedRendering.name = Component.literal("Disable Cached Rendering");
     }
+
+    private static Path figuraExtrasDirectory;
+    private static UUID instanceUUID;
 
     public static void sendBrandedMessage(Component text) {
         sendBrandedMessage("FiguraExtras", text);
@@ -113,9 +127,52 @@ public class FiguraExtras implements ClientModInitializer {
         ReceptionistServer.getOrCreateOrConnect().updateInformation();
     }
 
+    public static UUID getInstanceUUID() {
+        return instanceUUID;
+    }
+
+    public static Path getFiguraExtrasDirectory() {
+        return figuraExtrasDirectory;
+    }
+
     @Override
     public void onInitializeClient() {
+        Path gameDir = FabricLoader.getInstance().getGameDir();
+        try {
+            try {
+                figuraExtrasDirectory = gameDir.resolve("figura_extras");
+                Files.createDirectories(figuraExtrasDirectory);
+            } catch (FileAlreadyExistsException ignored) {
+            }
+
+            File file = figuraExtrasDirectory.resolve("id").toFile();
+            if (file.exists()) {
+                try (FileReader reader = new FileReader(file)) {
+                    char[] uuid = new char[36];
+                    if (reader.read(uuid) == 36 && reader.read() == -1) {
+                        instanceUUID = UUID.fromString(String.valueOf(uuid));
+                    }
+                }
+            }
+            if (instanceUUID == null) {
+                instanceUUID = UUID.randomUUID();
+                try (FileWriter writer = new FileWriter(file)) {
+                    writer.write(instanceUUID.toString());
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         updateInformation();
+
+
+        HudRenderCallback.EVENT.register((p, o) -> {
+            if (DebugProtocolServer.getInstance() != null) {
+                MutableComponent text = Component.literal("debugging");
+                p.drawString(Minecraft.getInstance().font, text, Minecraft.getInstance().getWindow().getGuiScaledWidth() - Minecraft.getInstance().font.width(text), Minecraft.getInstance().getWindow().getGuiScaledHeight() - 9, 0xffffffff);
+            }
+        });
 
         ClientLifecycleEvents.CLIENT_STOPPING.register(minecraft -> {
             com.github.applejuiceyy.figuraextras.util.Util.closeMultiple(ReceptionistServer::close, DebugProtocolServer::close);

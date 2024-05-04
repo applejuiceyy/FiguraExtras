@@ -1,5 +1,6 @@
 package com.github.applejuiceyy.figuraextras.vscode;
 
+import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.vscode.ipc.IPCFactory;
@@ -35,7 +36,6 @@ import java.util.stream.Collectors;
 
 public class C2CClientImpl implements C2CClient {
     public static Logger logger = LoggerFactory.getLogger("FiguraExtras:ReceptionistClient");
-    public final String receptionistId = UUID.randomUUID().toString();
     private C2CServer server;
     private boolean doSuccession = true;
     private int successionIndex;
@@ -161,7 +161,7 @@ public class C2CClientImpl implements C2CClient {
                         SharedConstants.getCurrentVersion().getName(),
                         Minecraft.getInstance().gameDirectory.getPath(),
                         FiguraMod.getFiguraDirectory().toString(),
-                        receptionistId,
+                        FiguraExtras.getInstanceUUID().toString(),
                         DebugProtocolServer.getInstance() != null,
                         info
                 )

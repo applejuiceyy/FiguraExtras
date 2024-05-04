@@ -395,6 +395,15 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     }
 
     @Override
+    public CompletableFuture<EvaluateResponse> evaluate(EvaluateArguments args) {
+        if (paused.isDone()) {
+            return Util.fail(ResponseErrorCode.InvalidRequest, "Not paused");
+        }
+        assert inspector != null;
+        return CompletableFuture.completedFuture(inspector.evaluateExpression(args));
+    }
+
+    @Override
     public CompletableFuture<SourceResponse> source(SourceArguments args) {
         int sourceReference = args.getSourceReference();
         String content = ((LuaRuntimeAccess) getCurrentAvatar().luaRuntime).figuraExtrass$getSource(sourceReference);
@@ -547,7 +556,13 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
 
     @Blocking
     public void doPause(Consumer<StoppedEventArguments> filler) {
-        if (isInBreakpoint) return;
+        if (isInBreakpoint) {
+            OutputEventArguments outputEventArguments = new OutputEventArguments();
+            outputEventArguments.setCategory(OutputEventArgumentsCategory.IMPORTANT);
+            outputEventArguments.setOutput("Skipping pause because it is paused");
+            client.output(outputEventArguments);
+            return;
+        }
         if (!paused.isDone()) return;
         if (!RenderSystem.isOnRenderThread()) {
             throw new IllegalStateException("Not on Render Thread");
