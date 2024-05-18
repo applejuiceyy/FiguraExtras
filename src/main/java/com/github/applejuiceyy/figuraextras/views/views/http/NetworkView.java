@@ -172,7 +172,7 @@ public class NetworkView implements Lifecycle {
             viewer.dispose();
     }
 
-    record StringSubscriber(HttpResponse.BodySubscriber<?> wrapped) implements Flow.Subscriber<ByteBuffer> {
+    public record StringSubscriber(HttpResponse.BodySubscriber<?> wrapped) implements Flow.Subscriber<ByteBuffer> {
         // what kind of joke is this
         // https://stackoverflow.com/questions/55816226/how-to-read-the-body-of-a-httprequest-in-java-11
         // this is why java has gotten the reputation of being a hard language

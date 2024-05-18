@@ -1,9 +1,9 @@
 package com.github.applejuiceyy.figuraextras.lua;
 
 import com.github.applejuiceyy.figuraextras.ducks.GlobalsAccess;
+import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor;
 import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
-import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
 import org.figuramc.figura.lua.FiguraLuaRuntime;
 import org.figuramc.figura.lua.LuaWhitelist;
 import org.luaj.vm2.Globals;

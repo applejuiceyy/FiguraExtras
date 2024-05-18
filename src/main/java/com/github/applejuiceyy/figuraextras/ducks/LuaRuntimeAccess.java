@@ -1,8 +1,8 @@
 package com.github.applejuiceyy.figuraextras.ducks;
 
+import com.github.applejuiceyy.figuraextras.ipc.dsp.SourceListener;
 import com.github.applejuiceyy.figuraextras.tech.captures.PossibleCapture;
 import com.github.applejuiceyy.figuraextras.util.Event;
-import com.github.applejuiceyy.figuraextras.vscode.dsp.SourceListener;
 import net.minecraft.util.Tuple;
 import org.luaj.vm2.Prototype;
 

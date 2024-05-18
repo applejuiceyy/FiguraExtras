@@ -1,6 +1,6 @@
 package com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura;
 
-import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
+import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import org.figuramc.figura.avatar.local.LocalAvatarLoader;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

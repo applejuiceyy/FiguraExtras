@@ -3,6 +3,7 @@ package com.github.applejuiceyy.figuraextras.mixin.figura;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.SoundBufferAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
+import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Registration;
@@ -18,7 +19,6 @@ import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.RenderTaskInter
 import com.github.applejuiceyy.figuraextras.tech.trees.objects.ObjectScraperExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
-import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
 import com.mojang.blaze3d.audio.OggAudioStream;
 import com.mojang.blaze3d.audio.SoundBuffer;
 import net.minecraft.network.chat.Component;

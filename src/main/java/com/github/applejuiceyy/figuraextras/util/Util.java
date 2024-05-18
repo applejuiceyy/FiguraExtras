@@ -95,19 +95,21 @@ public class Util {
         in.shouldStopListen().subscribe(o::stop);
     }
 
-    public static void thread(Runnable runnable) {
-        new Thread(runnable).start();
+    public static Thread thread(Runnable runnable) {
+        Thread thread = new Thread(runnable);
+        thread.start();
+        return thread;
     }
 
-    public static void after(Runnable runnable, long millis) {
-        new Thread(() -> {
+    public static Thread after(Runnable runnable, long millis) {
+        return thread(() -> {
             try {
                 Thread.sleep(millis);
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                return;
             }
             runnable.run();
-        }).start();
+        });
     }
 
     public static SafeCloseable maybeTry(Supplier<SafeCloseable> in, boolean yes) {

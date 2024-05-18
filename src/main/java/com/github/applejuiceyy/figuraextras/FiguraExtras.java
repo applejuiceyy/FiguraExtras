@@ -2,8 +2,9 @@ package com.github.applejuiceyy.figuraextras;
 
 
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
-import com.github.applejuiceyy.figuraextras.vscode.ReceptionistServer;
-import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
+import com.github.applejuiceyy.figuraextras.ducks.statics.AuthHandlerDuck;
+import com.github.applejuiceyy.figuraextras.ipc.ReceptionistServer;
+import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
@@ -59,6 +60,11 @@ public class FiguraExtras implements ClientModInitializer {
 
     public static Logger logger = LogUtils.getLogger();
 
+    private static Path globalMinecraftDirectory;
+
+    private static Path figuraExtrasDirectory;
+    private static UUID instanceUUID;
+
     static {
         try {
             Class.forName("org.figuramc.figura.config.Configs");
@@ -77,15 +83,16 @@ public class FiguraExtras implements ClientModInitializer {
         });
         kofi.name = Component.literal("Huh? Kofi? Is that some kind of lettuce?").withStyle(ChatFormatting.GREEN);
 
+        new ConfigType.ButtonConfig("test", category, () -> {
+            AuthHandlerDuck.setDivert(!AuthHandlerDuck.isDiverting());
+        });
+
         category.name = Component.literal("FiguraExtras");
         progName.name = Component.literal("Open With Program Name");
         progCmd.name = Component.literal("Open With Program Command");
         disableServerToasts.name = Component.literal("Disable Backend Toasts");
         disableCachedRendering.name = Component.literal("Disable Cached Rendering");
     }
-
-    private static Path figuraExtrasDirectory;
-    private static UUID instanceUUID;
 
     public static void sendBrandedMessage(Component text) {
         sendBrandedMessage("FiguraExtras", text);
@@ -135,9 +142,19 @@ public class FiguraExtras implements ClientModInitializer {
         return figuraExtrasDirectory;
     }
 
+    public static Path getGlobalMinecraftDirectory() {
+        return globalMinecraftDirectory;
+    }
+
     @Override
     public void onInitializeClient() {
         Path gameDir = FabricLoader.getInstance().getGameDir();
+        String s = switch (Util.getPlatform()) {
+            case WINDOWS -> System.getenv("APPDATA") + "/.minecraft";
+            case OSX -> System.getProperty("user.home") + "/Library/Application Support/minecraft";
+            default -> System.getProperty("user.home") + "/.minecraft";
+        };
+        globalMinecraftDirectory = Path.of(s, "figura_extras", "global");
         try {
             try {
                 figuraExtrasDirectory = gameDir.resolve("figura_extras");

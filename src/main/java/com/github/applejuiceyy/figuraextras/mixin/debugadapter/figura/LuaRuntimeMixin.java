@@ -1,11 +1,8 @@
 package com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura;
 
-import com.github.applejuiceyy.figuraextras.ducks.statics.LuaRuntimeDuck;
-import com.github.applejuiceyy.figuraextras.vscode.dsp.DebugProtocolServer;
+import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import net.minecraft.nbt.ListTag;
-import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
-import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.lua.FiguraLuaRuntime;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.Varargs;
