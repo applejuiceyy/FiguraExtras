@@ -18,7 +18,8 @@ const discoverySchema = z.array(
         version: z.string(),
         minecraftPath: z.string(),
         figuraPath: z.string(),
-        id: z.string(),
+        instanceId: z.string(),
+        playerId: z.string(),
         world: z.union([
             z.null(),
             world

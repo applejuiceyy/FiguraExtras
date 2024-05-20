@@ -79,10 +79,10 @@ export function activate(context: vscode.ExtensionContext) {
 						idx = i;
 						ret.push({
 							label: "Minecraft version " + element.version,
-							id: element.id,
+							id: element.instanceId,
 							detail: element.minecraftPath + (element.world === null ? "   (Not in a world)" : ("   " + element.world.name + " (" + (element.world.singleplayer ? "singleplayer" : "multiplayer") + " server)"))
 						});
-						perId[element.id] = element;
+						perId[element.instanceId] = element;
 					}
 				}
 			}
