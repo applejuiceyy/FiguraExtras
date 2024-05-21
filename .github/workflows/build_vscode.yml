@@ -3,7 +3,7 @@
 # certain platforms or Java versions, and provides a first line of defence
 # against bad commits.
 
-name: build
+name: build plugin
 on:
   pull_request:
     branches:
@@ -30,6 +30,8 @@ jobs:
         uses: actions/checkout@v3
       - name: Setup Node.js environment
         uses: actions/setup-node@v3.2.0
+      - name: Install
+        run: npm install
       - name: Build
         run: npm run compile
       - name: Package
