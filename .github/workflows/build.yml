@@ -3,7 +3,7 @@
 # certain platforms or Java versions, and provides a first line of defence
 # against bad commits.
 
-name: build
+name: Build mod
 on:
   pull_request:
     branches-ignore:
@@ -14,6 +14,7 @@ on:
       - vscode
 
   workflow_dispatch:
+
 
 jobs:
   build:
