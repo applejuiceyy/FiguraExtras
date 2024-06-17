@@ -252,9 +252,6 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 );
             }
         }
-        reloadsAreInvalid = true;
-        AvatarManager.clearAvatars(FiguraMod.getLocalPlayerUUID());
-        reloadsAreInvalid = false;
         if (!args.containsKey("avatarPath") || !(args.get("avatarPath") instanceof String)) {
             return Util.fail(ResponseErrorCode.InvalidParams, "avatarPath is not an argument");
         }
@@ -443,8 +440,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
             public void instruction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, int instruction, int pc) {
                 if (!isInstructionPausable(pc, luaClosure.p)) return;
                 if (luaFrame != null) {
-                    int l = luaFrame.closure.p.lineinfo[pc];
-                    if (line != l && stackTrace.frameList.size() - 1 == s) {
+                    if (stackTrace.frameList.size() - 1 == s && line != luaFrame.closure.p.lineinfo[pc]) {
                         doPause(arg -> arg.setReason(StoppedEventArgumentsReason.STEP));
                     }
                 }
@@ -862,7 +858,6 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         public void avatarReloading() {
             if (reloadsAreInvalid) return;
             reloadsAreInvalid = true;
-            AvatarManager.clearAvatars(FiguraMod.getLocalPlayerUUID());
             FiguraExtras.sendBrandedMessage("-------------");
             TerminatedEventArguments args = new TerminatedEventArguments();
             args.setRestart(true);

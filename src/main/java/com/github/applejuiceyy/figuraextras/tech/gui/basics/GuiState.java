@@ -612,7 +612,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_LEFT_ALT) {
+        if (keyCode == GLFW.GLFW_KEY_D && (modifiers & GLFW.GLFW_MOD_ALT) > 0) {
             renderDebug = !renderDebug;
             return true;
         }
