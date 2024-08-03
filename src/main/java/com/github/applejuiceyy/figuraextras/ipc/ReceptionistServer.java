@@ -28,8 +28,10 @@ import java.util.function.Function;
 public class ReceptionistServer {
     public static Logger logger = LoggerFactory.getLogger("FiguraExtras:ReceptionistServer");
     private static C2CClientImpl currentClient;
+    private static ReceptionistServer currentReceptionistServer;
     private static IPCFactory.IPC receptionistPipeServer;
     private static IPCFactory.IPC otherClientServer;
+
     ArrayList<ServerClientInterface> eligibleToSuccession = new ArrayList<>();
     ArrayList<ServerClientInterface> allClients = new ArrayList<>();
     ArrayList<ReceptionistVSCInterface> vscInterfaces = new ArrayList<>();
@@ -37,6 +39,11 @@ public class ReceptionistServer {
 
     public ReceptionistServer() {
 
+    }
+
+    @Nullable
+    public static ReceptionistServer getCurrentReceptionistServer() {
+        return currentReceptionistServer;
     }
 
     public static C2CClientImpl getOrCreateOrConnect() {
@@ -52,6 +59,7 @@ public class ReceptionistServer {
         if (!ipcFactory.exists(OTHER2HOST_PATH)) {
             succession = false;
             ReceptionistServer receptionistServer = new ReceptionistServer();
+
 
             try {
                 otherClientServer = ipcFactory.createServer(OTHER2HOST_PATH);
@@ -71,6 +79,8 @@ public class ReceptionistServer {
 
             otherClientServer.continuousConnect(receptionistServer::otherClientConnection);
             receptionistPipeServer.continuousConnect(receptionistServer::vscodeConnection);
+
+            ReceptionistServer.currentReceptionistServer = receptionistServer;
         }
         try {
             Tuple<InputStream, OutputStream> bundle = ipcFactory.connectAsClient(OTHER2HOST_PATH);
@@ -97,6 +107,8 @@ public class ReceptionistServer {
             throw e;
         }
         receptionistPipeServer.close();
+        currentClient = null;
+        currentReceptionistServer = null;
     }
 
     private static C2CClientImpl createLauncher(InputStream i, OutputStream o) {
@@ -135,15 +147,16 @@ public class ReceptionistServer {
     }
 
     public static <T> void startWithTermination(Object local, InputStream i, OutputStream o, Launcher<T> launcher, Runnable closer) {
-        listenForCompletion(launcher.startListening()).thenRun(() -> {
+        listenForCompletion(launcher.startListening()).handle((a, b) -> {
             if (local instanceof DisconnectAware da) {
                 da.onDisconnect();
             }
             Util.closeMultiple(i, o, closer::run);
+            return null;
         });
     }
 
-    void otherClientConnection(InputStream i, OutputStream o) {
+    public void otherClientConnection(InputStream i, OutputStream o) {
         logger.info("Other minecraft client connected");
         ServerClientInterface e = new ServerClientInterface(i, o);
         eligibleToSuccession.add(e);
@@ -158,18 +171,23 @@ public class ReceptionistServer {
         configureLauncher(e, ReceptionistClient.class, i, o, e::setClient);
     }
 
-    class ServerClientInterface implements C2CServer {
+    public ReceptionistServerBackend getBackend() {
+        return backend;
+    }
+
+    public class ServerClientInterface implements C2CServer {
         final ReceptionistServerBackendConnection receptionistServerBackendConnection = new ReceptionistServerBackendConnection(this, ReceptionistServer.this);
         C2CClient client;
+        @Nullable
+        ClientInformation information;
         private boolean successionDisallowed = false;
-        @Nullable ClientInformation information;
 
         public ServerClientInterface(InputStream i, OutputStream o) {
         }
 
         @Override
         public void disallowSuccession(boolean disallow) {
-            logger.info("Minecraft client wished to " + (disallow ? "disallow" : "allow") + " succession");
+            logger.info("Minecraft client wished to {} succession", disallow ? "disallow" : "allow");
             if (successionDisallowed != disallow) {
                 successionDisallowed = disallow;
                 if (disallow) {
@@ -191,7 +209,7 @@ public class ReceptionistServer {
 
         @Override
         public void updateInfo(ClientInformation information) {
-            logger.info("Minecraft client wished to update identity: " + information);
+            logger.info("Minecraft client wished to update identity: {}", information);
             this.information = information;
         }
 

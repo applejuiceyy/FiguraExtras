@@ -6,19 +6,17 @@ import com.github.applejuiceyy.figuraextras.util.Observers;
 import net.minecraft.client.gui.GuiGraphics;
 
 public class RangeSliderComponent extends Element {
-    private int max = 100;
-    private int min = 0;
     public final Observers.WritableObserver<Integer> lowerKnob = Observers.of(0);
     public final Observers.WritableObserver<Integer> higherKnob = Observers.of(100);
     int minSpacing = 10;
-
     int startHigherKnob = 0;
     int startLowerKnob = 0;
     float offset = 0;
-
     boolean dragging;
     boolean draggingLowerKnob;
     boolean draggingHigherKnob;
+    private int max = 100;
+    private int min = 0;
 
     public RangeSliderComponent() {
 

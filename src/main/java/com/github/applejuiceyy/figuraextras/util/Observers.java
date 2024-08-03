@@ -8,6 +8,13 @@ import java.util.Objects;
 import java.util.function.*;
 
 public class Observers {
+    public static final BiPredicate<Object, Object> DEFAULT_COMPARATOR = (v1, v2) -> {
+        if (v1 instanceof LuaValue self && v2 instanceof LuaValue other) {
+            return self.raweq(other);
+        }
+        return Objects.equals(v1, v2);
+    };
+
     private Observers() {
     }
 
@@ -27,14 +34,10 @@ public class Observers {
         return new SimpleObserver<>(value, predicate, path);
     }
 
-    public static final BiPredicate<Object, Object> DEFAULT_COMPARATOR = (v1, v2) -> {
-        if (v1 instanceof LuaValue self && v2 instanceof LuaValue other) {
-            return self.raweq(other);
-        }
-        return Objects.equals(v1, v2);
-    };
-
     public static abstract class Observer<VALUE> {
+        protected static int depth = 0;
+        private static int id = 0;
+        public final String path;
         private final Event<Runnable> startListening = Event.runnable();
         private final Event<Runnable> stopListening = Event.runnable();
         private final ArrayList<Predicate<VALUE>> subscribers = new ArrayList<>();
@@ -42,18 +45,12 @@ public class Observers {
         private final int ownId;
         private boolean preventMisfires = false;
         private boolean isFiring = false;
-
-        public abstract VALUE get();
-
-        public final String path;
-
-        private static int id = 0;
-        protected static int depth = 0;
-
         protected Observer(String path) {
             this.path = path;
             this.ownId = id++;
         }
+
+        public abstract VALUE get();
 
         @Override
         public String toString() {
@@ -277,8 +274,8 @@ public class Observers {
     }
 
     private static class SimpleObserver<VALUE> extends WritableObserver<VALUE> {
-        private VALUE value;
         private final BiPredicate<VALUE, VALUE> tester;
+        private VALUE value;
 
         private SimpleObserver(VALUE initial) {
             //noinspection unchecked
@@ -318,11 +315,8 @@ public class Observers {
     private static class DeriveObserver<IN, VALUE> extends Observer<VALUE> {
 
         private final Observer<IN> original;
-
-        private VALUE currentValue;
-
         private final Function<IN, VALUE> transformer;
-
+        private VALUE currentValue;
         private UnSubscriber unsub = null;
 
         public DeriveObserver(Observer<IN> original, Function<IN, VALUE> transformer, String path) {

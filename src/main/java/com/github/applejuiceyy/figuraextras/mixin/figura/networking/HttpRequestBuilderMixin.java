@@ -1,7 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura.networking;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
-import com.github.applejuiceyy.figuraextras.views.views.http.SplittingSubscription;
+import com.github.applejuiceyy.figuraextras.views.avatar.http.SplittingSubscription;
 import org.figuramc.figura.lua.api.data.FiguraFuture;
 import org.figuramc.figura.lua.api.net.HttpRequestsAPI;
 import org.spongepowered.asm.mixin.Final;

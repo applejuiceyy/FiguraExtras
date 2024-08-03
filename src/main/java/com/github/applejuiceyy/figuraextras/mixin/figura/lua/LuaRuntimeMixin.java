@@ -35,28 +35,27 @@ import java.util.WeakHashMap;
 
 @Mixin(value = FiguraLuaRuntime.class, remap = false)
 public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
-    @Unique
-    int initCount = -1;
-    @Unique
-    Event<SourceListener> dynamicLoadEvent = Event.interfacing(SourceListener.class);
-
-    @Shadow
-    public abstract void setGlobal(String name, Object obj);
-
     @Shadow
     @Final
     public LuaTypeManager typeManager;
     @Shadow
+    public EventsAPI events;
+    @Unique
+    int initCount = -1;
+    @Unique
+    Event<SourceListener> dynamicLoadEvent = Event.interfacing(SourceListener.class);
+    @Shadow
     @Final
     private Globals userGlobals;
-    @Shadow
-    public EventsAPI events;
     @Unique
     private WeakHashMap<Prototype, Integer> prototypesMarkedAsLoadStringed;
     @Unique
     private HashMap<Integer, Tuple<String, String>> sourceName;
     @Unique
     private int nextSource = 1;
+
+    @Shadow
+    public abstract void setGlobal(String name, Object obj);
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Ljava/util/Map;putAll(Ljava/util/Map;)V"))
     void init(Avatar avatar, Map<String, String> scripts, CallbackInfo ci) {

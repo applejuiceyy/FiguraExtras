@@ -12,10 +12,10 @@ import java.nio.ByteBuffer;
 
 @Mixin(SoundBuffer.class)
 public class SoundBufferMixin implements SoundBufferAccess {
-    @Shadow
-    private @Nullable ByteBuffer data;
     @Unique
     ByteBuffer keptBuffer = null;
+    @Shadow
+    private @Nullable ByteBuffer data;
 
     @Override
     public void figuraExtrass$keepBuffer() {

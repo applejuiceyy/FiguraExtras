@@ -6,5 +6,6 @@ import org.jetbrains.annotations.Nullable;
 public interface LuaTypeManagerAccess {
     void figuraExtrass$setAvatar(Avatar avatar);
 
-    @Nullable Avatar figuraExtrass$getAvatar();
+    @Nullable
+    Avatar figuraExtrass$getAvatar();
 }

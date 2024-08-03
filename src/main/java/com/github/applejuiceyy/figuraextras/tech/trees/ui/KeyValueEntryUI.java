@@ -24,16 +24,13 @@ public class KeyValueEntryUI<K, V> {
     private final ContentPopOut contentPopOut;
     private final ReferenceStore referenceStore;
     private final Event<Runnable>.Source updater;
-
-    private EntryUI<?> currentEntry = null;
-
-    private Object expanderIdentity = null;
-
     Flow root = new Flow();
     Grid nomenclature = new Grid();
     Grid keyNomenclature = new Grid();
     Grid valueNomenclature = new Grid();
     Flow children = new Flow();
+    private EntryUI<?> currentEntry = null;
+    private Object expanderIdentity = null;
 
     public KeyValueEntryUI(Entry<?, K, V> observer, ContentPopOut contentPopOut, ReferenceStore referenceStore, Registration registration, Event<Runnable>.Source updater) {
         this.registration = registration;

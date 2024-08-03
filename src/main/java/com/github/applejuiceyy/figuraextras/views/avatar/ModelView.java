@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.views.views;
+package com.github.applejuiceyy.figuraextras.views.avatar;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
@@ -11,23 +11,24 @@ import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectExpander
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
-import com.github.applejuiceyy.figuraextras.views.InfoViews;
+import com.github.applejuiceyy.figuraextras.views.View;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
+import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.model.FiguraModelPart;
 
 import java.util.ArrayList;
 import java.util.Optional;
 
 public class ModelView extends ObjectTreeView<DummyExpander.Dummy> {
-    public ModelView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
+    public ModelView(View.Context<Avatar> context, ParentElement.AdditionPoint additionPoint) {
         super(context, additionPoint);
     }
 
     @Override
     protected Expander<DummyExpander.Dummy> getRootExpander() {
-        return ((AvatarAccess) context.getAvatar()).figuraExtrass$getModelViewTree();
+        return ((AvatarAccess) context.getValue()).figuraExtrass$getModelViewTree();
     }
 
     static class ModelPartExpander implements ObjectExpander<FiguraModelPart, String, FiguraModelPart> {

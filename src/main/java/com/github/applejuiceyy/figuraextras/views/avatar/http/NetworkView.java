@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.views.views.http;
+package com.github.applejuiceyy.figuraextras.views.avatar.http;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
@@ -7,10 +7,11 @@ import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
-import com.github.applejuiceyy.figuraextras.views.InfoViews;
+import com.github.applejuiceyy.figuraextras.views.View;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.utils.ColorUtils;
 
 import java.net.URI;
@@ -28,7 +29,7 @@ public class NetworkView implements Lifecycle {
 
     ParentElement.AdditionPoint additionPoint;
 
-    public NetworkView(InfoViews.Context context, ParentElement.AdditionPoint ap) {
+    public NetworkView(View.Context<Avatar> context, ParentElement.AdditionPoint ap) {
         Grid root = new Grid();
         ap.accept(root);
 
@@ -65,7 +66,7 @@ public class NetworkView implements Lifecycle {
         Style values = Style.EMPTY.withColor(0x77aa99);
         Style fragment = Style.EMPTY.withColor(0x229922);
 
-        unsub = ((AvatarAccess) context.getAvatar()).figuraExtrass$getNetworkLogger().getSource().subscribe((future, request, bodyBytes) -> {
+        unsub = ((AvatarAccess) context.getValue()).figuraExtrass$getNetworkLogger().getSource().subscribe((future, request, bodyBytes) -> {
             URI uri = request.uri();
 
             net.minecraft.network.chat.MutableComponent component = net.minecraft.network.chat.Component.literal("HTTP ");

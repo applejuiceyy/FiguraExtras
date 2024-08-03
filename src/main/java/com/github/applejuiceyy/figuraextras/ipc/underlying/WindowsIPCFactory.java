@@ -220,9 +220,8 @@ public class WindowsIPCFactory extends IPCFactory {
     static class NamedPipeOutputStream extends OutputStream {
 
         private final WinNT.HANDLE handle;
-        private boolean closed = false;
-
         private final AtomicInteger refs;
+        private boolean closed = false;
 
         public NamedPipeOutputStream(WinNT.HANDLE handle) {
             this(handle, new AtomicInteger(1));

@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.level.storage.LevelStorageException;
@@ -45,7 +46,7 @@ public class C2CClientImpl implements C2CClient {
 
     @Override
     public void successionIndex(int index) {
-        logger.info("Server set succession index: " + index);
+        logger.info("Server set succession index: {}", index);
         successionIndex = index;
     }
 
@@ -176,13 +177,15 @@ public class C2CClientImpl implements C2CClient {
             }
         }
 
+        UUID profileId = Minecraft.getInstance().getUser().getProfileId();
         client.getServer().updateInfo(
                 new ClientInformation(
                         SharedConstants.getCurrentVersion().getName(),
                         Minecraft.getInstance().gameDirectory.getPath(),
                         FiguraMod.getFiguraDirectory().toString(),
                         FiguraExtras.getInstanceUUID().toString(),
-                        FiguraMod.getLocalPlayerUUID().toString(),
+                        UUIDUtil.createOfflinePlayerUUID(Minecraft.getInstance().getUser().getName()).toString(),
+                        profileId == null ? null : profileId.toString(),
                         DebugProtocolServer.getInstance() != null,
                         info
                 )
@@ -200,6 +203,11 @@ public class C2CClientImpl implements C2CClient {
     @Override
     public void onDisconnect() {
         logger.info("Host disconnected");
+        try {
+            ReceptionistServer.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         if (doSuccession) {
             new Thread(() -> {
                 try {

@@ -77,6 +77,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     private final HashMap<Either<String, Integer>, List<BreakpointState>> breakpoints = new HashMap<>();
     private final DAInternalInterface internalInterface = new DAInternalInterface();
     private final IPCFactory.IPC ipc;
+    private final HashMap<String, ExceptionFilterOptions> exceptionBreakpoints = new HashMap<>();
     InitializeRequestArguments clientCapabilities;
     Map<String, Object> launchArgs;
     IDebugProtocolClient client;
@@ -88,9 +89,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     private Event<Runnable> destroyers = Event.runnable();
     private @Nullable Runnable situationalBreakpointRemover;
     private boolean isInBreakpoint = false;
-
     private boolean reloadsAreInvalid = false;
-    private final HashMap<String, ExceptionFilterOptions> exceptionBreakpoints = new HashMap<>();
 
     public DebugProtocolServer(IPCFactory.IPC ipc) {
         this.ipc = ipc;

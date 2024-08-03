@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.views.views;
+package com.github.applejuiceyy.figuraextras.views.avatar;
 
 import com.github.applejuiceyy.figuraextras.ducks.GlobalsAccess;
 import com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor;
@@ -11,22 +11,23 @@ import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.util.Differential;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
-import com.github.applejuiceyy.figuraextras.views.InfoViews;
-import com.github.applejuiceyy.figuraextras.views.views.capture.FlameGraphView;
+import com.github.applejuiceyy.figuraextras.views.View;
+import com.github.applejuiceyy.figuraextras.views.avatar.capture.FlameGraphView;
 import net.minecraft.ChatFormatting;
+import org.figuramc.figura.avatar.Avatar;
 import org.luaj.vm2.Globals;
 
 import java.util.Map;
 
 public class CaptureView implements Lifecycle {
-    InfoViews.Context context;
+    View.Context<Avatar> context;
     Differential<Map.Entry<Object, PossibleCapture>, Object, Instance> differential;
     Flow root = new Flow();
 
-    public CaptureView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
+    public CaptureView(View.Context<Avatar> context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
         differential = new Differential<>(
-                ((GlobalsAccess) ((LuaRuntimeAccessor) context.getAvatar().luaRuntime).getUserGlobals()).figuraExtrass$getCaptureState().getAvailableSingularCaptures().entrySet(),
+                ((GlobalsAccess) ((LuaRuntimeAccessor) context.getValue().luaRuntime).getUserGlobals()).figuraExtrass$getCaptureState().getAvailableSingularCaptures().entrySet(),
                 Map.Entry::getValue,
                 o -> {
                     Instance i = new Instance(o.getValue());
@@ -65,10 +66,10 @@ public class CaptureView implements Lifecycle {
 
             root = (Button) Button.minimal().addAnd(label);
             root.mouseDown.subscribe(event -> {
-                Globals globals = ((LuaRuntimeAccessor) context.getAvatar().luaRuntime).getUserGlobals();
+                Globals globals = ((LuaRuntimeAccessor) context.getValue().luaRuntime).getUserGlobals();
                 ((GlobalsAccess) globals).figuraExtrass$getCaptureState().queueSingularCapture(
-                        new ActiveOpportunity<>(value, new GraphBuilder(context.getAvatar().luaRuntime.typeManager, frame -> {
-                            context.setView((context, additionPoint) -> new FlameGraphView(context, additionPoint, frame));
+                        new ActiveOpportunity<>(value, new GraphBuilder(context.getValue().luaRuntime.typeManager, frame -> {
+                            context.setView((context, additionPoint) -> new FlameGraphView(additionPoint, frame));
                         })));
             });
         }

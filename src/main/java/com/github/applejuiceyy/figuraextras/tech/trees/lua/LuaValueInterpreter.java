@@ -1,13 +1,13 @@
 package com.github.applejuiceyy.figuraextras.tech.trees.lua;
 
 import com.github.applejuiceyy.figuraextras.mixin.figura.printer.FiguraLuaPrinterAccessor;
-import com.github.applejuiceyy.figuraextras.screen.Hover;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectInterpreter;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.github.applejuiceyy.figuraextras.util.Util;
+import com.github.applejuiceyy.figuraextras.views.Hover;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatar.Avatar;
@@ -22,6 +22,17 @@ public class LuaValueInterpreter implements ObjectInterpreter<LuaValue> {
 
     public LuaValueInterpreter(Avatar avatar) {
         this.avatar = avatar;
+    }
+
+    public static Object hash(LuaValue value) {
+        return switch (value.type()) {
+            case LuaValue.TFUNCTION, LuaValue.TTHREAD, LuaValue.TTABLE, LuaValue.TNIL -> value;
+            case LuaValue.TSTRING -> value.toString();
+            case LuaValue.TBOOLEAN -> value.checkboolean();
+            case LuaValue.TNUMBER, LuaValue.TINT -> value.checknumber();
+            case LuaValue.TUSERDATA -> value.checkuserdata();
+            default -> value;
+        };
     }
 
     @Override
@@ -84,18 +95,6 @@ public class LuaValueInterpreter implements ObjectInterpreter<LuaValue> {
         updater.merge(observer).observe(live -> {
             button.setText(TextUtils.replaceTabs(prefix.apply(Util.appendReference(avatar.luaRuntime.typeManager, live.getA(), live.getB(), quoteStrings))));
         });
-    }
-
-
-    public static Object hash(LuaValue value) {
-        return switch (value.type()) {
-            case LuaValue.TFUNCTION, LuaValue.TTHREAD, LuaValue.TTABLE, LuaValue.TNIL -> value;
-            case LuaValue.TSTRING -> value.toString();
-            case LuaValue.TBOOLEAN -> value.checkboolean();
-            case LuaValue.TNUMBER, LuaValue.TINT -> value.checknumber();
-            case LuaValue.TUSERDATA -> value.checkuserdata();
-            default -> value;
-        };
     }
 
     /*

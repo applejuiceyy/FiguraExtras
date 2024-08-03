@@ -9,12 +9,20 @@ import java.util.function.Supplier;
 
 public abstract class ScreenContainer {
     private final Supplier<Screen> defaultScreen;
-    private Screen currentScreen;
     private final FabricScreenEventsCompat fabricCompat = new FabricScreenEventsCompat(this);
+    private Screen currentScreen;
 
     public ScreenContainer(Supplier<Screen> defaultScreen) {
         this.defaultScreen = defaultScreen;
         setScreen(null);
+    }
+
+    public void dispose() {
+        currentScreen.removed();
+    }
+
+    public Screen getScreen() {
+        return currentScreen;
     }
 
     public void setScreen(Screen screen) {
@@ -35,14 +43,6 @@ public abstract class ScreenContainer {
 
             newScreen();
         });
-    }
-
-    public void dispose() {
-        currentScreen.removed();
-    }
-
-    public Screen getScreen() {
-        return currentScreen;
     }
 
     public void doEvent(String methodName, Object... args) {

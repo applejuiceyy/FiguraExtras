@@ -40,22 +40,6 @@ public class Event<T> {
         });
     }
 
-    public boolean hasSubscribers() {
-        return subscribers.size() > 0;
-    }
-
-    private void doWhenAppropriate(Runnable runnable) {
-        if (isFiring) {
-            toRun.add(runnable);
-            return;
-        }
-        runnable.run();
-    }
-
-    public Event<T>.Source getSource() {
-        return source;
-    }
-
     public static <T, U, V> Event<TriConsumer<T, U, V>> triConsumer() {
         return new Event<>((v, b) -> (p, l, k) -> {
             b.startFiring();
@@ -132,6 +116,22 @@ public class Event<T> {
                 b.finishFiring();
             }
         }));
+    }
+
+    public boolean hasSubscribers() {
+        return subscribers.size() > 0;
+    }
+
+    private void doWhenAppropriate(Runnable runnable) {
+        if (isFiring) {
+            toRun.add(runnable);
+            return;
+        }
+        runnable.run();
+    }
+
+    public Event<T>.Source getSource() {
+        return source;
     }
 
     public T getSink() {

@@ -2,7 +2,7 @@ package com.github.applejuiceyy.figuraextras.mixin.figura.networking;
 
 import com.github.applejuiceyy.figuraextras.ducks.statics.AuthHandlerDuck;
 import com.github.applejuiceyy.figuraextras.ipc.ReceptionistServer;
-import com.github.applejuiceyy.figuraextras.views.views.http.NetworkView;
+import com.github.applejuiceyy.figuraextras.views.avatar.http.NetworkView;
 import net.minecraft.util.Tuple;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;

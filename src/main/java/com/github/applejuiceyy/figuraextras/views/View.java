@@ -1,27 +1,41 @@
 package com.github.applejuiceyy.figuraextras.views;
 
-import com.github.applejuiceyy.figuraextras.screen.MainInfoScreen;
-import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
+import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
+import com.github.applejuiceyy.figuraextras.util.Differential;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
+import com.github.applejuiceyy.figuraextras.views.screen.ViewScreen;
+import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
+import com.github.applejuiceyy.figuraextras.window.WindowContext;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatar.Avatar;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.BooleanSupplier;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.*;
 
-public class InfoViews {
+public class View {
+    public static <T> void newWindow(T value, ViewConstructor<Context<T>, ?> constructor) {
+        FiguraExtras.windows.add(new DetachedWindow(() -> new ViewScreen<>(value, constructor)));
+    }
+
+    public static Function<ParentElement.AdditionPoint, ErrorView> error(String err) {
+        return ap -> new ErrorView(Component.literal(err), ap);
+    }
+
+    public static Function<ParentElement.AdditionPoint, ErrorView> error(Component err) {
+        return ap -> new ErrorView(err, ap);
+    }
+
     public static <T, V> ConditionalViewBuilder<T, V> conditional() {
         return new ConditionalViewBuilder<>();
     }
 
-    public static ConditionalViewBuilder<Context, Avatar> context() {
-        ConditionalViewBuilder<Context, Avatar> v = new ConditionalViewBuilder<>();
-        v.toPredicate(Context::getAvatar);
+    public static ConditionalViewBuilder<Context<Avatar>, Avatar> context() {
+        ConditionalViewBuilder<Context<Avatar>, Avatar> v = new ConditionalViewBuilder<>();
+        v.toPredicate(Context::getValue);
         return v;
     }
 
@@ -35,19 +49,54 @@ public class InfoViews {
         return simpleConditional();
     }
 
-    public interface Context {
-        Avatar getAvatar();
+    public static <C, I, K> ViewConstructor<C, ? extends Lifecycle> differential(Function<C, Iterable<I>> iterator, Function<I, K> key, ViewConstructor<I, ?> constructor) {
+        record Binding(ParentElement.AdditionPoint additionPoint, Lifecycle lifecycle) implements Lifecycle {
+            @Override
+            public void tick() {
+                lifecycle.tick();
+            }
 
-        ParentElement<?> getRoot();
+            @Override
+            public void render() {
+                lifecycle.render();
+            }
 
-        WindowContentPopOutHost getHost();
+            @Override
+            public void dispose() {
+                lifecycle.dispose();
+                additionPoint.remove();
+            }
+        }
 
-        MainInfoScreen getScreen();
+        return (c, ap) -> new DifferentialView(
+                apProvider -> new Differential<>(
+                        iterator.apply(c),
+                        key,
+                        i -> {
+                            ParentElement.AdditionPoint additionPoint = apProvider.get();
+                            return new Binding(additionPoint, constructor.apply(i, additionPoint));
+                        },
+                        Lifecycle::dispose
+                ),
+                ap
+        );
+    }
 
-        void setView(InfoViews.ViewConstructor<InfoViews.Context, Lifecycle> view);
+    public interface Context<T> {
+        T getValue();
+
+        WindowContext getWindowContext();
+
+        <L extends Lifecycle> L setView(View.ViewConstructor<View.Context<T>, L> view);
+
+        <N, L extends Lifecycle> L setView(View.ViewConstructor<View.Context<N>, L> view, N thing);
     }
 
     public interface ViewConstructor<T, V extends Lifecycle> extends BiFunction<T, ParentElement.AdditionPoint, V> {
+    }
+
+    public interface ImplementsMeta {
+        void enableMeta();
     }
 
     public static class ConditionalViewBuilder<T, V> implements ViewConstructor<T, ConditionalView<T, V>> {
@@ -90,11 +139,11 @@ public class InfoViews {
         }
 
         public ConditionalViewBuilder<T, V> ifTrue(Component ifTrue) {
-            return ifTrue((c, ip) -> new ErrorView(ifTrue, ip));
+            return ifTrue((c, ip) -> error(ifTrue).apply(ip));
         }
 
         public ConditionalViewBuilder<T, V> ifFalse(Component ifFalse) {
-            return ifFalse((c, ip) -> new ErrorView(ifFalse, ip));
+            return ifFalse((c, ip) -> error(ifFalse).apply(ip));
         }
 
         public ConditionalViewBuilder<T, V> ifTrue(String ifTrue) {
@@ -180,6 +229,33 @@ public class InfoViews {
             if (currentView != null) {
                 currentView.dispose();
             }
+        }
+    }
+
+    static class DifferentialView implements Lifecycle {
+        Differential<?, ?, ? extends Lifecycle> differential;
+        Flow flow;
+
+        DifferentialView(Function<Supplier<ParentElement.AdditionPoint>, Differential<?, ?, ? extends Lifecycle>> differential, ParentElement.AdditionPoint additionPoint) {
+            flow = new Flow();
+            this.differential = differential.apply(() -> flow.adder(settings -> {
+            }));
+            additionPoint.accept(Elements.withVerticalScroll(flow));
+        }
+
+        @Override
+        public void tick() {
+            differential.update(Lifecycle::tick);
+        }
+
+        @Override
+        public void render() {
+            differential.update(Lifecycle::render);
+        }
+
+        @Override
+        public void dispose() {
+            differential.dispose();
         }
     }
 }

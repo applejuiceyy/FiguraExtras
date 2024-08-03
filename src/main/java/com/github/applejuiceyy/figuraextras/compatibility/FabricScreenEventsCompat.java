@@ -8,8 +8,8 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 
 public class FabricScreenEventsCompat {
-    private final ScreenContainer screenContainer;
     private static final HashMap<String, Method> cache = new HashMap<>();
+    private final ScreenContainer screenContainer;
 
     public FabricScreenEventsCompat(ScreenContainer screenContainer) {
         this.screenContainer = screenContainer;

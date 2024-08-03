@@ -26,6 +26,7 @@ public class ReceptionistServerBackend {
         getAvatars().forEach(cleaningObjects::add);
         getUsers().forEach(cleaningObjects::add);
         for (CleanableBackendObject<?> cleaningObject : cleaningObjects) {
+            // 10 days
             if (System.currentTimeMillis() > cleaningObject.getUpkeep().getTime() + 1000 * 60 * 60 * 24 * 10) {
                 cleaningObject.delete();
             }
@@ -327,6 +328,32 @@ public class ReceptionistServerBackend {
                     new UUID(i.readLong(), i.readLong()),
                     i.readUTF()
             )).toArray(new BackendAvatar[0]);
+        }
+
+        public Iterable<BackendAvatar> getUploadedAvatars() {
+            return () -> {
+                File folder = avatarPath.resolve(uuid.toString()).toFile();
+                if (!folder.exists()) {
+                    return new Iterator<>() {
+                        @Override
+                        public boolean hasNext() {
+                            return false;
+                        }
+
+                        @Override
+                        public BackendAvatar next() {
+                            throw new NoSuchElementException();
+                        }
+                    };
+                }
+                return Arrays.stream(
+                                Objects.requireNonNull(folder.list())
+                        )
+                        .filter(o -> o.endsWith(".content"))
+                        .map(o -> o.substring(0, o.length() - ".content".length()))
+                        .map(s -> new BackendAvatar(uuid, s))
+                        .iterator();
+            };
         }
 
         public Collateral setEquippedAvatars(BackendAvatar[] newAvatars) {

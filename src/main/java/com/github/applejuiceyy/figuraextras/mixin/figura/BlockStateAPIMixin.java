@@ -23,14 +23,13 @@ import java.util.*;
 
 @Mixin(value = BlockStateAPI.class, remap = false)
 public class BlockStateAPIMixin {
+    @Unique
+    private final Map<RenderShape, Map<String, ArrayList<HashMap<String, Object>>>> cache = new HashMap<>();
     @Shadow
     @Final
     public BlockState blockState;
-
     @Shadow
     private BlockPos pos;
-    @Unique
-    private final Map<RenderShape, Map<String, ArrayList<HashMap<String, Object>>>> cache = new HashMap<>();
 
     @LuaWhitelist
     public Vec3 getRenderOffset() {

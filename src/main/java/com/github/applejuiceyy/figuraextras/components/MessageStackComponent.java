@@ -86,7 +86,6 @@ public class MessageStackComponent extends Element {
         }
 
 
-
         int yPos = height.get();
 
         for (int i = lines.size() - 1 - messageOffset; i >= 0; i--) {

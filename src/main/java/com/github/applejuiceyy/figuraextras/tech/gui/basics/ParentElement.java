@@ -22,14 +22,13 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     public final Observers.WritableObserver<Integer> yViewSize = Observers.of(0);
     public final Observers.WritableObserver<Integer> xViewSize = Observers.of(0);
     private final HashMap<Element, S> settings = new HashMap<>();
-    private boolean needReposition = false;
-    private boolean needReflowLayout = false;
-
-    private boolean disableChildrenDirtyRequests = false;
-    private List<Element> needReflowDetached = new ArrayList<>();
     boolean constrainX = true, constrainY = true;
     int previousX, previousY;
     int previousXView, previousYView;
+    private boolean needReposition = false;
+    private boolean needReflowLayout = false;
+    private boolean disableChildrenDirtyRequests = false;
+    private List<Element> needReflowDetached = new ArrayList<>();
 
     {
         xView.observe(x -> {
@@ -387,6 +386,12 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
 
     ;
 
+    public interface AdditionPoint extends Consumer<Element> {
+        void remove();
+
+        void ensureRemoved();
+    }
+
     static public class Settings {
 
         private final BooleanSupplier willCauseReflow;
@@ -533,12 +538,6 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
         public void setY(int y) {
             this.y = y;
         }
-    }
-
-    public interface AdditionPoint extends Consumer<Element> {
-        void remove();
-
-        void ensureRemoved();
     }
 
     static class NotAChildException extends RuntimeException {

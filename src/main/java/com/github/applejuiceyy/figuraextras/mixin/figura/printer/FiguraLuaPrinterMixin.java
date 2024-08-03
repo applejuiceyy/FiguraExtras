@@ -22,12 +22,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 
 
 @Mixin(value = FiguraLuaPrinter.class, remap = false)
 public abstract class FiguraLuaPrinterMixin {
+
+    @Unique
+    private static Integer switchLogPingsBack = 0;
 
     @Shadow
     private static MutableComponent getPrintText(LuaTypeManager typeManager, LuaValue value, boolean hasTooltip, boolean quoteStrings) {
@@ -72,9 +74,6 @@ public abstract class FiguraLuaPrinterMixin {
             }
         }
     }
-
-    @Unique
-    private static Integer switchLogPingsBack = 0;
 
     @Inject(method = "sendPingMessage", at = @At("HEAD"))
     private static void tamperConfigVariable(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci) {

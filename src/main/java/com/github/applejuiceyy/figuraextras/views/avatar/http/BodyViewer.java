@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.views.views.http;
+package com.github.applejuiceyy.figuraextras.views.avatar.http;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;

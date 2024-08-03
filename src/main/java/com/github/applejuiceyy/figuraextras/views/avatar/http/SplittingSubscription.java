@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.views.views.http;
+package com.github.applejuiceyy.figuraextras.views.avatar.http;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;

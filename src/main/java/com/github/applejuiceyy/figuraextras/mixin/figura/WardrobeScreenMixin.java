@@ -1,8 +1,8 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
-import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarListAccess;
-import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
+import com.github.applejuiceyy.figuraextras.views.View;
+import com.github.applejuiceyy.figuraextras.views.avatar.main.MainAvatarsView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -20,12 +20,12 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(value = WardrobeScreen.class, remap = false)
 public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
-    @Shadow
-    public abstract void tick();
-
     private WardrobeScreenMixin(Screen parentScreen, Component title) {
         super(parentScreen, title);
     }
+
+    @Shadow
+    public abstract void tick();
 
     @Inject(
             method = "init",
@@ -45,7 +45,7 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
                 14, 14,
                 Component.literal("B"),
                 null,
-                o -> FiguraExtras.windows.add(new DetachedWindow())
+                o -> View.newWindow(null, MainAvatarsView::new)
         );
 
 

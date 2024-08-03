@@ -30,11 +30,6 @@ public class Button extends Grid implements SetText {
         hoveringKind.observe(() -> this.enqueueDirtySection(false, false));
     }
 
-    @Override
-    protected boolean renders() {
-        return true;
-    }
-
     public static Button minimal() {
         return minimal(0);
     }
@@ -49,6 +44,11 @@ public class Button extends Grid implements SetText {
                 new NinePatch(true, new ResourceLocation("textures/gui/widgets.png"), 0, 46 / 256f, 200 / 256f, 20 / 256f, 200, 20, 4, 4, 4, 4),
                 new NinePatch(true, new ResourceLocation("textures/gui/widgets.png"), 0, 86 / 256f, 200 / 256f, 20 / 256f, 200, 20, 4, 4, 4, 4)
         );
+    }
+
+    @Override
+    protected boolean renders() {
+        return true;
     }
 
     public Surface getNormalTexture() {

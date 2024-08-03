@@ -20,14 +20,13 @@ public class ContextAgnosticMouseHandler {
     private boolean isLeftPressed;
     private boolean isMiddlePressed;
     private boolean isRightPressed;
-    private double xpos;
-    private double ypos;
+    private double xPos;
+    private double yPos;
     private int fakeRightMouse;
     private int activeButton = -1;
     private boolean ignoreFirstMove = true;
     private int clickDepth;
     private double mousePressedTime;
-    private final double lastMouseEventTime = Double.MIN_VALUE;
 
     public ContextAgnosticMouseHandler(Window window, Callback callback) {
         this.window = window;
@@ -69,9 +68,9 @@ public class ContextAgnosticMouseHandler {
             }
 
             if (bl) {
-                callback.onCLick(this.xpos, this.ypos, button);
+                callback.onCLick(this.xPos(), this.yPos(), button);
             } else {
-                callback.onRelease(this.xpos, this.ypos, button);
+                callback.onRelease(this.xPos(), this.yPos(), button);
             }
 
             if (button == 0) {
@@ -87,7 +86,7 @@ public class ContextAgnosticMouseHandler {
     private void onScroll(long windowHandle, double scrollDeltaX, double scrollDeltaY) {
         if (windowHandle == window.getWindow()) {
             double d = (getMinecraft().options.discreteMouseScroll().get() ? Math.signum(scrollDeltaY) : scrollDeltaY) * getMinecraft().options.mouseWheelSensitivity().get();
-            callback.onScroll(this.xpos, this.ypos, d);
+            callback.onScroll(this.xPos(), this.yPos(), d);
         }
     }
 
@@ -130,18 +129,18 @@ public class ContextAgnosticMouseHandler {
                 return;
             }
 
-            double d = x * (double) window.getGuiScaledWidth() / (double) window.getScreenWidth();
-            double e = y * (double) window.getGuiScaledHeight() / (double) window.getScreenHeight();
+            double d = x / window.getGuiScale();
+            double e = y / window.getGuiScale();
 
             callback.mouseMoved(d, e);
             if (this.activeButton != -1 && this.mousePressedTime > 0.0) {
-                double f = (d - this.xpos);
-                double g = (e - this.ypos);
+                double f = (d - this.xPos());
+                double g = (e - this.yPos());
                 callback.mouseDragged(d, e, this.activeButton, f, g);
             }
 
-            this.xpos = d;
-            this.ypos = e;
+            this.xPos = x;
+            this.yPos = y;
         }
     }
 
@@ -164,12 +163,12 @@ public class ContextAgnosticMouseHandler {
         return this.isRightPressed;
     }
 
-    public double xpos() {
-        return this.xpos;
+    public double xPos() {
+        return this.xPos / window.getGuiScale();
     }
 
-    public double ypos() {
-        return this.ypos;
+    public double yPos() {
+        return this.yPos / window.getGuiScale();
     }
 
     public void setIgnoreFirstMove() {

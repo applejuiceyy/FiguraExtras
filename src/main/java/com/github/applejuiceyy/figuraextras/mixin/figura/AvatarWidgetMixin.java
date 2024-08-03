@@ -28,8 +28,7 @@ public class AvatarWidgetMixin {
                 String cmd = FiguraExtras.progCmd.value.replace("$folder", avatar.getPath().toString());
                 if (Util.getPlatform() == Util.OS.WINDOWS) {
                     Runtime.getRuntime().exec("cmd.exe /c " + cmd);
-                }
-                else {
+                } else {
                     Runtime.getRuntime().exec("/bin/sh -c " + cmd);
                 }
 

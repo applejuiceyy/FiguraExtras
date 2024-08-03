@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.views.views.http;
+package com.github.applejuiceyy.figuraextras.views.avatar.http;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
@@ -6,7 +6,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Scrollbar;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
-import com.github.applejuiceyy.figuraextras.views.InfoViews;
+import com.github.applejuiceyy.figuraextras.views.View;
 
 import java.io.InputStream;
 import java.net.http.HttpRequest;
@@ -49,11 +49,11 @@ public class RequestResponseViewer implements Lifecycle {
         additionPoint = root.adder(g -> g.setRow(2));
 
         addTab("Request Headers", (o, ap) -> new HeaderViewer(request.headers(), ap));
-        addTab("Response Headers", InfoViews.voiding()
+        addTab("Response Headers", View.voiding()
                 .predicate(future::isDone)
                 .ifFalse("Still Fetching")
                 .ifTrue(
-                        InfoViews.voiding()
+                        View.voiding()
                                 .predicate(() -> !future.isCompletedExceptionally())
                                 .ifFalse("No useful information as it failed before the html stage")
                                 .ifTrue(ap -> {
@@ -67,17 +67,17 @@ public class RequestResponseViewer implements Lifecycle {
         );
 
         //noinspection OptionalGetWithoutIsPresent
-        addTab("Request Body", InfoViews.voiding()
+        addTab("Request Body", View.voiding()
                 .predicate(requestBody::isPresent)
                 .ifFalse("Empty")
                 .ifTrue(ap -> new BodyViewer(requestBody.get(), ap))
         );
 
-        addTab("Response Body", InfoViews.voiding()
+        addTab("Response Body", View.voiding()
                 .predicate(bodyBytes::isDone)
                 .ifFalse("Still Fetching")
                 .ifTrue(
-                        InfoViews.voiding()
+                        View.voiding()
                                 .predicate(() -> !bodyBytes.isCompletedExceptionally())
                                 .ifFalse("No useful information as it failed before the html stage")
                                 .ifTrue(ap -> {
@@ -91,7 +91,7 @@ public class RequestResponseViewer implements Lifecycle {
         );
     }
 
-    void addTab(String text, InfoViews.ViewConstructor<Void, ? extends Lifecycle> supplier) {
+    void addTab(String text, View.ViewConstructor<Void, ? extends Lifecycle> supplier) {
         int column = tabs.columnCount();
         tabs.addColumn(0, Grid.SpacingKind.CONTENT);
         Button button = Button.vanilla();
@@ -100,7 +100,7 @@ public class RequestResponseViewer implements Lifecycle {
         tabs.add(button).setColumn(column);
     }
 
-    void changeTo(InfoViews.ViewConstructor<Void, ? extends Lifecycle> content) {
+    void changeTo(View.ViewConstructor<Void, ? extends Lifecycle> content) {
         if (currentView != null) {
             currentView.dispose();
             additionPoint.remove();

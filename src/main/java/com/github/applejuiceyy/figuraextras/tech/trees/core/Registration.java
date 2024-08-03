@@ -13,6 +13,12 @@ public class Registration {
 
     ArrayList<ObjectInterpreter<?>> interpreters = new ArrayList<>();
 
+    public static Registration from(Consumer<Registration> consumer) {
+        Registration registration = new Registration();
+        consumer.accept(registration);
+        return registration;
+    }
+
     public List<ObjectExpander<?, ?, ?>> getExpanders() {
         return Collections.unmodifiableList(expanders);
     }
@@ -27,11 +33,5 @@ public class Registration {
 
     public void addInterpreter(ObjectInterpreter<?> interpreter) {
         interpreters.add(interpreter);
-    }
-
-    public static Registration from(Consumer<Registration> consumer) {
-        Registration registration = new Registration();
-        consumer.accept(registration);
-        return registration;
     }
 }

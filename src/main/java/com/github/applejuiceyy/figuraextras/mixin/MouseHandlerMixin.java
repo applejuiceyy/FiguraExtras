@@ -16,15 +16,13 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 public abstract class MouseHandlerMixin {
     @Shadow
     private int activeButton;
+    @Shadow
+    private double xpos;
+    @Shadow
+    private double ypos;
 
     @Shadow
     public abstract boolean isMouseGrabbed();
-
-    @Shadow
-    private double xpos;
-
-    @Shadow
-    private double ypos;
 
     @SuppressWarnings("InvalidInjectorMethodSignature") // it's drunk again
     @Inject(

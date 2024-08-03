@@ -25,37 +25,32 @@ import java.util.UUID;
 
 @Mixin(value = FiguraTexture.class, remap = false)
 public abstract class FiguraTextureMixin implements FiguraTextureAccess {
+    @Unique
+    boolean pendingModifications = false;
+    @Unique
+    int locks = 0;
+    @Unique
+    boolean realTimePendingModifications = false;
+    @Unique
+    boolean realTimeTextureIsRegistered = false;
     @Shadow
     @Final
     private Avatar owner;
-
-
     @Shadow
     private boolean isClosed;
+    @Shadow
+    @Final
+    private NativeImage texture;
+    @Unique
+    private FiguraIdentifier realTimeTextureIdentifier;
+    @Unique
+    private SimpleTexture realTimeTexture;
 
     @Shadow
     public abstract int getWidth();
 
     @Shadow
     public abstract int getHeight();
-
-    @Shadow
-    @Final
-    private NativeImage texture;
-    @Unique
-    boolean pendingModifications = false;
-    @Unique
-    int locks = 0;
-
-
-    @Unique
-    boolean realTimePendingModifications = false;
-    @Unique
-    boolean realTimeTextureIsRegistered = false;
-    @Unique
-    private FiguraIdentifier realTimeTextureIdentifier;
-    @Unique
-    private SimpleTexture realTimeTexture;
 
     @Unique
     private void generateUpdatedTexture() {

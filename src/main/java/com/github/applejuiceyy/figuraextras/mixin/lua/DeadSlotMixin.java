@@ -34,6 +34,7 @@ public class DeadSlotMixin {
     @Inject(method = "remove", at = @At(value = "RETURN", ordinal = 1), cancellable = true)
     void a(@Coerce Object target, CallbackInfoReturnable cir) throws InvocationTargetException, IllegalAccessException {
         //noinspection unchecked
-        cir.setReturnValue(removeMethod.invoke(nextField.get(this), target));
+        Object obj = nextField.get(this);
+        cir.setReturnValue(obj == null ? null : removeMethod.invoke(obj, target));
     }
 }

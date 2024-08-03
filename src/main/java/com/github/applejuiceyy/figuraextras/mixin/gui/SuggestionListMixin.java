@@ -25,18 +25,14 @@ import java.util.List;
 public class SuggestionListMixin {
     @Shadow
     @Final
-    private Rect2i rect;
-
-    @Shadow
-    private int offset;
-
-    @Shadow
-    private int current;
-
+    CommandSuggestions field_21615;
     @Shadow
     @Final
-    CommandSuggestions field_21615;
-
+    private Rect2i rect;
+    @Shadow
+    private int offset;
+    @Shadow
+    private int current;
     @Shadow
     @Final
     private List<Suggestion> suggestionList;

@@ -10,21 +10,19 @@ import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.ReferenceStore;
 import com.github.applejuiceyy.figuraextras.tech.trees.ui.EntryUI;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
-import com.github.applejuiceyy.figuraextras.views.InfoViews;
+import com.github.applejuiceyy.figuraextras.views.View;
+import org.figuramc.figura.avatar.Avatar;
 
 
 public abstract class ObjectTreeView<VALUE> implements Lifecycle {
-    protected final InfoViews.Context context;
-
-    private final Grid root = new Grid();
-
+    protected final View.Context<Avatar> context;
+    private final ContentPopOut contentPopOut;
     EntryUI<VALUE> expanderUI;
 
-    private final ContentPopOut contentPopOut;
-
-    public ObjectTreeView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint) {
+    public ObjectTreeView(View.Context<Avatar> context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
 
+        Grid root = new Grid();
         root.rows()
                 .content()
                 .cols()
@@ -32,7 +30,7 @@ public abstract class ObjectTreeView<VALUE> implements Lifecycle {
                 .content();
 
         // TODO: implement this
-        contentPopOut = new ContentPopOut(context::getHost);
+        contentPopOut = new ContentPopOut(() -> context.getWindowContext().getContentPopOutHost());
 
 
         expanderUI = new EntryUI<>(

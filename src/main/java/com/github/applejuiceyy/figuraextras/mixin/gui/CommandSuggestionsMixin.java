@@ -49,8 +49,14 @@ public abstract class CommandSuggestionsMixin implements CommandSuggestionsAcces
     boolean useFiguraSuggester = false;
     @Unique
     CompletableFuture<SuggestionBehaviour> currentBehaviour;
-
-
+    @Shadow
+    boolean keepSuggestions;
+    @Shadow
+    @Final
+    EditBox input;
+    @Shadow
+    @Final
+    Font font;
     @Shadow
     private CompletableFuture<Suggestions> pendingSuggestions;
     @Final
@@ -60,23 +66,12 @@ public abstract class CommandSuggestionsMixin implements CommandSuggestionsAcces
     private int commandUsageWidth;
     @Shadow
     private boolean allowSuggestions;
-    @Shadow
-    boolean keepSuggestions;
     @Final
     @Shadow
     private
     Screen screen;
-
     @Shadow
     private int commandUsagePosition;
-
-    @Shadow
-    @Final
-    EditBox input;
-
-    @Shadow
-    @Final
-    Font font;
 
     @Shadow
     public abstract void updateCommandInfo();

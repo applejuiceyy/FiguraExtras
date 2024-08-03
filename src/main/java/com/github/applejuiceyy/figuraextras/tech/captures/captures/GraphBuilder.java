@@ -168,25 +168,19 @@ public class GraphBuilder implements Hook {
     }
 
     public static class Frame extends Child {
-        @Nullable
-        final Frame previous;
         public final LuaDuck.CallType type;
-
         public final @Nullable String possibleName;
         public final Component argumentComponent;
-
         @Nullable
         public final LuaClosure boundClosure;
-        private LuaDuck.ReturnType returnType = LuaDuck.ReturnType.NORMAL;
-
-        private int cachedInstructions = -1;
-
-        private Region currentlyConstructingRegion = null;
+        @Nullable
+        final Frame previous;
         ArrayList<Child> children = new ArrayList<>();
-
         ArrayList<Marker> markers = new ArrayList<>();
-
         ArrayList<Region> regions = new ArrayList<>();
+        private LuaDuck.ReturnType returnType = LuaDuck.ReturnType.NORMAL;
+        private int cachedInstructions = -1;
+        private Region currentlyConstructingRegion = null;
 
         Frame(@Nullable Frame previous, LuaDuck.CallType type, @Nullable String possibleName, @Nullable LuaClosure luaClosure, Component argumentComponent) {
             this.possibleName = possibleName;

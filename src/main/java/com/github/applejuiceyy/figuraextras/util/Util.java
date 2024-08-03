@@ -167,10 +167,6 @@ public class Util {
     }
 
     public interface SetterGetter<T> {
-        void set(T value);
-
-        T get();
-
         static <V> SetterGetter<V> value(V initial) {
             return new SetterGetter<>() {
                 V v = initial;
@@ -186,5 +182,9 @@ public class Util {
                 }
             };
         }
+
+        void set(T value);
+
+        T get();
     }
 }

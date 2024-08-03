@@ -24,29 +24,24 @@ abstract public class Element implements Rectangle {
     public final Observers.WritableObserver<Integer> height = Observers.of(0);
     public final Observers.WritableObserver<Integer> x = Observers.of(0);
     public final Observers.WritableObserver<Integer> y = Observers.of(0);
-
-    private final Int2IntOpenHashMap cachedOptimalHeight = new Int2IntOpenHashMap();
-    boolean hasRendered = false;
-    ImmutableRectangle clippingBox = null;
-    private @Nullable ReadableRectangle previousRestingPosition = null;
     public final Observers.WritableObserver<Boolean> hovering = Observers.of(false);
     public final Observers.WritableObserver<HoverIntent> hoveringKind = Observers.of(HoverIntent.NONE);
     public final Observers.WritableObserver<Boolean> hoveringWithin = Observers.of(false);
     public final Observers.WritableObserver<Boolean> focused = Observers.of(false);
     public final Event<Consumer<DefaultCancellableEvent.CausedEvent<Either<DefaultCancellableEvent.KeyEvent, DefaultCancellableEvent.MousePositionButtonEvent>>>> activation = Event.consumer();
-
-
     public final Event<Consumer<DefaultCancellableEvent.ToolTipEvent>> tooltip = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseDown = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseUp = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionEvent>> mouseMove = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonDeltaEvent>> mouseDragged = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionAmountEvent>> mouseScrolled = Event.consumer();
-
     public final Event<Consumer<DefaultCancellableEvent.KeyEvent>> keyPressed = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.KeyEvent>> keyReleased = Event.consumer();
-
     public final Event<Consumer<DefaultCancellableEvent.CharEvent>> charTyped = Event.consumer();
+    private final Int2IntOpenHashMap cachedOptimalHeight = new Int2IntOpenHashMap();
+    boolean hasRendered = false;
+    ImmutableRectangle clippingBox = null;
+    private @Nullable ReadableRectangle previousRestingPosition = null;
     private boolean haveTranslated = false;
     private boolean recurse = false;
     private boolean doSelf = false;

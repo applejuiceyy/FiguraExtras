@@ -1,9 +1,10 @@
 package com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura;
 
 import com.github.applejuiceyy.figuraextras.ducks.LuaRuntimeAccess;
-import org.apache.commons.io.input.TeeInputStream;
 import org.figuramc.figura.lua.FiguraLuaRuntime;
-import org.luaj.vm2.*;
+import org.luaj.vm2.Globals;
+import org.luaj.vm2.LuaClosure;
+import org.luaj.vm2.LuaValue;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

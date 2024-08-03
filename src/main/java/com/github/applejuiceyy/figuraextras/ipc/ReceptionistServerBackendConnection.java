@@ -3,6 +3,7 @@ package com.github.applejuiceyy.figuraextras.ipc;
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.ipc.backend.ReceptionistServerBackend;
 import com.github.applejuiceyy.figuraextras.ipc.protocol.C2CServer;
+import com.github.applejuiceyy.figuraextras.ipc.protocol.ClientInformation;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -30,13 +31,29 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
         this.owner = owner;
     }
 
-    private UUID getPlayerId() {
-        assert client.information != null;
-        return UUID.fromString(client.information.playerId());
+    private UUID getStoringId() {
+        return getStoringId(Objects.requireNonNull(client.information));
+    }
+
+    private UUID getStoringId(ClientInformation information) {
+        assert information != null;
+        String id = information.gameProfileId();
+        return UUID.fromString(id == null ? information.instanceId() : id);
+    }
+
+    private UUID convertToStoringId(UUID id) {
+        for (ReceptionistServer.ServerClientInterface client : owner.allClients) {
+            if (client.information != null) {
+                if (UUID.fromString(client.information.offlinePlayerId()).equals(id)) {
+                    return getStoringId(client.information);
+                }
+            }
+        }
+        return id;
     }
 
     private Iterable<ReceptionistServer.ServerClientInterface> interestedClients() {
-        return interestedClients(getPlayerId());
+        return interestedClients(getStoringId());
     }
 
     private Iterable<ReceptionistServer.ServerClientInterface> interestedClients(UUID id) {
@@ -51,14 +68,24 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
         ByteArrayInputStream stream = new ByteArrayInputStream(content);
         DataInputStream dis = new DataInputStream(stream);
         try {
-            dis.readByte();
-            boolean sync = dis.readBoolean();
-            ByteBuffer buffer = ByteBuffer.allocate(content.length + 8 + 8 + 1);
-            UUID uuid = getPlayerId();
-            buffer.put((byte) 1);
-            buffer.putLong(uuid.getMostSignificantBits());
-            buffer.putLong(uuid.getLeastSignificantBits());
-            buffer.put(content);
+            dis.readByte();  // event id, not needed
+            int id = dis.readInt();  // ping id
+            boolean sync = dis.readBoolean();  // sync
+
+            byte[] bytes = dis.readAllBytes();
+
+            ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1 + 8 + 8 + 4 + 1);
+            UUID uuid = getStoringId();
+
+            buffer.put((byte) 1);  // event id, ping
+            buffer.putLong(uuid.getMostSignificantBits());  // uuid
+            buffer.putLong(uuid.getLeastSignificantBits());  // uuid
+            buffer.putInt(id);  // ping name
+            buffer.put((byte) (sync ? 1 : 0));  // sync
+
+
+            buffer.put(bytes);  // data
+
             byte[] array = buffer.array();
             owner.allClients
                     .stream()
@@ -72,7 +99,7 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
 
     @Override
     public CompletableFuture<Void> subscribe(String id) {
-        subscriptions.add(UUID.fromString(id));
+        subscriptions.add(convertToStoringId(UUID.fromString(id)));
         return CompletableFuture.completedFuture(null);
     }
 
@@ -105,7 +132,7 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
     @Override
     public CompletableFuture<String> deleteAvatar(HashMap<String, String> args) {
         String avatarId = args.get("id");
-        ReceptionistServerBackend.BackendAvatar avatar = owner.backend.getAvatar(getPlayerId(), avatarId);
+        ReceptionistServerBackend.BackendAvatar avatar = owner.backend.getAvatar(getStoringId(), avatarId);
 
         if (!avatar.exists()) {
             return CompletableFuture.completedFuture("");
@@ -183,7 +210,7 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
     @Override
     public CompletableFuture<String> putAvatar(HashMap<String, String> args) {
         try {
-            owner.backend.getAvatar(getPlayerId(), args.get("id")).setContent(Hex.decodeHex(args.get("body")));
+            owner.backend.getAvatar(getStoringId(), args.get("id")).setContent(Hex.decodeHex(args.get("body")));
         } catch (DecoderException e) {
             throw new RuntimeException(e);
         }
@@ -205,8 +232,8 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
             String id = object.get("id").getAsString();
             avatars.add(owner.backend.getAvatar(UUID.fromString(uuid), id));
         }
-        owner.backend.getUser(getPlayerId()).setEquippedAvatars(avatars.toArray(new ReceptionistServerBackend.BackendAvatar[0]));
-        UUID uuid = getPlayerId();
+        owner.backend.getUser(getStoringId()).setEquippedAvatars(avatars.toArray(new ReceptionistServerBackend.BackendAvatar[0]));
+        UUID uuid = getStoringId();
         ByteBuffer buffer = ByteBuffer.allocate(1 + 8 + 8);
         buffer.put((byte) 2);
         buffer.putLong(uuid.getMostSignificantBits());
@@ -222,7 +249,7 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
 
     @Override
     public CompletableFuture<String> getUser(HashMap<String, String> args) {
-        ReceptionistServerBackend.BackendUser user = owner.backend.getUser(UUID.fromString(args.get("id")));
+        ReceptionistServerBackend.BackendUser user = owner.backend.getUser(convertToStoringId(UUID.fromString(args.get("id"))));
         user.upkeep();
 
         JsonObject json = new JsonObject();

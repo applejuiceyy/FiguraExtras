@@ -59,4 +59,7 @@ public interface C2CServer extends DisconnectAware, Endpoint {
         @JsonRequest
         CompletableFuture<String> getAvatar(HashMap<String, String> args);
     }
+
+    record NetworkBackendAvatar(String id, String owner) {
+    }
 }

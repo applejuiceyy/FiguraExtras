@@ -33,6 +33,9 @@ import java.util.function.Supplier;
 
 @Mixin(Minecraft.class)
 public abstract class MinecraftMixin implements MinecraftAccess {
+    @Shadow
+    @Final
+    public MouseHandler mouseHandler;
     @Unique
     WindowContentPopOutHost host;
     @Unique
@@ -44,32 +47,25 @@ public abstract class MinecraftMixin implements MinecraftAccess {
     @Shadow
     @Final
     private VirtualScreen virtualScreen;
-
-    @Shadow
-    public abstract Window getWindow();
-
     @Mutable
     @Shadow
     @Final
     private Window window;
-
-    @Shadow
-    public abstract RenderBuffers renderBuffers();
-
     @Mutable
     @Shadow
     @Final
     private RenderTarget mainRenderTarget;
+    @Shadow
+    private ProfilerFiller profiler;
 
     @Shadow
-    @Final
-    public MouseHandler mouseHandler;
+    public abstract Window getWindow();
+
+    @Shadow
+    public abstract RenderBuffers renderBuffers();
 
     @Shadow
     public abstract float getDeltaFrameTime();
-
-    @Shadow
-    private ProfilerFiller profiler;
 
     @Shadow
     public abstract void destroy();

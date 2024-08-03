@@ -4,7 +4,12 @@ package com.github.applejuiceyy.figuraextras;
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.AuthHandlerDuck;
 import com.github.applejuiceyy.figuraextras.ipc.ReceptionistServer;
+import com.github.applejuiceyy.figuraextras.ipc.backend.ReceptionistServerBackend;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
+import com.github.applejuiceyy.figuraextras.views.TabView;
+import com.github.applejuiceyy.figuraextras.views.View;
+import com.github.applejuiceyy.figuraextras.views.backend.AvatarInstance;
+import com.github.applejuiceyy.figuraextras.views.backend.PlayerInstance;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
@@ -29,6 +34,7 @@ import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Badges;
 import org.figuramc.figura.config.ConfigType;
 import org.figuramc.figura.ducks.ChannelHandleAccessor;
+import org.figuramc.figura.gui.FiguraToast;
 import org.figuramc.figura.lua.api.sound.LuaSound;
 import org.figuramc.figura.lua.api.sound.SoundAPI;
 import org.figuramc.figura.math.vector.FiguraVec3;
@@ -47,19 +53,15 @@ import java.util.UUID;
 import java.util.function.UnaryOperator;
 
 public class FiguraExtras implements ClientModInitializer {
-    public static ArrayList<DetachedWindow> windows = new ArrayList<>();
-
-    public static Object2IntArrayMap<UUID> showSoundPositions = new Object2IntArrayMap<>();
-
     public static final ConfigType.StringConfig progName;
     public static final ConfigType.BoolConfig disableServerToasts;
     public static final ConfigType.BoolConfig disableCachedRendering;
     public static final ConfigType.StringConfig progCmd;
     private static final ConfigType.Category category;
-    private static String id;
-
+    public static ArrayList<DetachedWindow> windows = new ArrayList<>();
+    public static Object2IntArrayMap<UUID> showSoundPositions = new Object2IntArrayMap<>();
     public static Logger logger = LogUtils.getLogger();
-
+    private static String id;
     private static Path globalMinecraftDirectory;
 
     private static Path figuraExtrasDirectory;
@@ -85,6 +87,30 @@ public class FiguraExtras implements ClientModInitializer {
 
         new ConfigType.ButtonConfig("test", category, () -> {
             AuthHandlerDuck.setDivert(!AuthHandlerDuck.isDiverting());
+        });
+
+        new ConfigType.ButtonConfig("other_test", category, () -> {
+            ReceptionistServer.getOrCreateOrConnect();
+            ReceptionistServer server = ReceptionistServer.getCurrentReceptionistServer();
+            if (server != null) {
+                View.newWindow(server, (ctx, ap) -> {
+                    TabView tabView = new TabView(ctx, ap);
+                    ReceptionistServerBackend backend = server.getBackend();
+                    tabView.add("Players", View.differential(
+                            c -> c.getValue().getUsers(),
+                            ReceptionistServerBackend.BackendUser::getUuid,
+                            PlayerInstance::new
+                    ), backend);
+                    tabView.add("Avatars", View.differential(
+                            c -> c.getValue().getAvatars(),
+                            avatar -> avatar.getOwner() + "-" + avatar.getId(),
+                            AvatarInstance::new
+                    ), backend);
+                    return tabView;
+                });
+            } else {
+                FiguraToast.sendToast("Not the owner of the backend");
+            }
         });
 
         category.name = Component.literal("FiguraExtras");

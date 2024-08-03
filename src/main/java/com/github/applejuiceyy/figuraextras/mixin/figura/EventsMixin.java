@@ -16,11 +16,11 @@ import java.util.Map;
 @Mixin(value = EventsAPI.class, remap = false)
 public class EventsMixin implements EventsAPIAccess {
 
+    @Unique
+    public LuaEvent CHAT_AUTOCOMPLETE;
     @Shadow
     @Final
     private Map<String, LuaEvent> events;
-    @Unique
-    public LuaEvent CHAT_AUTOCOMPLETE;
 
     @Inject(method = "<init>", at = @At("RETURN"))
     void a(CallbackInfo ci) {

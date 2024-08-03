@@ -9,11 +9,15 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 
 public class Scrollbar extends Element implements NumberRangeAlike {
-    private boolean horizontal = false;
     public boolean enabled = true;
-    private float size = 100, thumbSize = 10;
-
     public Observers.WritableObserver<Float> pos = Observers.of(0f);
+    NinePatch thumb = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 0, 0, 5 / 27f, 5 / 15f, 5, 5, 2, 2, 1, 2);
+    NinePatch thumbHovered = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 5 / 27f, 0, 5 / 27f, 5 / 15f, 5, 5, 2, 2, 1, 2);
+    NinePatch track = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 15 / 27f, 0, 3 / 27f, 3 / 15f, 3, 3, 1, 1, 1, 1);
+    NinePatch trackDisabled = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 18 / 27f, 0, 3 / 27f, 3 / 15f, 3, 3, 1, 1, 1, 1);
+    private boolean horizontal = false;
+    private float size = 100, thumbSize = 10;
+    private double dragPos, previousPos;
 
     {
         pos.observe(() -> enqueueDirtySection(false, false));
@@ -50,12 +54,6 @@ public class Scrollbar extends Element implements NumberRangeAlike {
         optimalSizeChanged();
         return this;
     }
-
-    NinePatch thumb = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 0, 0, 5 / 27f, 5 / 15f, 5, 5, 2, 2, 1, 2);
-    NinePatch thumbHovered = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 5 / 27f, 0, 5 / 27f, 5 / 15f, 5, 5, 2, 2, 1, 2);
-    NinePatch track = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 15 / 27f, 0, 3 / 27f, 3 / 15f, 3, 3, 1, 1, 1, 1);
-    NinePatch trackDisabled = new NinePatch(true, new ResourceLocation("figuraextras", "textures/gui/scrollbar.png"), 18 / 27f, 0, 3 / 27f, 3 / 15f, 3, 3, 1, 1, 1, 1);
-    private double dragPos, previousPos;
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {

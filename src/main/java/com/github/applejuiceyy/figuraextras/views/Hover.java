@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.screen;
+package com.github.applejuiceyy.figuraextras.views;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.util.Observers;

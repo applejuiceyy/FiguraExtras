@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.views.views.capture;
+package com.github.applejuiceyy.figuraextras.views.avatar.capture;
 
 import com.github.applejuiceyy.figuraextras.components.FlameGraphComponent;
 import com.github.applejuiceyy.figuraextras.components.RangeSliderComponent;
@@ -7,7 +7,6 @@ import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
-import com.github.applejuiceyy.figuraextras.views.InfoViews;
 
 
 public class FlameGraphView implements Lifecycle {
@@ -16,7 +15,7 @@ public class FlameGraphView implements Lifecycle {
     FlameGraphComponent component;
     RangeSliderComponent slider;
 
-    public FlameGraphView(InfoViews.Context context, ParentElement.AdditionPoint additionPoint, GraphBuilder.Frame frame) {
+    public FlameGraphView(ParentElement.AdditionPoint additionPoint, GraphBuilder.Frame frame) {
         root = new Grid();
 
         root.rows()

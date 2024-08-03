@@ -32,6 +32,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -41,6 +43,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class GuiState implements Renderable, GuiEventListener, LayoutElement, NarratableEntry {
+    public static Logger logger = LoggerFactory.getLogger("FiguraExtras:GuiState");
     public final ElementOrder elementOrder = new ElementOrder();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseDown = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.MousePositionButtonEvent>> mouseUp = Event.consumer();
@@ -50,17 +53,11 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public final Event<Consumer<DefaultCancellableEvent.KeyEvent>> keyPressed = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.KeyEvent>> keyReleased = Event.consumer();
     public final Event<Consumer<DefaultCancellableEvent.CharEvent>> charTyped = Event.consumer();
-
-    HashMap<Class<?>, Object> extension;
-    private final DirtySectionHolder dirtySectionHolder = new DirtySectionHolder();
-
-    public final Processor<ParentElement<?>> childReprocessor = new Processor<>((el, p) -> el.positionElements(), Comparator.comparingInt(Element::getDepth), this);
-    public final Processor<Element> updateDirtySections = new Processor<>((o, processor) -> o.updateDirtySections(dirtySectionHolder, processor), null, this);
     public final Processor<Element> clipDirty = new Processor<>((element, processor) -> {
         ImmutableRectangle rectangle = element.getParent() == null ? null : element.getParent().clippingBox;
         if (element.shouldClip()) {
             ReadableRectangle rect = Rectangle.expansiveIntersectionOf(rectangle, element);
-            rectangle = rect != null ? rect.immutable() : null;
+            rectangle = rect != null ? rect.immutable() : Rectangle.empty().immutable();
         }
 
         if (element.clippingBox == rectangle || (rectangle != null && element.clippingBox != null && element.clippingBox.equalsRectangle(rectangle))) {
@@ -74,23 +71,34 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
             }
         }
     }, Comparator.comparingInt(Element::getDepth), this);
+    private final DirtySectionHolder dirtySectionHolder = new DirtySectionHolder();
+    public final Processor<Element> updateDirtySections = new Processor<>((o, processor) -> o.updateDirtySections(dirtySectionHolder, processor), null, this);
+    public final Processor<ParentElement<?>> childReprocessor = new Processor<>((el, p) -> el.positionElements(), Comparator.comparingInt(Element::getDepth), this);
     private final Element root;
     private final List<Runnable> afterPriority = new ArrayList<>();
+    public boolean renderDebug = false;
+    HashMap<Class<?>, Object> extension;
+    DefaultCancellableEvent.ToolTipEvent activeTooltipEvent = null;
     private Element focused;
     private boolean thisFocused;
     private boolean priorityDirty = false;
     private RenderTarget cachedTarget = null;
-
-    public boolean renderDebug = false;
     private List<Element> currentHoverStack = List.of();
     private List<Element> mouseDownStack = List.of();
-    DefaultCancellableEvent.ToolTipEvent activeTooltipEvent = null;
     private boolean shouldDoTooltips = true;
     private boolean useBackingRenderTarget = true;
+    private boolean needFullRepaint = false;
+    private double renderedGuiScale = 0;
 
     public GuiState(Element root) {
         this.root = root;
         root.setState(this);
+        root.width.observe(() -> {
+            needFullRepaint = true;
+        });
+        root.height.observe(() -> {
+            needFullRepaint = true;
+        });
     }
 
     public boolean shouldDoTooltips() {
@@ -153,31 +161,13 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     }
 
     // region flow
-    private void updateClippingBoxes(Element element, @Nullable ImmutableRectangle currentBox) {
-        if (element.shouldClip()) {
-            ReadableRectangle rect = Rectangle.expansiveIntersectionOf(currentBox, element);
-            currentBox = rect != null ? rect.immutable() : null;
-        }
-        element.clippingBox = currentBox;
 
-        if (element instanceof ParentElement<?> parentElement) {
-            for (Element child : parentElement.getElements()) {
-                updateClippingBoxes(child, currentBox);
-            }
-        }
-    }
     public void afterPriority(Runnable runnable) {
         afterPriority.add(runnable);
     }
 
     public void markPriorityDirty() {
         priorityDirty = true;
-    }
-
-
-    protected void integrateState(GuiState state) {
-        childReprocessor.integrate(state.childReprocessor);
-        state.afterPriority.forEach(this::afterPriority);
     }
 
     // endregion
@@ -196,7 +186,27 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
         if (useBackingRenderTarget) {
             Rectangle toUpdate = null;
-            if (dirtySectionHolder.dirtySection != null) {
+
+            double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+            int width = (int) (getWidth() * guiScale);
+            int height = (int) (getHeight() * guiScale);
+
+            boolean fullRepaint = cachedTarget == null || needFullRepaint || renderedGuiScale != guiScale;
+            needFullRepaint = false;
+            renderedGuiScale = guiScale;
+            boolean repaint = false;
+
+            if (fullRepaint) {
+                if (cachedTarget == null) {
+                    cachedTarget = new TextureTarget(width, height, true, Minecraft.ON_OSX);
+                } else {
+                    cachedTarget.resize(width, height, Minecraft.ON_OSX);
+                }
+                dirtySectionHolder.dirtySection = root;
+                toUpdate = root;
+                logger.info("starting full repaint");
+                repaint = true;
+            } else if (dirtySectionHolder.dirtySection != null) {
                 dirtySectionHolder.dirtySection = dirtySectionHolder.dirtySection.intersection(root);
                 if (dirtySectionHolder.dirtySection != null) {
                     toUpdate = dirtySectionHolder.dirtySection.copy();
@@ -205,24 +215,23 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                     toUpdate.setWidth(toUpdate.getWidth() + 2);
                     toUpdate.setHeight(toUpdate.getHeight() + 2);
                     dirtySectionHolder.dirtySection = toUpdate;
-                    int width = (int) (getWidth() * Minecraft.getInstance().getWindow().getGuiScale());
-                    int height = (int) (getHeight() * Minecraft.getInstance().getWindow().getGuiScale());
-                    if (cachedTarget == null) {
-                        cachedTarget = new TextureTarget(width, height, true, Minecraft.ON_OSX);
-                    } else if (cachedTarget.width != width || cachedTarget.height != height) {
-                        cachedTarget.resize(width, height, Minecraft.ON_OSX);
-                    }
-                    pose.pushPose();
-                    setClippingBox(dirtySectionHolder.dirtySection);
-                    cachedTarget.clear(Minecraft.ON_OSX);
-                    Stacks.RENDER_TARGETS.push(cachedTarget);
-                    pose.translate(-getX(), -getY(), 0);
-                    renderElements(elementOrder.tree, graphics, mouseX, mouseY, delta);
-                    setClippingBox(null);
-                    Stacks.RENDER_TARGETS.pop(false);
-                    dirtySectionHolder.dirtySection = null;
-                    pose.popPose();
+                    logger.info("starting repainting section");
+                    repaint = true;
                 }
+            }
+
+
+            if (repaint) {
+                pose.pushPose();
+                setClippingBox(dirtySectionHolder.dirtySection);
+                cachedTarget.clear(Minecraft.ON_OSX);
+                Stacks.RENDER_TARGETS.push(cachedTarget);
+                pose.translate(-getX(), -getY(), 0);
+                renderElements(elementOrder.tree, graphics, mouseX, mouseY, delta);
+                setClippingBox(null);
+                Stacks.RENDER_TARGETS.pop(false);
+                dirtySectionHolder.dirtySection = null;
+                pose.popPose();
             }
 
             if (cachedTarget != null) {
@@ -237,12 +246,12 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                     graphics.fill(toUpdate.getX() + toUpdate.getWidth() - 1, toUpdate.getY() + 1, toUpdate.getX() + toUpdate.getWidth(), toUpdate.getY() + toUpdate.getHeight() - 1, 0xffff0000);
                 }
 
-                /*for (ReadableRectangle dirtySection : dirtySectionHolder.allDirtySections) {
+                for (ReadableRectangle dirtySection : dirtySectionHolder.allDirtySections) {
                     graphics.fill(dirtySection.getX(), dirtySection.getY(), dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + 1, 0xff00ff00);
                     graphics.fill(dirtySection.getX(), dirtySection.getY() + dirtySection.getHeight() - 1, dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + dirtySection.getHeight(), 0xff00ff00);
                     graphics.fill(dirtySection.getX(), dirtySection.getY() + 1, dirtySection.getX() + 1, dirtySection.getY() + dirtySection.getHeight() - 1, 0xff00ff00);
                     graphics.fill(dirtySection.getX() + dirtySection.getWidth() - 1, dirtySection.getY() + 1, dirtySection.getX() + dirtySection.getWidth(), dirtySection.getY() + dirtySection.getHeight() - 1, 0xff00ff00);
-                }*/
+                }
             }
         } else {
             dirtySectionHolder.dirtySection = root;
@@ -669,6 +678,11 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         }
     }
 
+    @Override
+    public void setFocused(boolean focused) {
+        this.thisFocused = focused;
+    }
+
     public <T> void setExtension(@NotNull T thing) {
         setExtension(thing.getClass(), thing);
     }
@@ -684,11 +698,6 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     public <T> @Nullable T getExtension(@NotNull Class<? extends T> cls) {
         //noinspection unchecked
         return (T) extension.get(cls);
-    }
-
-    @Override
-    public void setFocused(boolean focused) {
-        this.thisFocused = focused;
     }
 
     @Override

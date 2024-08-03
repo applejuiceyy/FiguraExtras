@@ -10,7 +10,8 @@ import org.spongepowered.asm.mixin.Unique;
 @Mixin(LuaTypeManager.class)
 public class LuaTypeManagerMixin implements LuaTypeManagerAccess {
     @Unique
-    @Nullable Avatar avatar;
+    @Nullable
+    Avatar avatar;
 
     @Override
     public void figuraExtrass$setAvatar(@Nullable Avatar avatar) {

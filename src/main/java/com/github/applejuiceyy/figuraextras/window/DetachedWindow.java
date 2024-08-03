@@ -2,7 +2,6 @@ package com.github.applejuiceyy.figuraextras.window;
 
 import com.github.applejuiceyy.figuraextras.ducks.MinecraftAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.WindowDuck;
-import com.github.applejuiceyy.figuraextras.screen.MainInfoScreen;
 import com.github.applejuiceyy.figuraextras.screen.ScreenContainer;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
 import com.mojang.blaze3d.platform.DisplayData;
@@ -10,6 +9,7 @@ import com.mojang.blaze3d.platform.Window;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.util.Tuple;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeWin32;
@@ -26,7 +26,7 @@ public class DetachedWindow implements WindowContext {
     Window mainWindow;
     WindowContentPopOutHost host;
 
-    public DetachedWindow() {
+    public DetachedWindow(Supplier<Screen> defaultScreen) {
         // garbage code 0/10
         mainWindow = Minecraft.getInstance().getWindow();
 
@@ -152,7 +152,7 @@ public class DetachedWindow implements WindowContext {
         });
         host = new WindowContentPopOutHost(window.window);
         ref.handler = window.mouseHandler;
-        screenContainer = new ScreenContainer(MainInfoScreen::new) {
+        screenContainer = new ScreenContainer(defaultScreen) {
             @Override
             public int getInnerWidth() {
                 return window.window.getGuiScaledWidth();
@@ -179,10 +179,10 @@ public class DetachedWindow implements WindowContext {
 
     public void render(GuiGraphics guiGraphics) {
         Minecraft.getInstance().getProfiler().push("Screen Rendering");
-        screenContainer.doEvent("beforeRender", guiGraphics, (int) window.mouseHandler.xpos(), (int) window.mouseHandler.ypos(), Minecraft.getInstance().getDeltaFrameTime());
-        screenContainer.getScreen().render(guiGraphics, (int) window.mouseHandler.xpos(), (int) window.mouseHandler.ypos(), Minecraft.getInstance().getDeltaFrameTime());
-        screenContainer.doEvent("afterRender", guiGraphics, (int) window.mouseHandler.xpos(), (int) window.mouseHandler.ypos(), Minecraft.getInstance().getDeltaFrameTime());
-        host.render(guiGraphics, (int) window.mouseHandler.xpos(), (int) window.mouseHandler.ypos(), Minecraft.getInstance().getDeltaFrameTime());
+        screenContainer.doEvent("beforeRender", guiGraphics, (int) window.mouseHandler.xPos(), (int) window.mouseHandler.yPos(), Minecraft.getInstance().getDeltaFrameTime());
+        screenContainer.getScreen().render(guiGraphics, (int) window.mouseHandler.xPos(), (int) window.mouseHandler.yPos(), Minecraft.getInstance().getDeltaFrameTime());
+        screenContainer.doEvent("afterRender", guiGraphics, (int) window.mouseHandler.xPos(), (int) window.mouseHandler.yPos(), Minecraft.getInstance().getDeltaFrameTime());
+        host.render(guiGraphics, (int) window.mouseHandler.xPos(), (int) window.mouseHandler.yPos(), Minecraft.getInstance().getDeltaFrameTime());
         guiGraphics.flush();
         Minecraft.getInstance().getProfiler().pop();
     }

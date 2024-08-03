@@ -16,10 +16,9 @@ public class EntryUI<V> {
     public final Flow childrenLayout = new Flow();
 
     private final Label noEntries = new Label(Component.literal("No entries found"));
-    private int currentEntries = 0;
     HashMap<Entry<?, ?, ?>, KeyValueEntryUI<?, ?>> entryMappings = new HashMap<>();
-
     Runnable listingCancel;
+    private int currentEntries = 0;
 
     public EntryUI(Expander<V> expander, ContentPopOut contentPopOut, ReferenceStore referenceStore, Registration registration) {
         childrenLayout.add(noEntries);

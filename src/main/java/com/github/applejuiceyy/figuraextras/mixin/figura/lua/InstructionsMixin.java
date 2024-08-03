@@ -14,11 +14,11 @@ import java.util.function.IntConsumer;
 
 @Mixin(value = Avatar.Instructions.class, remap = false)
 public abstract class InstructionsMixin implements InstructionsAccess {
-    @Shadow
-    public abstract int getTotal();
-
     @Unique
     ArrayList<IntConsumer> hooks = new ArrayList<>();
+
+    @Shadow
+    public abstract int getTotal();
 
     @Override
     public Runnable figuraExtrass$addHook(IntConsumer result) {

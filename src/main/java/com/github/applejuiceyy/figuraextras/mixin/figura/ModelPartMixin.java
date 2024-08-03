@@ -1,6 +1,6 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
-import com.github.applejuiceyy.figuraextras.screen.Hover;
+import com.github.applejuiceyy.figuraextras.views.Hover;
 import net.minecraft.client.renderer.LightTexture;
 import org.figuramc.figura.model.FiguraModelPart;
 import org.figuramc.figura.model.PartCustomization;
@@ -30,9 +30,6 @@ public abstract class ModelPartMixin {
 
     @Shadow
     public List<FiguraTextureSet> textures;
-
-    @Shadow
-    public abstract FiguraModelPart secondaryTexture(String type, Object x);
 
     @Inject(
             method = "pushVerticesImmediate",
