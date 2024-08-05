@@ -2,10 +2,12 @@ package com.github.applejuiceyy.figuraextras;
 
 
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
-import com.github.applejuiceyy.figuraextras.ducks.statics.AuthHandlerDuck;
+import com.github.applejuiceyy.figuraextras.ipc.IPCManager;
 import com.github.applejuiceyy.figuraextras.ipc.ReceptionistServer;
 import com.github.applejuiceyy.figuraextras.ipc.backend.ReceptionistServerBackend;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
+import com.github.applejuiceyy.figuraextras.ipc.protocol.ClientInformation;
+import com.github.applejuiceyy.figuraextras.ipc.protocol.WorldInformation;
 import com.github.applejuiceyy.figuraextras.views.TabView;
 import com.github.applejuiceyy.figuraextras.views.View;
 import com.github.applejuiceyy.figuraextras.views.backend.AvatarInstance;
@@ -21,11 +23,15 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
+import net.minecraft.SharedConstants;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -38,6 +44,7 @@ import org.figuramc.figura.gui.FiguraToast;
 import org.figuramc.figura.lua.api.sound.LuaSound;
 import org.figuramc.figura.lua.api.sound.SoundAPI;
 import org.figuramc.figura.math.vector.FiguraVec3;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
@@ -67,6 +74,8 @@ public class FiguraExtras implements ClientModInitializer {
     private static Path figuraExtrasDirectory;
     private static UUID instanceUUID;
 
+    private static ConfigType.BoolConfig localBackend;
+
     static {
         try {
             Class.forName("org.figuramc.figura.config.Configs");
@@ -85,33 +94,36 @@ public class FiguraExtras implements ClientModInitializer {
         });
         kofi.name = Component.literal("Huh? Kofi? Is that some kind of lettuce?").withStyle(ChatFormatting.GREEN);
 
-        new ConfigType.ButtonConfig("test", category, () -> {
-            AuthHandlerDuck.setDivert(!AuthHandlerDuck.isDiverting());
-        });
+        localBackend = new ConfigType.BoolConfig("divert_backend", category, false) {
+            @Override
+            public void onChange() {
+                IPCManager.INSTANCE.divertBackend.divertBackend(value);
+            }
+        };
+        localBackend.name = Component.literal("Use local backend");
 
         new ConfigType.ButtonConfig("other_test", category, () -> {
-            ReceptionistServer.getOrCreateOrConnect();
-            ReceptionistServer server = ReceptionistServer.getCurrentReceptionistServer();
-            if (server != null) {
-                View.newWindow(server, (ctx, ap) -> {
-                    TabView tabView = new TabView(ctx, ap);
-                    ReceptionistServerBackend backend = server.getBackend();
-                    tabView.add("Players", View.differential(
-                            c -> c.getValue().getUsers(),
-                            ReceptionistServerBackend.BackendUser::getUuid,
-                            PlayerInstance::new
-                    ), backend);
-                    tabView.add("Avatars", View.differential(
-                            c -> c.getValue().getAvatars(),
-                            avatar -> avatar.getOwner() + "-" + avatar.getId(),
-                            AvatarInstance::new
-                    ), backend);
-                    return tabView;
-                });
-            } else {
+            if (!IPCManager.INSTANCE.isHost()) {
                 FiguraToast.sendToast("Not the owner of the backend");
             }
-        });
+
+            ReceptionistServer server = IPCManager.INSTANCE.getReceptionistServer();
+            View.newWindow(server, (ctx, ap) -> {
+                TabView tabView = new TabView(ctx, ap);
+                ReceptionistServerBackend backend = server.getBackend();
+                tabView.add("Players", View.differential(
+                        c -> c.getValue().getUsers(),
+                        ReceptionistServerBackend.BackendUser::getUuid,
+                        PlayerInstance::new
+                ), backend);
+                tabView.add("Avatars", View.differential(
+                        c -> c.getValue().getAvatars(),
+                        avatar -> avatar.getOwner() + "-" + avatar.getId(),
+                        AvatarInstance::new
+                ), backend);
+                return tabView;
+            });
+        }).name = Component.literal("Open local backend view");
 
         category.name = Component.literal("FiguraExtras");
         progName.name = Component.literal("Open With Program Name");
@@ -156,10 +168,6 @@ public class FiguraExtras implements ClientModInitializer {
         sendBrandedMessage(header, style, Component.literal(text).withStyle(ChatFormatting.WHITE));
     }
 
-    public static void updateInformation() {
-        ReceptionistServer.getOrCreateOrConnect().updateInformation();
-    }
-
     public static UUID getInstanceUUID() {
         return instanceUUID;
     }
@@ -170,6 +178,40 @@ public class FiguraExtras implements ClientModInitializer {
 
     public static Path getGlobalMinecraftDirectory() {
         return globalMinecraftDirectory;
+    }
+
+    public static void updateInformation() {
+        WorldInformation info = getWorldInformation();
+
+        UUID profileId = Minecraft.getInstance().getUser().getProfileId();
+        IPCManager.INSTANCE.setCurrentInformation(
+                new ClientInformation(
+                        SharedConstants.getCurrentVersion().getName(),
+                        Minecraft.getInstance().gameDirectory.getPath(),
+                        FiguraMod.getFiguraDirectory().toString(),
+                        FiguraExtras.getInstanceUUID().toString(),
+                        UUIDUtil.createOfflinePlayerUUID(Minecraft.getInstance().getUser().getName()).toString(),
+                        profileId == null ? null : profileId.toString(),
+                        DebugProtocolServer.getInstance() != null,
+                        info
+                )
+        );
+    }
+
+    private static @Nullable WorldInformation getWorldInformation() {
+        WorldInformation info = null;
+        if (Minecraft.getInstance().level != null) {
+            IntegratedServer iServer = Minecraft.getInstance().getSingleplayerServer();
+            if (iServer != null) {
+                info = new WorldInformation(iServer.getWorldData().getLevelName(), true);
+            } else {
+                ServerData mServer = Minecraft.getInstance().getCurrentServer();
+                if (mServer != null) {
+                    info = new WorldInformation(mServer.name, true);
+                }
+            }
+        }
+        return info;
     }
 
     @Override
@@ -208,7 +250,8 @@ public class FiguraExtras implements ClientModInitializer {
         }
 
         updateInformation();
-
+        IPCManager.INSTANCE.enableConnections(true);
+        IPCManager.INSTANCE.divertBackend.divertBackend(localBackend.value);
 
         HudRenderCallback.EVENT.register((p, o) -> {
             if (DebugProtocolServer.getInstance() != null) {
@@ -218,7 +261,8 @@ public class FiguraExtras implements ClientModInitializer {
         });
 
         ClientLifecycleEvents.CLIENT_STOPPING.register(minecraft -> {
-            com.github.applejuiceyy.figuraextras.util.Util.closeMultiple(ReceptionistServer::close, DebugProtocolServer::close);
+            IPCManager.INSTANCE.closeEverything();
+            com.github.applejuiceyy.figuraextras.util.Util.closeMultiple(DebugProtocolServer::close);
         });
 
         WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {

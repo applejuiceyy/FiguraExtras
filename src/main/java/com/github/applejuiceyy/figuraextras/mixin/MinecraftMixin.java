@@ -2,6 +2,7 @@ package com.github.applejuiceyy.figuraextras.mixin;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.ducks.MinecraftAccess;
+import com.github.applejuiceyy.figuraextras.ipc.IPCManager;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.MonitorContentPopOutHost;
 import com.github.applejuiceyy.figuraextras.screen.contentpopout.WindowContentPopOutHost;
 import com.github.applejuiceyy.figuraextras.util.Util;
@@ -208,6 +209,9 @@ public abstract class MinecraftMixin implements MinecraftAccess {
 
     @Inject(method = "setLevel", at = @At("RETURN"))
     void e(ClientLevel world, CallbackInfo ci) {
+        if (IPCManager.INSTANCE.isConnected()) {
+            IPCManager.INSTANCE.getC2CClient().joinedWorld();
+        }
         FiguraExtras.updateInformation();
     }
 

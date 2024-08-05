@@ -11,8 +11,6 @@ import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 public interface C2CServer extends DisconnectAware, Endpoint {
-    @JsonNotification
-    void disallowSuccession(boolean disallow);
 
     @JsonNotification
     void updateInfo(ClientInformation information);
@@ -58,6 +56,12 @@ public interface C2CServer extends DisconnectAware, Endpoint {
 
         @JsonRequest
         CompletableFuture<String> getAvatar(HashMap<String, String> args);
+
+        @JsonRequest
+        CompletableFuture<Void> connect();
+
+        @JsonRequest
+        CompletableFuture<Void> disconnect();
     }
 
     record NetworkBackendAvatar(String id, String owner) {

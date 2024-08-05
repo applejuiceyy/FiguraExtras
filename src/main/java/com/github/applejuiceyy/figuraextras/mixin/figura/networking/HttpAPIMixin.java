@@ -1,7 +1,6 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura.networking;
 
-import com.github.applejuiceyy.figuraextras.ducks.statics.AuthHandlerDuck;
-import com.github.applejuiceyy.figuraextras.ipc.ReceptionistServer;
+import com.github.applejuiceyy.figuraextras.ipc.IPCManager;
 import com.github.applejuiceyy.figuraextras.views.avatar.http.NetworkView;
 import net.minecraft.util.Tuple;
 import org.apache.commons.codec.DecoderException;
@@ -39,7 +38,7 @@ import java.util.stream.Collectors;
 public abstract class HttpAPIMixin {
     @Inject(method = "runString", at = @At("HEAD"), cancellable = true)
     static private void overrideString(HttpRequest request, BiConsumer<Integer, String> consumer, CallbackInfo ci) {
-        if (AuthHandlerDuck.isDiverting()) {
+        if (IPCManager.INSTANCE.divertBackend.shouldDivertBackend()) {
             diversion(request, consumer);
             ci.cancel();
         }
@@ -47,7 +46,7 @@ public abstract class HttpAPIMixin {
 
     @Inject(method = "runStream", at = @At("HEAD"), cancellable = true)
     static private void overrideStream(HttpRequest request, BiConsumer<Integer, InputStream> consumer, CallbackInfo ci) {
-        if (AuthHandlerDuck.isDiverting()) {
+        if (IPCManager.INSTANCE.divertBackend.shouldDivertBackend()) {
             diversion(request, (i, s) -> {
                 try {
                     consumer.accept(i, new ByteArrayInputStream(Hex.decodeHex(s)));
@@ -61,6 +60,9 @@ public abstract class HttpAPIMixin {
 
     @Unique
     static private void diversion(HttpRequest request, BiConsumer<Integer, String> consumer) {
+        if (!IPCManager.INSTANCE.divertBackend.isBackendConnected()) {
+            return;
+        }
         String name = Path.of(request.uri().getPath()).getFileName().toString();
 
         String method = request.method();
@@ -84,7 +86,7 @@ public abstract class HttpAPIMixin {
             return bodySubscriber.getBody().toCompletableFuture().join();
         }).ifPresent(s -> query.put("body", Hex.encodeHexString(s)));
 
-        CompletableFuture<?> requested = ReceptionistServer.getOrCreateOrConnect().getServer().getBackend().request("backend/" + name, query);
+        CompletableFuture<?> requested = IPCManager.INSTANCE.getC2CServer().getBackend().request("backend/" + name, query);
 
         try {
             consumer.accept(200, (String) requested.join());
@@ -111,28 +113,28 @@ public abstract class HttpAPIMixin {
 
     @Inject(method = "getUser", at = @At("HEAD"), cancellable = true)
     private void overrideGetUser(UUID id, CallbackInfoReturnable<HttpRequest> cir) {
-        if (AuthHandlerDuck.isDiverting()) {
+        if (IPCManager.INSTANCE.divertBackend.shouldDivertBackend()) {
             cir.setReturnValue(header("user?id=" + id.toString()).build());
         }
     }
 
     @Inject(method = "getAvatar", at = @At("HEAD"), cancellable = true)
     private void overrideGetAvatar(UUID owner, String id, CallbackInfoReturnable<HttpRequest> cir) {
-        if (AuthHandlerDuck.isDiverting()) {
+        if (IPCManager.INSTANCE.divertBackend.shouldDivertBackend()) {
             cir.setReturnValue(header("avatar?owner=" + owner.toString() + "&id=" + URLEncoder.encode(id, Charset.defaultCharset())).build());
         }
     }
 
     @Inject(method = "uploadAvatar", at = @At("HEAD"), cancellable = true)
     private void overrideUploadAvatar(String id, byte[] bytes, CallbackInfoReturnable<HttpRequest> cir) {
-        if (AuthHandlerDuck.isDiverting()) {
+        if (IPCManager.INSTANCE.divertBackend.shouldDivertBackend()) {
             cir.setReturnValue(header("avatar?id=" + id).PUT(HttpRequest.BodyPublishers.ofByteArray(bytes)).build());
         }
     }
 
     @Inject(method = "deleteAvatar", at = @At("HEAD"), cancellable = true)
     private void overrideDeleteAvatar(String id, CallbackInfoReturnable<HttpRequest> cir) {
-        if (AuthHandlerDuck.isDiverting()) {
+        if (IPCManager.INSTANCE.divertBackend.shouldDivertBackend()) {
             cir.setReturnValue(header("avatar?id=" + id).DELETE().build());
         }
     }

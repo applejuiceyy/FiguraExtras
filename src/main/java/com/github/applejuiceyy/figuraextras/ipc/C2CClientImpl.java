@@ -1,20 +1,14 @@
 package com.github.applejuiceyy.figuraextras.ipc;
 
-import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.ipc.protocol.C2CClient;
 import com.github.applejuiceyy.figuraextras.ipc.protocol.C2CServer;
-import com.github.applejuiceyy.figuraextras.ipc.protocol.ClientInformation;
 import com.github.applejuiceyy.figuraextras.ipc.protocol.WorldInformation;
 import com.github.applejuiceyy.figuraextras.ipc.underlying.IPCFactory;
 import com.github.applejuiceyy.figuraextras.util.Util;
-import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.client.server.IntegratedServer;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.level.storage.LevelStorageException;
@@ -23,7 +17,6 @@ import org.eclipse.lsp4j.debug.launch.DSPLauncher;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
-import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.backend2.websocket.S2CMessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,15 +32,12 @@ import java.util.stream.Collectors;
 
 public class C2CClientImpl implements C2CClient {
     public static Logger logger = LoggerFactory.getLogger("FiguraExtras:ReceptionistClient");
+    private final Runnable disconnect;
     private C2CServer server;
-    private boolean doSuccession = true;
-    private int successionIndex;
     private CompletableFuture<Void> whenLevelLoads;
 
-    @Override
-    public void successionIndex(int index) {
-        logger.info("Server set succession index: {}", index);
-        successionIndex = index;
+    public C2CClientImpl(Runnable disconnect) {
+        this.disconnect = disconnect;
     }
 
     @Override
@@ -110,13 +100,19 @@ public class C2CClientImpl implements C2CClient {
                 DebugProtocolServer.create(ipc);
                 DebugProtocolServer instance = DebugProtocolServer.getInstance();
                 Launcher<IDebugProtocolClient> serverLauncher = DSPLauncher.createServerLauncher(instance, connect.getA(), connect.getB());
-                ReceptionistServer.startWithTermination(instance, connect.getA(), connect.getB(), serverLauncher, () -> {
+                JSONPUtils.startWithTermination(instance, connect.getA(), connect.getB(), serverLauncher, () -> {
+                    IPCManager.INSTANCE.closeables.remove(connect.getA());
+                    IPCManager.INSTANCE.closeables.remove(connect.getB());
+                    IPCManager.INSTANCE.closeables.remove(ipc);
                     try {
                         ipc.close();
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
                 });
+                IPCManager.INSTANCE.closeables.add(connect.getA());
+                IPCManager.INSTANCE.closeables.add(connect.getB());
+                IPCManager.INSTANCE.closeables.add(ipc);
                 assert instance != null;
                 instance.connect(serverLauncher.getRemoteProxy());
             } catch (IOException e) {
@@ -153,44 +149,6 @@ public class C2CClientImpl implements C2CClient {
         };
     }
 
-    public void disallowSuccession(boolean b) {
-        doSuccession = !b;
-        server.disallowSuccession(b);
-    }
-
-    public void updateInformation() {
-        C2CClientImpl client = ReceptionistServer.getOrCreateOrConnect();
-        WorldInformation info = null;
-        if (Minecraft.getInstance().level != null) {
-            if (whenLevelLoads != null) {
-                whenLevelLoads.complete(null);
-                whenLevelLoads = null;
-            }
-            IntegratedServer iServer = Minecraft.getInstance().getSingleplayerServer();
-            if (iServer != null) {
-                info = new WorldInformation(iServer.getWorldData().getLevelName(), true);
-            } else {
-                ServerData mServer = Minecraft.getInstance().getCurrentServer();
-                if (mServer != null) {
-                    info = new WorldInformation(mServer.name, true);
-                }
-            }
-        }
-
-        UUID profileId = Minecraft.getInstance().getUser().getProfileId();
-        client.getServer().updateInfo(
-                new ClientInformation(
-                        SharedConstants.getCurrentVersion().getName(),
-                        Minecraft.getInstance().gameDirectory.getPath(),
-                        FiguraMod.getFiguraDirectory().toString(),
-                        FiguraExtras.getInstanceUUID().toString(),
-                        UUIDUtil.createOfflinePlayerUUID(Minecraft.getInstance().getUser().getName()).toString(),
-                        profileId == null ? null : profileId.toString(),
-                        DebugProtocolServer.getInstance() != null,
-                        info
-                )
-        );
-    }
 
     public C2CServer getServer() {
         return server;
@@ -203,20 +161,13 @@ public class C2CClientImpl implements C2CClient {
     @Override
     public void onDisconnect() {
         logger.info("Host disconnected");
-        try {
-            ReceptionistServer.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        if (doSuccession) {
-            new Thread(() -> {
-                try {
-                    Thread.sleep(successionIndex * 1000L);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                ReceptionistServer.getOrCreateOrConnect();
-            }).start();
+        disconnect.run();
+    }
+
+    public void joinedWorld() {
+        if (whenLevelLoads != null) {
+            whenLevelLoads.complete(null);
+            whenLevelLoads = null;
         }
     }
 }

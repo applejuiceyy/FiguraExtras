@@ -10,14 +10,14 @@ import java.io.OutputStream;
 import java.util.function.BiConsumer;
 
 public abstract class IPCFactory {
-    static public IPCFactory getIPCFactory() {
+    static public IPCFactory getIPCFactory() throws UnsupportedPlatformException {
         if (SystemUtils.IS_OS_WINDOWS) {
             return new WindowsIPCFactory();
         }
         if (SystemUtils.IS_OS_UNIX) {
             return new UNIXIPCFactory();
         }
-        throw new UnsupportedOperationException();
+        throw new UnsupportedPlatformException();
     }
 
     public abstract boolean exists(String path);
@@ -55,5 +55,8 @@ public abstract class IPCFactory {
         public void close() throws IOException {
 
         }
+    }
+
+    public static class UnsupportedPlatformException extends IOException {
     }
 }

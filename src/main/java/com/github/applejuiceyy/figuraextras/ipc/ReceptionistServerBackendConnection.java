@@ -250,6 +250,10 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
     @Override
     public CompletableFuture<String> getUser(HashMap<String, String> args) {
         ReceptionistServerBackend.BackendUser user = owner.backend.getUser(convertToStoringId(UUID.fromString(args.get("id"))));
+        if (!user.exists()) {
+            return CompletableFuture.completedFuture("{\"equipped\":[],\"equippedBadges\":{\"pride\":[],\"special\":[]}}");
+        }
+
         user.upkeep();
 
         JsonObject json = new JsonObject();
@@ -296,6 +300,16 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
         ReceptionistServerBackend.BackendAvatar avatar = owner.backend.getAvatar(UUID.fromString(args.get("owner")), args.get("id"));
         avatar.upkeep();
         return CompletableFuture.completedFuture(Hex.encodeHexString(avatar.getContent()));
+    }
+
+    @Override
+    public CompletableFuture<Void> connect() {
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Override
+    public CompletableFuture<Void> disconnect() {
+        return CompletableFuture.completedFuture(null);
     }
 
 

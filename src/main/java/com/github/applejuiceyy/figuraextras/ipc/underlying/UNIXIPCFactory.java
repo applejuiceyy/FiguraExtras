@@ -1,5 +1,6 @@
 package com.github.applejuiceyy.figuraextras.ipc.underlying;
 
+import com.github.applejuiceyy.figuraextras.util.Util;
 import net.minecraft.util.Tuple;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -14,6 +15,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
@@ -48,10 +50,22 @@ public class UNIXIPCFactory extends IPCFactory {
 
     @Override
     public IPC createServer(String path) throws IOException {
-        ServerSocketChannel socket = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
-        String name = createFolders(toUnixDomain(path));
-        socket.bind(UnixDomainSocketAddress.of(name));
-        return new UNIXIPC(socket, name);
+        ArrayList<AutoCloseable> autos = new ArrayList<>();
+        try {
+            ServerSocketChannel socket = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
+            autos.add(socket);
+            String name = createFolders(toUnixDomain(path));
+            autos.add(() -> {
+                if (!new File(toUnixDomain(path)).delete()) {
+                    throw new IOException("Could not delete files while cleaning up");
+                }
+            });
+            socket.bind(UnixDomainSocketAddress.of(name));
+            return new UNIXIPC(socket, name);
+        } catch (IOException e) {
+            Util.closeMultiple(autos.toArray(new AutoCloseable[0]));
+            throw e;
+        }
     }
 
     @Override

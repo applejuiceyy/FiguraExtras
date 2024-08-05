@@ -1,7 +1,6 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura.networking;
 
-import com.github.applejuiceyy.figuraextras.ducks.statics.AuthHandlerDuck;
-import com.github.applejuiceyy.figuraextras.util.Util;
+import com.github.applejuiceyy.figuraextras.ipc.IPCManager;
 import org.figuramc.figura.backend2.AuthHandler;
 import org.figuramc.figura.backend2.NetworkStuff;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,9 +12,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class AuthHandlerMixin {
     @Inject(method = "lambda$auth$0", at = @At("HEAD"), cancellable = true)
     static private void override(boolean reAuth, CallbackInfo ci) {
-        if (AuthHandlerDuck.isDiverting()) {
+        if (IPCManager.INSTANCE.divertBackend.shouldDivertBackend()) {
             if (reAuth || !NetworkStuff.isConnected()) {
-                Util.after(() -> NetworkStuffAccessor.invokeAuthSuccess(""), 1000);
+                IPCManager.INSTANCE.divertBackend.connectDivertedBackend();
+                NetworkStuffAccessor.invokeAuthSuccess("");
             }
 
             ci.cancel();
