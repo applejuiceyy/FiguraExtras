@@ -40,9 +40,6 @@ public class MessageStackComponent extends Element {
             lines.addAll(newLines);
         }
         messages.add(new Message(message, shouldShow));
-        while (lines.size() > 100) {
-            lines.remove(0);
-        }
         while (messages.size() > 100) {
             messages.remove(0);
         }
@@ -58,9 +55,6 @@ public class MessageStackComponent extends Element {
                 List<FormattedCharSequence> newLines = ComponentRenderUtils.wrapComponents(message.content(), width.get(), Minecraft.getInstance().font);
                 lines.addAll(newLines);
             }
-        }
-        while (lines.size() > 100) {
-            lines.remove(0);
         }
         updateUpperBound();
         enqueueDirtySection(false, false);

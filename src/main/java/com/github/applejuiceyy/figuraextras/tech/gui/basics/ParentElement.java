@@ -28,7 +28,7 @@ abstract public class ParentElement<S extends ParentElement.Settings> extends El
     private boolean needReposition = false;
     private boolean needReflowLayout = false;
     private boolean disableChildrenDirtyRequests = false;
-    private List<Element> needReflowDetached = new ArrayList<>();
+    private final List<Element> needReflowDetached = new ArrayList<>();
 
     {
         xView.observe(x -> {

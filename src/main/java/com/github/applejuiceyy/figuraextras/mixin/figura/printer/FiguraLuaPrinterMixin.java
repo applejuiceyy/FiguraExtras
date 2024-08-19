@@ -36,20 +36,24 @@ public abstract class FiguraLuaPrinterMixin {
         return null;
     }
 
+    @Unique
+    private static Component cleanText(Component message) {
+        String print = message.getString();
+        if (!print.isEmpty()) {
+            message = print.endsWith("\n") ? TextUtils.substring(message, 0, print.length() - 1) : message;
+        }
+        return TextUtils.replaceTabs(message);
+    }
+
     @Inject(method = "sendLuaChatMessage", at = @At("HEAD"), cancellable = true)
     private static void cheese(Component message, CallbackInfo ci) {
         if (FiguraLuaPrinterDuck.currentAvatar == null) {
             return;
         }
-
+        if (message.getString().isEmpty()) return;
         Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) FiguraLuaPrinterDuck.currentAvatar).figuraExtrass$getChatRedirect();
         if (redirect.hasSubscribers()) {
-            String print = message.getString();
-            if (!print.isEmpty()) {
-                message = print.endsWith("\n") ? TextUtils.substring(message, 0, print.length() - 1) : message;
-            }
-            Component finalMessage = message;
-            if (redirect.getSink().test(TextUtils.replaceTabs(finalMessage), FiguraLuaPrinterDuck.currentKind)) {
+            if (redirect.getSink().test(cleanText(message), FiguraLuaPrinterDuck.currentKind)) {
                 if (!FiguraLuaPrinterDuck.logOthers && !FiguraMod.isLocal(FiguraLuaPrinterDuck.currentAvatar.owner)) {
                     ci.cancel();
                 }
@@ -69,7 +73,7 @@ public abstract class FiguraLuaPrinterMixin {
     private static void moreCheese(LuaError error, Avatar owner, CallbackInfo ci, String message, MutableComponent component) {
         Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) owner).figuraExtrass$getChatRedirect();
         if (redirect.hasSubscribers()) {
-            if (!redirect.getSink().test(TextUtils.replaceTabs(component), FiguraLuaPrinterDuck.Kind.ERRORS)) {
+            if (!redirect.getSink().test(cleanText(component), FiguraLuaPrinterDuck.Kind.ERRORS)) {
                 ci.cancel();
             }
         }
@@ -88,7 +92,7 @@ public abstract class FiguraLuaPrinterMixin {
     private static void evenMoreCheese(Avatar owner, String ping, int size, LuaValue[] args, CallbackInfo ci, int config, MutableComponent text) {
         Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) owner).figuraExtrass$getChatRedirect();
         Configs.LOG_PINGS.value = switchLogPingsBack;
-        if (!redirect.getSink().test(text, FiguraLuaPrinterDuck.Kind.PINGS) || (switchLogPingsBack == 0 || switchLogPingsBack == 1 && !owner.isHost)) {
+        if (!redirect.getSink().test(cleanText(text), FiguraLuaPrinterDuck.Kind.PINGS) || (switchLogPingsBack == 0 || switchLogPingsBack == 1 && !owner.isHost)) {
             ci.cancel();
         }
     }

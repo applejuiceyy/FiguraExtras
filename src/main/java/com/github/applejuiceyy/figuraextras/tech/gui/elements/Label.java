@@ -24,6 +24,10 @@ public class Label extends Element implements SetText {
         text = component;
     }
 
+    public Label(String text) {
+        this.text = Component.literal(text);
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         graphics.drawWordWrap(Minecraft.getInstance().font, text, getX(), getY(), getWidth(), 0xffffff);

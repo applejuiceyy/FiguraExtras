@@ -12,6 +12,7 @@ public class Processor<T> {
 
     int rejectNew = 0;
     ArrayList<Runnable> after = new ArrayList<>();
+    ArrayList<Runnable> whenAfter = new ArrayList<>();
     BiConsumer<T, Processor<T>> caller;
 
     Comparator<T> comparator;
@@ -52,16 +53,29 @@ public class Processor<T> {
         after.add(runnable);
     }
 
+    public void whenAfter(Runnable runnable) {
+        whenAfter.add(runnable);
+    }
+
     boolean run() {
         if (comparator != null) {
             enqueued.sort(comparator);
         }
-
+        boolean performed = false;
         while (!enqueued.isEmpty()) {
             caller.accept(enqueued.remove(0), this);
+            performed = true;
         }
 
-        if (after.isEmpty()) return false;
+        boolean r = false;
+        if (performed && !whenAfter.isEmpty()) {
+            ArrayList<Runnable> copy = new ArrayList<>(whenAfter);
+            whenAfter.clear();
+            copy.forEach(Runnable::run);
+            r = true;
+        }
+
+        if (after.isEmpty()) return r;
         ArrayList<Runnable> copy = new ArrayList<>(after);
         after.clear();
         copy.forEach(Runnable::run);

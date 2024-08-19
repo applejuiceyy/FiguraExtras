@@ -121,13 +121,13 @@ public class IPCManager {
             try {
                 attemptConnection();
             } catch (IPCFactory.UnsupportedPlatformException e) {
-                FiguraToast.sendToast("Cannot connect to other clients as platform is not supported");
+                FiguraToast.sendToast("Cannot connect to other clients", "Platform is not supported", FiguraToast.ToastType.ERROR);
                 enabled = false;
                 return false;
             } catch (Exception exception) {
                 tries++;
                 if (tries >= 5) {
-                    FiguraToast.sendToast("Cannot connect to other clients, view the logs for more information");
+                    FiguraToast.sendToast("Cannot connect to other clients", "View the logs for more information", FiguraToast.ToastType.ERROR);
                     logger.error("Could not connect to other clients", exception);
                     enabled = false;
                     return false;

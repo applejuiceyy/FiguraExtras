@@ -15,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.config.Configs;
+import org.figuramc.figura.utils.TextUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,8 @@ public class ChatLikeView implements Lifecycle {
     private final MessageStackComponent stack = new MessageStackComponent();
 
     private final List<FiguraLuaPrinterDuck.Kind> show = new ArrayList<>();
+    private final Grid root;
+    private final Flow scrollReceptacle;
     Runnable sub;
 
     public ChatLikeView(View.Context<Avatar> context, ParentElement.AdditionPoint additionPoint) {
@@ -35,7 +38,7 @@ public class ChatLikeView implements Lifecycle {
             FiguraExtras.sendBrandedMessage("Redirecting output to informational screens");
         }
 
-        Grid root = new Grid();
+        root = new Grid();
 
         root
                 .rows()
@@ -43,6 +46,8 @@ public class ChatLikeView implements Lifecycle {
                 .percentage(1)
                 .cols()
                 .percentage(1);
+
+        additionPoint.accept(root);
 
         // FlowLayout controls = Containers.horizontalFlow(Sizing.fill(100), Sizing.fill(10));
         // root.add(controls);
@@ -64,14 +69,27 @@ public class ChatLikeView implements Lifecycle {
         // controls.child(showErrors);
         // controls.child(showOthers);
 
-        root.add(Elements.withVerticalScroll(new Flow().addAnd(stack), true)).setRow(1);
+        this.scrollReceptacle = new Flow();
+        root.add(Elements.withVerticalScroll(scrollReceptacle.addAnd(stack), true)).setRow(1);
 
         sub = event.getSource().subscribe((message, kind) -> {
-            stack.addMessage(message, () -> show.contains(kind) || show.isEmpty());
+            stack.addMessage(TextUtils.replaceTabs(message), () -> show.contains(kind) || show.isEmpty());
             return false;
         });
 
-        additionPoint.accept(root);
+        scrollReceptacle.yViewSize.observe(new Consumer<>() {
+            int prev = 0;
+
+            @Override
+            public void accept(Integer v) {
+                if (v < scrollReceptacle.getHeight()) {
+                    scrollReceptacle.yView.set(0);
+                } else if (prev < scrollReceptacle.getHeight() || prev - scrollReceptacle.getYView() == scrollReceptacle.getHeight()) {
+                    scrollReceptacle.yView.set(v - scrollReceptacle.getHeight());
+                }
+                prev = v;
+            }
+        });
     }
 
     private <T> Consumer<Boolean> hideOrShow(List<T> list, T value, Runnable after) {

@@ -13,13 +13,15 @@ import net.minecraft.network.chat.Component;
 
 import java.util.function.Consumer;
 
-public class TabView implements Lifecycle {
+public class TabView<DN> implements Lifecycle {
     public final Grid root;
     private final Flow flow;
     private final ViewContainer container;
+    private final View.Context<DN> context;
 
-    public TabView(View.Context<?> context, ParentElement.AdditionPoint additionPoint) {
+    public TabView(View.Context<DN> context, ParentElement.AdditionPoint additionPoint) {
         root = new Grid();
+        this.context = context;
         additionPoint.accept(root);
         container = new ViewContainer(context::getWindowContext, root.adder(settings -> settings.setColumn(1)));
         root.rows()
@@ -62,6 +64,10 @@ public class TabView implements Lifecycle {
 
     public <N> void add(String text, View.ViewConstructor<View.Context<N>, ?> constructor, N thing) {
         add(Component.literal(text), a -> a.setView(constructor, thing));
+    }
+
+    public void add(String text, View.ViewConstructor<View.Context<DN>, ?> constructor) {
+        add(Component.literal(text), a -> a.setView(constructor, context.getValue()));
     }
 
     public void add(String text, Consumer<SetViewCallback> activation) {

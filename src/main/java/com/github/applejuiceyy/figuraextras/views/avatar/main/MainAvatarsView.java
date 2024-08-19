@@ -1,9 +1,11 @@
 package com.github.applejuiceyy.figuraextras.views.avatar.main;
 
+import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Surface;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.TabView;
@@ -14,6 +16,7 @@ import com.github.applejuiceyy.figuraextras.views.avatar.http.NetworkView;
 import com.github.applejuiceyy.figuraextras.window.WindowContext;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.util.Tuple;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 
@@ -21,6 +24,7 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
     private final Button guiScaleButton;
     private final Grid.GridSettings guiScaleButtonSettings;
     private final View.Context<Void> context;
+    private final Label avatarSelectedLabel;
     ViewContainer container;
 
     public MainAvatarsView(View.Context<Void> context, ParentElement.AdditionPoint additionPoint) {
@@ -53,40 +57,7 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
                 .content();
 
         Button selectAvatarButton = (Button) Button.minimal(2).addAnd("Select avatar");
-        selectAvatarButton.mouseDown.subscribe(event -> {
-            event.cancelPropagation();
-            Elements.spawnContextMenu(root.getState(), event.x, event.y, (flow, culler) -> {
-                boolean empty = true;
-                for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
-                    empty = false;
-                    Component text = Component.literal(loadedAvatar.entityName).append(": ").append(loadedAvatar.name);
-                    Button button = (Button) Button.minimal().addAnd(text);
-                    button.activation.subscribe(r -> {
-                        culler.run();
-                        TabView tabView = container.setView(TabView::new, null);
-                        tabView.add("Object View", ensureScript(ObjectView::new), loadedAvatar);
-                        tabView.add("Model View", ensureScript(ModelView::new), loadedAvatar);
-                        tabView.add(Elements.separator());
-                        tabView.add("Tick Instructions", ensureScript((c, ap) -> new MetricsView(c, ap, c.getValue().tick)), loadedAvatar);
-                        tabView.add("Render Instructions", ensureScript((c, ap) -> new MetricsView(c, ap, c.getValue().render)), loadedAvatar);
-                        tabView.add(Elements.separator());
-                        tabView.add("Textures", TextureView::new, loadedAvatar);
-                        tabView.add("Sounds", SoundView::new, loadedAvatar);
-                        tabView.add(Elements.separator());
-                        tabView.add("Output", ChatLikeView::new, loadedAvatar);
-                        tabView.add("Network", NetworkView::new, loadedAvatar);
-                        tabView.add(Elements.separator());
-                        tabView.add("Capturer", CaptureView::new, loadedAvatar);
-                        tabView.add(Elements.separator());
-                        tabView.add(Button.minimal().addAnd("Download Avatar"));
-                    });
-                    flow.add(button);
-                }
-                if (empty) {
-                    flow.add(Component.literal("No avatars loaded").setStyle(Style.EMPTY.withColor(0xffaaaaaa)));
-                }
-            });
-        });
+
         left.add(selectAvatarButton);
 
         Grid centerer = new Grid();
@@ -99,7 +70,53 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
                 .fixed(10)
                 .content();
 
-        centerer.add("No Avatar Selected").setRow(1).setColumn(1);
+        avatarSelectedLabel = new Label("No Avatar Selected");
+        centerer.add(avatarSelectedLabel).setRow(1).setColumn(1);
+
+        selectAvatarButton.activation.subscribe(event -> {
+            event.cancelPropagation();
+            //noinspection SuspiciousNameCombination
+            Tuple<Double, Double> pos = event.motivation.map(
+                    kv -> new Tuple<>((double) selectAvatarButton.x.get(), (double) selectAvatarButton.y.get() + selectAvatarButton.height.get()),
+                    mv -> new Tuple<>(mv.x, mv.y)
+            );
+            Elements.spawnContextMenu(root.getState(), pos.getA(), pos.getB(), (flow, culler) -> {
+                boolean empty = true;
+                for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
+                    empty = false;
+                    Component text = Component.literal(loadedAvatar.entityName).append(": ").append(loadedAvatar.name);
+                    Button button = (Button) Button.minimal().addAnd(text);
+                    button.activation.subscribe(r -> {
+                        culler.run();
+                        avatarSelectedLabel.setText(text);
+                        container.setView(ensureAvatarLoaded((c1, c2) -> {
+                            TabView<Avatar> tabView = new TabView<>(c1, c2);
+                            tabView.add("Object View", ensureScript(ObjectView::new));
+                            tabView.add("Model View", ensureScript(ModelView::new));
+                            tabView.add(Elements.separator());
+                            tabView.add("Tick Instructions", ensureScript((c, ap) -> new MetricsView(c, ap, c.getValue().tick)));
+                            tabView.add("Render Instructions", ensureScript((c, ap) -> new MetricsView(c, ap, c.getValue().render)));
+                            tabView.add(Elements.separator());
+                            tabView.add("Textures", TextureView::new);
+                            tabView.add("Sounds", SoundView::new);
+                            tabView.add(Elements.separator());
+                            tabView.add("Output", ChatLikeView::new);
+                            tabView.add("Network", NetworkView::new);
+                            tabView.add(Elements.separator());
+                            tabView.add("Capturer", CaptureView::new);
+                            tabView.add(Elements.separator());
+                            tabView.add(Button.minimal().addAnd("Download Avatar"));
+                            return tabView;
+                        }), loadedAvatar);
+                    });
+                    flow.add(button);
+                }
+                if (empty) {
+                    flow.add(Component.literal("No avatars loaded").setStyle(Style.EMPTY.withColor(0xffaaaaaa)));
+                }
+            });
+        });
+
 
         this.guiScaleButton = (Button) Button.minimal(2).addAnd("Gui Scale: Auto");
         guiScaleButtonSettings = top.add(guiScaleButton);
@@ -143,5 +160,12 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
                 .predicate(avatar -> avatar.loaded && avatar.luaRuntime != null)
                 .ifTrue(what)
                 .ifFalse("Script not detected");
+    }
+
+    private View.ViewConstructor<View.Context<Avatar>, ? extends Lifecycle> ensureAvatarLoaded(View.ViewConstructor<View.Context<Avatar>, ? extends Lifecycle> what) {
+        return View.context()
+                .predicate(avatar -> avatar.loaded && !((AvatarAccess) avatar).figuraExtrass$isCleaned())
+                .ifTrue(what)
+                .ifFalse("Avatar not loaded");
     }
 }

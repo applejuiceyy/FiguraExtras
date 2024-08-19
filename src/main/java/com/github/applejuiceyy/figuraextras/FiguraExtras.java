@@ -64,17 +64,17 @@ public class FiguraExtras implements ClientModInitializer {
     public static final ConfigType.BoolConfig disableServerToasts;
     public static final ConfigType.BoolConfig disableCachedRendering;
     public static final ConfigType.StringConfig progCmd;
+    private static final ConfigType.BoolConfig localBackend;
     private static final ConfigType.Category category;
     public static ArrayList<DetachedWindow> windows = new ArrayList<>();
     public static Object2IntArrayMap<UUID> showSoundPositions = new Object2IntArrayMap<>();
     public static Logger logger = LogUtils.getLogger();
-    private static String id;
     private static Path globalMinecraftDirectory;
 
     private static Path figuraExtrasDirectory;
     private static UUID instanceUUID;
 
-    private static ConfigType.BoolConfig localBackend;
+
 
     static {
         try {
@@ -109,7 +109,7 @@ public class FiguraExtras implements ClientModInitializer {
 
             ReceptionistServer server = IPCManager.INSTANCE.getReceptionistServer();
             View.newWindow(server, (ctx, ap) -> {
-                TabView tabView = new TabView(ctx, ap);
+                TabView<ReceptionistServer> tabView = new TabView<>(ctx, ap);
                 ReceptionistServerBackend backend = server.getBackend();
                 tabView.add("Players", View.differential(
                         c -> c.getValue().getUsers(),
