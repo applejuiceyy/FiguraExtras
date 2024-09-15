@@ -1,10 +1,6 @@
-// NOT BUILDING: will be fixed when the official maven gets pre-5
-// you would need to build it locally following some other steps
-
 plugins {
-    id 'fabric-loom' version '1.2-SNAPSHOT'
+    id 'fabric-loom' version '1.4-SNAPSHOT'
     id 'maven-publish'
-    id 'io.github.juuxel.loom-vineflower' version '1.11.0'
 }
 
 version = project.mod_version
@@ -41,9 +37,13 @@ dependencies {
     include(implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.22.0"))
     include(implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc.debug:0.22.0"))
 
-    implementation("com.github.FiguraMC.LuaJ:luaj-core:3.0.8-figura")
-    implementation("com.github.FiguraMC.LuaJ:luaj-jse:3.0.8-figura")
     implementation("com.neovisionaries:nv-websocket-client:2.14")
+
+    include(implementation(project(":LuaBridge")) {
+        exclude group: "org.ow2.asm", module: "asm"
+        exclude group: "org.slf4j", module: "slf4j-api"
+        exclude group: "com.google.guava", module: "guava"
+    })
 }
 
 processResources {

@@ -2,7 +2,7 @@ package com.github.applejuiceyy.figuraextras.mixin.gui;
 
 import com.github.applejuiceyy.figuraextras.ducks.CommandSuggestionsAccess;
 import com.github.applejuiceyy.figuraextras.ducks.EventsAPIAccess;
-import com.github.applejuiceyy.figuraextras.lua.DelayedResponse;
+import com.github.applejuiceyy.figuraextras.lua.figura.DelayedResponse;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.suggestion.Suggestions;
 import net.minecraft.client.Minecraft;

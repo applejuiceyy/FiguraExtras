@@ -282,7 +282,7 @@ public class WindowsIPCFactory extends IPCFactory {
         private final WinNT.HANDLE handle;
         private boolean closed = false;
         private boolean invalidated = false;
-        private AtomicInteger refs;
+        private final AtomicInteger refs;
 
         public NamedPipeInputStream(WinNT.HANDLE handle) {
             this(handle, new AtomicInteger(1));
@@ -308,7 +308,7 @@ public class WindowsIPCFactory extends IPCFactory {
                 return -1;
             }
             ;
-            return bytes[0];
+            return bytes[0] & 0xFF;
         }
 
         @Override
@@ -348,7 +348,7 @@ public class WindowsIPCFactory extends IPCFactory {
         }
     }
 
-    static class CodeIOException extends IOException {
+    public static class CodeIOException extends IOException {
 
         public int code;
 

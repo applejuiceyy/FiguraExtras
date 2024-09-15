@@ -1,7 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura.lua;
 
-import com.github.applejuiceyy.figuraextras.lua.DebuggerAPI;
-import com.github.applejuiceyy.figuraextras.lua.DelayedResponse;
+import com.github.applejuiceyy.figuraextras.lua.figura.DebuggerAPI;
+import com.github.applejuiceyy.figuraextras.lua.figura.DelayedResponse;
 import org.figuramc.figura.lua.FiguraAPIManager;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;

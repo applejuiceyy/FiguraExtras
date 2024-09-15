@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.lua;
+package com.github.applejuiceyy.figuraextras.lua.figura;
 
 import com.github.applejuiceyy.figuraextras.ducks.GlobalsAccess;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;

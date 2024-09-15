@@ -206,7 +206,7 @@ public class UNIXIPCFactory extends IPCFactory {
                     return -1;
                 }
                 if (read == 1) {
-                    return buffer.get(0);
+                    return buffer.get(0) & 0xFF;
                 }
             }
         }

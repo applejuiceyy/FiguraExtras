@@ -5,7 +5,7 @@ import com.github.applejuiceyy.figuraextras.ducks.LuaRuntimeAccess;
 import com.github.applejuiceyy.figuraextras.ducks.LuaTypeManagerAccess;
 import com.github.applejuiceyy.figuraextras.ducks.statics.LuaRuntimeDuck;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.SourceListener;
-import com.github.applejuiceyy.figuraextras.lua.DebuggerAPI;
+import com.github.applejuiceyy.figuraextras.lua.figura.DebuggerAPI;
 import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import it.unimi.dsi.fastutil.ints.IntArraySet;

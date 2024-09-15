@@ -64,6 +64,7 @@ public class FiguraExtras implements ClientModInitializer {
     public static final ConfigType.BoolConfig disableServerToasts;
     public static final ConfigType.BoolConfig disableCachedRendering;
     public static final ConfigType.StringConfig progCmd;
+    public static final ConfigType.IntConfig prepInstructionCount;
     private static final ConfigType.BoolConfig localBackend;
     private static final ConfigType.Category category;
     public static ArrayList<DetachedWindow> windows = new ArrayList<>();
@@ -84,6 +85,8 @@ public class FiguraExtras implements ClientModInitializer {
         }
 
         category = new ConfigType.Category("FiguraExtras");
+
+        prepInstructionCount = new ConfigType.IntConfig("prep_instruction_count", category, 1000000);
         progName = new ConfigType.StringConfig("prog_name", category, "Visual Studio Code");
         progCmd = new ConfigType.StringConfig("prog_cmd", category, "code \"$folder\"");
         disableServerToasts = new ConfigType.BoolConfig("disable_server_toasts", category, false);
@@ -126,6 +129,7 @@ public class FiguraExtras implements ClientModInitializer {
         }).name = Component.literal("Open local backend view");
 
         category.name = Component.literal("FiguraExtras");
+        prepInstructionCount.name = Component.literal("Instruction limit for preprocessor");
         progName.name = Component.literal("Open With Program Name");
         progCmd.name = Component.literal("Open With Program Command");
         disableServerToasts.name = Component.literal("Disable Backend Toasts");

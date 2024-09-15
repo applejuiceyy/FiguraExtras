@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.lua;
+package com.github.applejuiceyy.figuraextras.lua.figura;
 
 import org.figuramc.figura.lua.LuaWhitelist;
 import org.luaj.vm2.LuaValue;

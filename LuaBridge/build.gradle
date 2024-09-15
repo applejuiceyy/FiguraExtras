@@ -1,0 +1,28 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'com.github.applejuiceyy'
+version = '1.0.0'
+
+repositories {
+    maven { url "https://maven.figuramc.org/releases" }
+    maven { url "https://repository.ow2.org" }
+    maven { url 'https://jitpack.io' }
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    api("com.github.FiguraMC.LuaJ:luaj-core:3.0.8-figura")
+    api("com.github.FiguraMC.LuaJ:luaj-jse:3.0.8-figura")
+
+    implementation("org.ow2.asm:asm:9.6")
+    implementation("org.slf4j:slf4j-api:2.0.1")
+    implementation("com.google.guava:guava:33.3.0-jre")
+}
+
+test {
+    useJUnitPlatform()
+}
