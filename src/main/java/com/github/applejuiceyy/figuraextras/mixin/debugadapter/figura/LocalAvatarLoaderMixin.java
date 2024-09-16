@@ -7,6 +7,7 @@ import com.github.applejuiceyy.figuraextras.lua.types.resource.Resources;
 import com.github.applejuiceyy.figuraextras.util.LuaRuntimes;
 import com.github.applejuiceyy.luabridge.LuaRuntime;
 import com.github.applejuiceyy.luabridge.limiting.DefaultInstructionLimiter;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
@@ -22,7 +23,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -42,8 +42,8 @@ public class LocalAvatarLoaderMixin {
         }
     }
 
-    @Inject(method = "lambda$loadAvatar$2", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/avatar/UserData;loadAvatar(Lnet/minecraft/nbt/CompoundTag;)V"), locals = LocalCapture.CAPTURE_FAILHARD, cancellable = true)
-    static private void mutateRead(Path finalPath, UserData target, CallbackInfo ci, CompoundTag tag) {
+    @Inject(method = "lambda$loadAvatar$2", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/avatar/UserData;loadAvatar(Lnet/minecraft/nbt/CompoundTag;)V"), cancellable = true, remap = true)
+    static private void mutateRead(Path finalPath, UserData target, CallbackInfo ci, @Local(ordinal = 0) CompoundTag tag) {
         Path resolve = finalPath.resolve(".preprocess");
         if (resolve.toFile().isDirectory() && resolve.resolve("main.lua").toFile().isFile()) {
             LuaRuntime<MinecraftLuaBridge> luaRuntime = new LuaRuntime<>(
