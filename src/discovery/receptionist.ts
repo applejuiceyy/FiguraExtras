@@ -19,7 +19,9 @@ const discoverySchema = z.array(
         minecraftPath: z.string(),
         figuraPath: z.string(),
         instanceId: z.string(),
-        playerId: z.string(),
+        offlinePlayerId: z.string(),
+        gameProfileId: z.string(),
+        isConnected: z.boolean(),
         world: z.union([
             z.null(),
             world
