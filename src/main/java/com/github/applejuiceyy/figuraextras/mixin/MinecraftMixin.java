@@ -202,7 +202,7 @@ public abstract class MinecraftMixin implements MinecraftAccess {
         profiler.pop();
     }
 
-    @Inject(method = "clearLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("RETURN"))
+    @Inject(method = "clearClientLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("RETURN"))
     void e(CallbackInfo ci) {
         FiguraExtras.updateInformation();
     }

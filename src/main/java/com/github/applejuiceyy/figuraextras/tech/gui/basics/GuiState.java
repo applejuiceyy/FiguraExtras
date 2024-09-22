@@ -613,7 +613,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double amount, double d) {
         return defaultMouseOverEvent(mouseX, mouseY, e -> e.mouseScrolled, mouseScrolled, Element::defaultMouseScrolledBehaviour,
                 element -> element.mouseHoverIntent(mouseX, mouseY) == Element.HoverIntent.INTERACT,
                 new DefaultCancellableEvent.MousePositionAmountEvent(mouseX, mouseY, amount)) != null;

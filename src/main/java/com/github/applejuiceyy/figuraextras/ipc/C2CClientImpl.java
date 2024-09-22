@@ -8,7 +8,6 @@ import com.github.applejuiceyy.figuraextras.ipc.underlying.IPCFactory;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.level.storage.LevelStorageException;
@@ -77,12 +76,15 @@ public class C2CClientImpl implements C2CClient {
             return Util.fail(ResponseErrorCode.InvalidRequest, "In a world");
         }
         if (instance.getLevelSource().levelExists(name)) {
+            CompletableFuture<?> thisFuture;
+            thisFuture = whenLevelLoads = new CompletableFuture<>();
             instance.execute(() -> {
-                Screen screen = instance.screen;
                 instance.forceSetScreen(new GenericDirtMessageScreen(Component.translatable("selectWorld.data_read")));
-                instance.createWorldOpenFlows().loadLevel(screen, name);
+                instance.createWorldOpenFlows().checkForBackupAndLoad(name, () -> {
+                    thisFuture.completeExceptionally(new Throwable("Level was not loaded"));
+                    if (whenLevelLoads == thisFuture) whenLevelLoads = null;
+                });
             });
-            whenLevelLoads = new CompletableFuture<>();
             return whenLevelLoads;
         }
         return Util.fail(ResponseErrorCode.InvalidParams, "World doesn't exist");

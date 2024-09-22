@@ -118,7 +118,7 @@ public class DetachedWindow implements WindowContext {
             public void mouseScrolled(double x, double y, double d) {
                 screenContainer.withContext(() -> {
                     screenContainer.doEvent("beforeMouseScroll", x, y, 0, d);
-                    screenContainer.getScreen().mouseScrolled(x, y, d);
+                    screenContainer.getScreen().mouseScrolled(x, y, 0, d);
                     screenContainer.doEvent("afterMouseScroll", x, y, 0, d);
                 });
             }
