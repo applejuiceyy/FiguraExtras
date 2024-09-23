@@ -10,6 +10,7 @@ import com.github.applejuiceyy.luabridge.limiting.DefaultInstructionLimiter;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraMod;
@@ -27,6 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -102,8 +104,17 @@ public class LocalAvatarLoaderMixin {
                         FiguraMod.sendChatMessage(Component.literal(err.getMessage()).withStyle(ChatFormatting.RED))
                 );
                 ci.cancel();
+                return;
             }
-
         }
+
+        if (FiguraExtras.signAvatars.value == 0) return;
+
+        CompoundTag figuraExtras = new CompoundTag();
+
+        byte[] signature = FiguraExtras.avatarSigner.sign(tag.getAsString().getBytes(StandardCharsets.UTF_8));
+
+        tag.put("figura-extras", figuraExtras);
+        figuraExtras.put("signature", new ByteArrayTag(signature));
     }
 }

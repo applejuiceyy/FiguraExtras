@@ -16,6 +16,7 @@
     "figura.EntityUtilsMixin",
     "figura.ImmediateAvatarRendererAccessor",
     "figura.StatusWidgetMixin",
+    "figura.UserDataMixin",
     "figura.lua.InstructionsMixin",
     "figura.lua.LuaRuntimeAccessor",
     "figura.lua.LuaRuntimeMixin",
