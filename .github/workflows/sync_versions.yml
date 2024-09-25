@@ -1,0 +1,52 @@
+# Automatically build the project and run any configured tests for every push
+# and submitted pull request. This can help catch issues that only occur on
+# certain platforms or Java versions, and provides a first line of defence
+# against bad commits.
+
+name: Sync versions
+on:
+  push:
+    branches:
+      - 1.20.1
+
+
+jobs:
+  probe:
+    if: ${{!startsWith(github.event.head_commit.message, '[SYNC]')}}
+    outputs:
+      branches: ${{steps.branches.outputs.branches}}
+    strategy:
+      matrix:
+        branches: ${{github.event.git}}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Probe branches
+        id: branches
+        run:
+          echo "branches=$(git branch -r --format='%(refname)' | jq -R -s -c '[split("\n").[] | (if contains($GITHUB_REF) or contains("vscode") then empty else . end)]')" >> "$GITHUB_OUTPUT"
+
+
+  transfer:
+    needs: probe
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        branches: ${{fromJson(needs.probe.outputs.branches)}}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{matrix.branches}}
+      - name: Cherry-pick
+        run:
+          git cherry-pick -n ${{github.event.before}}..${{github.event.after}}
+      - name: Commit
+        run:
+          git commit -m "Sync with main version"
+      - name: Push
+        run: git push
