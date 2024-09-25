@@ -51,8 +51,11 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - name: Merge
         run:
-          git merge 1.20.1 -m "Sync with main version"
+          git merge 1.20.1 --no-squash --no-commit --no-ff
+      - name: Commit
+        run: git commit -m "Sync with main version"
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{matrix.branches}}
