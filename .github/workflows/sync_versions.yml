@@ -15,9 +15,6 @@ jobs:
     if: ${{!startsWith(github.event.head_commit.message, '[SYNC]')}}
     outputs:
       branches: ${{steps.branches.outputs.branches}}
-    strategy:
-      matrix:
-        branches: ${{github.event.git}}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
