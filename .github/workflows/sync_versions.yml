@@ -25,7 +25,7 @@ jobs:
       - name: Probe branches
         id: branches
         run:
-          echo "branches=$(git branch -r --format='%(refname)' | jq -R -s -c '[split("\n").[] | (if contains($GITHUB_REF) or contains("vscode") then empty else . end)]')" >> "$GITHUB_OUTPUT"
+          echo "branches=$(git branch -r --format='%(refname:short)' | jq -R -s -c '[split("\n")[:-1][] | .[7:] | select(. != "1.20.1" and . != "vscode")]')" >> "$GITHUB_OUTPUT"
 
 
   transfer:
