@@ -35,6 +35,10 @@ jobs:
       matrix:
         branches: ${{fromJson(needs.probe.outputs.branches)}}
     steps:
+      - name: Setup user
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - name: checkout main repository
         uses: actions/checkout@v3
         with:
