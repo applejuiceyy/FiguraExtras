@@ -52,5 +52,7 @@ jobs:
       - name: Merge
         run:
           git merge 1.20.1 -m "Sync with main version"
-      - name: Push
-        run: git push
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
