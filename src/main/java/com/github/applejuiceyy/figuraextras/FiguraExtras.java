@@ -48,14 +48,20 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import javax.crypto.KeyGenerator;
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 
@@ -65,19 +71,24 @@ public class FiguraExtras implements ClientModInitializer {
     public static final ConfigType.BoolConfig disableCachedRendering;
     public static final ConfigType.StringConfig progCmd;
     public static final ConfigType.IntConfig prepInstructionCount;
+    public static final ConfigType.EnumConfig signAvatars;
     private static final ConfigType.BoolConfig localBackend;
     private static final ConfigType.Category category;
+
     public static ArrayList<DetachedWindow> windows = new ArrayList<>();
     public static Object2IntArrayMap<UUID> showSoundPositions = new Object2IntArrayMap<>();
     public static Logger logger = LogUtils.getLogger();
-    private static Path globalMinecraftDirectory;
 
+    private static Path globalMinecraftDirectory;
     private static Path figuraExtrasDirectory;
+
     private static UUID instanceUUID;
+    public static SymmetricSigner avatarSigner;
 
 
 
     static {
+
         try {
             Class.forName("org.figuramc.figura.config.Configs");
         } catch (ClassNotFoundException e) {
@@ -91,10 +102,22 @@ public class FiguraExtras implements ClientModInitializer {
         progCmd = new ConfigType.StringConfig("prog_cmd", category, "code \"$folder\"");
         disableServerToasts = new ConfigType.BoolConfig("disable_server_toasts", category, false);
         disableCachedRendering = new ConfigType.BoolConfig("disable_cached_rendering", category, false);
+        signAvatars = new ConfigType.EnumConfig("sign_avatars", category, 2, 4) {{
+            enumList = List.of(
+                    Component.literal("Skip Signing"),
+                    Component.literal("Ignore Signing"),
+                    Component.literal("Warn Incompatible Signatures"),
+                    Component.literal("Reject Incompatible Signatures")
+            );
+            enumTooltip = List.of(
+                    Component.literal("Skip signing entirely"),
+                    Component.literal("Skip verifying signatures but still sign"),
+                    Component.literal("Emit a warning when a signature isn't matching"),
+                    Component.literal("reject when a signature isn't matching")
+            );
+        }};
 
-        ConfigType.ButtonConfig kofi = new ConfigType.ButtonConfig("kofi", category, () -> {
-            Util.getPlatform().openUri("https://ko-fi.com/theapplejuice");
-        });
+        ConfigType.ButtonConfig kofi = new ConfigType.ButtonConfig("kofi", category, () -> Util.getPlatform().openUri("https://ko-fi.com/theapplejuice"));
         kofi.name = Component.literal("Huh? Kofi? Is that some kind of lettuce?").withStyle(ChatFormatting.GREEN);
 
         localBackend = new ConfigType.BoolConfig("divert_backend", category, false) {
@@ -134,6 +157,7 @@ public class FiguraExtras implements ClientModInitializer {
         progCmd.name = Component.literal("Open With Program Command");
         disableServerToasts.name = Component.literal("Disable Backend Toasts");
         disableCachedRendering.name = Component.literal("Disable Cached Rendering");
+        signAvatars.name = Component.literal("Sign Avatars");
     }
 
     public static void sendBrandedMessage(Component text) {
@@ -234,9 +258,14 @@ public class FiguraExtras implements ClientModInitializer {
             } catch (FileAlreadyExistsException ignored) {
             }
 
-            File file = figuraExtrasDirectory.resolve("id").toFile();
-            if (file.exists()) {
-                try (FileReader reader = new FileReader(file)) {
+            try {
+                Files.createDirectories(globalMinecraftDirectory);
+            } catch (FileAlreadyExistsException ignored) {
+            }
+
+            Path file = figuraExtrasDirectory.resolve("id");
+            if (Files.exists(file)) {
+                try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(file))) {
                     char[] uuid = new char[36];
                     if (reader.read(uuid) == 36 && reader.read() == -1) {
                         instanceUUID = UUID.fromString(String.valueOf(uuid));
@@ -245,11 +274,53 @@ public class FiguraExtras implements ClientModInitializer {
             }
             if (instanceUUID == null) {
                 instanceUUID = UUID.randomUUID();
-                try (FileWriter writer = new FileWriter(file)) {
-                    writer.write(instanceUUID.toString());
-                }
+                Files.write(file, instanceUUID.toString().getBytes());
             }
-        } catch (IOException e) {
+
+            SecretKey key = null;
+
+            file = globalMinecraftDirectory.resolve("avatarkey");
+            Mac mac = Mac.getInstance("HmacSHA256");
+            reading:
+            if (Files.exists(file)) {
+                logger.info("Sourcing generated secret key");
+                SecretKeySpec hmacSHA256 = new SecretKeySpec(Files.readAllBytes(file), "HmacSHA256");
+
+                try {
+                    mac.init(hmacSHA256);
+                } catch (InvalidKeyException e) {
+                    logger.warn("Deleting key file because apparently it's invalid");
+                    Files.delete(file);
+                    break reading;
+                }
+
+                key = hmacSHA256;
+            }
+
+            if (key == null) {
+                logger.info("Generating a new secret key");
+                KeyGenerator generator = KeyGenerator.getInstance("HmacSHA256");
+                generator.init(1024 * 8);
+                key = generator.generateKey();
+                try {
+                    mac.init(key);
+                } catch (InvalidKeyException e) {
+                    throw new RuntimeException(e);
+                }
+                Files.write(file, key.getEncoded());
+            }
+            avatarSigner = new SymmetricSigner() {
+                @Override
+                public byte[] sign(byte[] bytes) {
+                    return mac.doFinal(bytes);
+                }
+
+                @Override
+                public boolean verify(byte[] message, byte[] signature) {
+                    return Arrays.equals(sign(message), signature);
+                }
+            };
+        } catch (IOException | NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
 
@@ -318,5 +389,11 @@ public class FiguraExtras implements ClientModInitializer {
                 }
             }
         });
+    }
+
+    public interface SymmetricSigner {
+        byte[] sign(byte[] bytes);
+
+        boolean verify(byte[] message, byte[] signature);
     }
 }

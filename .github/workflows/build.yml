@@ -12,6 +12,11 @@ on:
   push:
     branches-ignore:
       - vscode
+    paths:
+      - "**/*.java"
+      - "./build.gradle"
+      - "./gradle.properties"
+      - "./settings.gradle"
 
   workflow_dispatch:
 
