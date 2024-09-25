@@ -35,10 +35,16 @@ jobs:
       matrix:
         branches: ${{fromJson(needs.probe.outputs.branches)}}
     steps:
+      - name: checkout main repository
+        uses: actions/checkout@v3
+        with:
+          ref: 1.20.1
+          fetch-depth: 0
       - name: checkout repository
         uses: actions/checkout@v3
         with:
           ref: ${{matrix.branches}}
+          fetch-depth: 0
       - name: Cherry-pick
         run:
           git merge 1.20.1
