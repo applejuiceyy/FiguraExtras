@@ -35,10 +35,6 @@ jobs:
       matrix:
         branches: ${{fromJson(needs.probe.outputs.branches)}}
     steps:
-      - name: Setup user
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - name: checkout main repository
         uses: actions/checkout@v3
         with:
@@ -49,7 +45,11 @@ jobs:
         with:
           ref: ${{matrix.branches}}
           fetch-depth: 0
-      - name: Cherry-pick
+      - name: Setup user
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Merge
         run:
           git merge 1.20.1
       - name: Commit
