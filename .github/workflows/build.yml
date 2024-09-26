@@ -18,7 +18,7 @@ on:
 
   workflow_dispatch:
 
-run-name: "[${{github.ref}}] ${{github.event_name == 'workflow_dispatch' && 'Workflow Dispatch' || (github.event_name == 'push' && github.event.head_commit.message || 'PR Verification')}}"
+run-name: "[${{github.ref_name}}] ${{github.event_name == 'workflow_dispatch' && 'Workflow Dispatch' || (github.event_name == 'push' && github.event.head_commit.message || 'PR Verification')}}"
 
 jobs:
   build:
