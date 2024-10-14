@@ -10,6 +10,7 @@ import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
 import org.apache.commons.codec.binary.Hex;
@@ -85,7 +86,7 @@ public class UserDataMixin implements UserDataAccess {
                     byte[] bytes = bucket.get(FiguraExtras.HOST_AVATAR);
                     bucket.set(CommonOps.TIME, Instant.now());
                     try {
-                        nbtVar.set(NbtIo.readCompressed(new ByteArrayInputStream(bytes)));
+                        nbtVar.set(NbtIo.readCompressed(new ByteArrayInputStream(bytes), NbtAccounter.unlimitedHeap()));
                         guestNbt = n;
                     } catch (IOException e) {
                         throw new RuntimeException(e);
