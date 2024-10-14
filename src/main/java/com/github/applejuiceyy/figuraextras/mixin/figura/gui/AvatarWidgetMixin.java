@@ -1,6 +1,7 @@
-package com.github.applejuiceyy.figuraextras.mixin.figura;
+package com.github.applejuiceyy.figuraextras.mixin.figura.gui;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
+import com.github.applejuiceyy.figuraextras.mixin.figura.AvatarWidgetAccessor;
 import net.minecraft.Util;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatar.local.LocalAvatarFetcher;

@@ -2,6 +2,7 @@ package com.github.applejuiceyy.figuraextras.mixin.figura.networking;
 
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.views.avatar.http.SplittingSubscription;
+import com.llamalad7.mixinextras.sugar.Local;
 import org.figuramc.figura.lua.api.data.FiguraFuture;
 import org.figuramc.figura.lua.api.net.HttpRequestsAPI;
 import org.spongepowered.asm.mixin.Final;
@@ -12,7 +13,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.io.InputStream;
 import java.net.http.HttpRequest;
@@ -87,10 +87,9 @@ public class HttpRequestBuilderMixin {
 
     @Inject(
             method = "send",
-            at = @At(value = "RETURN"),
-            locals = LocalCapture.CAPTURE_FAILEXCEPTION
+            at = @At(value = "RETURN")
     )
-    void e(CallbackInfoReturnable<FiguraFuture<HttpRequestsAPI.HttpResponse>> cir, String uri, HttpRequest req, FiguraFuture<HttpRequestsAPI.HttpResponse> future, CompletableFuture<HttpResponse<InputStream>> asyncResponse) {
+    void e(CallbackInfoReturnable<FiguraFuture<HttpRequestsAPI.HttpResponse>> cir, @Local HttpRequest req, @Local CompletableFuture<HttpResponse<InputStream>> asyncResponse) {
         ((AvatarAccess) ((NetworkingAPIAccessor) ((HttpRequestsAPIAccessor) parent).getParent()).getOwner())
                 .figuraExtrass$getNetworkLogger()
                 .getSink()

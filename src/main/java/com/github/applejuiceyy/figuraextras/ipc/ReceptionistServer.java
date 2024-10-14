@@ -4,6 +4,8 @@ import com.github.applejuiceyy.figuraextras.ipc.backend.ReceptionistServerBacken
 import com.github.applejuiceyy.figuraextras.ipc.protocol.*;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
+import org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint;
+import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,10 +49,12 @@ public class ReceptionistServer implements AutoCloseable {
 
     public C2CServer selfConnect(C2CClientImpl C2CClient) {
         logger.info("Self-connected");
+
         ServerClientInterface e = new ServerClientInterface(C2CClient::onDisconnect);
+        C2CServer object = ServiceEndpoints.toServiceObject(new GenericEndpoint(e), C2CServer.class);
         allClients.add(e);
-        C2CClient.setServer(e);
-        return e;
+        C2CClient.setServer(object);
+        return object;
     }
 
     public ReceptionistServerBackend getBackend() {

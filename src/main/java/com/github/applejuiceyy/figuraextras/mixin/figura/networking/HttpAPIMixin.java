@@ -30,7 +30,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -86,11 +88,11 @@ public abstract class HttpAPIMixin {
             return bodySubscriber.getBody().toCompletableFuture().join();
         }).ifPresent(s -> query.put("body", Hex.encodeHexString(s)));
 
-        CompletableFuture<?> requested = IPCManager.INSTANCE.getC2CServer().getBackend().request("backend/" + name, query);
+        CompletableFuture<?> requested = IPCManager.INSTANCE.getC2CServer().getBackend().request("backend/" + name, query.isEmpty() ? null : query);
 
         try {
-            consumer.accept(200, (String) requested.join());
-        } catch (CompletionException e) {
+            consumer.accept(200, (String) requested.get(5, TimeUnit.SECONDS));
+        } catch (ExecutionException e) {
             if (e.getCause() instanceof ResponseErrorException err) {
                 String message = err.getResponseError().getMessage();
                 if (message.equals("not logged in")) {
@@ -104,7 +106,11 @@ public abstract class HttpAPIMixin {
                 consumer.accept(500, null);
                 return;
             }
-            throw e;
+            throw new RuntimeException(e.getCause());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+            consumer.accept(500, null);
         }
     }
 

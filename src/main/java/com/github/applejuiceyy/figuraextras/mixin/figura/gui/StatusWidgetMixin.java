@@ -1,4 +1,4 @@
-package com.github.applejuiceyy.figuraextras.mixin.figura;
+package com.github.applejuiceyy.figuraextras.mixin.figura.gui;
 
 import com.github.applejuiceyy.figuraextras.ipc.IPCManager;
 import net.minecraft.ChatFormatting;
