@@ -1,359 +1,242 @@
 package com.github.applejuiceyy.figuraextras.ipc.backend;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
+import com.github.applejuiceyy.figuraextras.fsstorage.Bucket;
+import com.github.applejuiceyy.figuraextras.fsstorage.CommonOps;
+import com.github.applejuiceyy.figuraextras.fsstorage.DataId;
+import com.github.applejuiceyy.figuraextras.fsstorage.storage.Storage;
+import com.github.applejuiceyy.figuraextras.util.Util;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Streams;
 import net.minecraft.util.Tuple;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
+import static com.github.applejuiceyy.figuraextras.fsstorage.CommonOps.TIME;
+
 public class ReceptionistServerBackend {
+    private static final DataId.RW<UUID> UUID_RW = new DataId.RW<>() {
+        @Override
+        public UUID read(DataInputStream stream) throws IOException {
+            return new UUID(stream.readLong(), stream.readLong());
+        }
+
+        @Override
+        public void write(UUID data, DataOutputStream stream) throws IOException {
+            stream.writeLong(data.getMostSignificantBits());
+            stream.writeLong(data.getLeastSignificantBits());
+        }
+    };
+    private static final DataId.RW<String> STRING_RW = new DataId.RW<>() {
+        @Override
+        public String read(DataInputStream stream) throws IOException {
+            return stream.readUTF();
+        }
+
+        @Override
+        public void write(String data, DataOutputStream stream) throws IOException {
+            stream.writeUTF(data);
+        }
+    };
+    private static final DataId.RW<BitSet> BIT_SET_RW = new DataId.RW<>() {
+        @Override
+        public BitSet read(DataInputStream stream) throws DataId.ParseException, IOException {
+            return BitSet.valueOf(stream.readAllBytes());
+        }
+
+        @Override
+        public void write(BitSet data, DataOutputStream stream) throws IOException {
+            stream.write(data.toByteArray());
+        }
+    };
+
+    private static final DataId<byte[]> AVATAR_DATA = DataId.of(DataId.PASS_THROUGH, "avatar", false);
+    private static final DataId<byte[]> AVATAR_HASH = DataId.of(DataId.PASS_THROUGH, "hash");
+    private static final DataId<List<UUID>> AVATAR_USE = DataId.of(DataId.repeating(UUID_RW), "use");
+
+    private static final DataId<List<Tuple<UUID, String>>> USER_EQUIPPED = DataId.of(DataId.repeating(DataId.concat(UUID_RW, STRING_RW)), "equipped");
+    private static final DataId<BitSet> USER_SPECIAL_BADGES = DataId.of(BIT_SET_RW, "special");
+    private static final DataId<BitSet> USER_PRIDE_BADGES = DataId.of(BIT_SET_RW, "pride");
+
     public static Logger logger = LoggerFactory.getLogger("FiguraExtras:Backend");
-    private final Path backendDirectory;
-    private final Path equipmentPath;
-    private final Path avatarPath;
+    private final Storage playerStorage;
+    private final Storage avatarStorage;
 
     public ReceptionistServerBackend() {
-        backendDirectory = FiguraExtras.getGlobalMinecraftDirectory().resolve("backend");
-        equipmentPath = backendDirectory.resolve("players");
-        avatarPath = backendDirectory.resolve("avatars");
-        List<CleanableBackendObject<?>> cleaningObjects = new ArrayList<>();
-        getAvatars().forEach(cleaningObjects::add);
-        getUsers().forEach(cleaningObjects::add);
-        for (CleanableBackendObject<?> cleaningObject : cleaningObjects) {
-            // 10 days
-            if (System.currentTimeMillis() > cleaningObject.getUpkeep().getTime() + 1000 * 60 * 60 * 24 * 10) {
-                cleaningObject.delete();
-            }
-        }
+        Path backendDirectory = FiguraExtras.getGlobalMinecraftDirectory().resolve("backend");
+        Path playerPath = backendDirectory.resolve("players");
+        Path avatarPath = backendDirectory.resolve("avatars");
+
+        playerStorage = Storage.create(playerPath, Set.of(USER_EQUIPPED, USER_PRIDE_BADGES, USER_SPECIAL_BADGES, TIME), 1);
+        avatarStorage = Storage.create(avatarPath, Set.of(AVATAR_DATA, AVATAR_HASH, AVATAR_USE, TIME), 2);
+
+        CommonOps.pruneBucketsByTime(() -> Iterators.concat(playerStorage.iterator(), avatarStorage.iterator()), Duration.ofDays(10));
     }
 
-    private void write(Path path, CapriciousConsumer<DataOutputStream> stream) {
-        write(path, stream, false);
-    }
-
-    private void write(Path path, byte[] bytes) {
-        write(path, bytes, false);
-    }
-
-    private void write(Path path, CapriciousConsumer<DataOutputStream> stream, boolean append) {
-        File file = path.toFile();
-        File parent = path.getParent().toFile();
-        if (!parent.exists() && !parent.mkdirs()) {
-            throw new RuntimeException("Could not create necessary folders");
-        }
-        logger.info("Writing to " + path);
-        try (DataOutputStream fp = new DataOutputStream(new FileOutputStream(file, append))) {
-            stream.accept(fp);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void write(Path path, byte[] bytes, boolean append) {
-        write(path, o -> o.write(bytes), append);
-    }
-
-    private void delete(Path path) {
-        if (!path.startsWith(backendDirectory)) {
-            return;
-        }
-        File file = path.toFile();
-        if (file.exists()) {
-            logger.info("Deleting " + path);
-            if (!file.delete()) {
-                throw new RuntimeException("Could not delete file");
-            }
-        }
-        Path parent = path.getParent();
-        if (parent == null) {
-            return;
-        }
-        if (parent.startsWith(backendDirectory) && !backendDirectory.equals(parent)) {
-            File folder = parent.toFile();
-            if (Objects.requireNonNull(folder.list()).length == 0) {
-                delete(parent);
-            }
-        }
-    }
-
-    private <T> T read(Path path, CapriciousFunction<DataInputStream, T> stream) {
-        File file = path.toFile();
-        if (!file.exists() || file.isDirectory()) {
-            return null;
-        }
-        logger.info("Reading from " + path);
-        try (DataInputStream fp = new DataInputStream(new FileInputStream(file))) {
-            return stream.apply(fp);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private byte @Nullable [] read(Path path) {
-        return read(path, InputStream::readAllBytes);
-    }
-
-    private <T> List<T> repeatedRead(Path path, CapriciousFunction<DataInputStream, T> consumer) {
-        return read(path, i -> {
-            ArrayList<T> things = new ArrayList<>();
-
-            while (true) {
-                try {
-                    things.add(consumer.apply(i));
-                } catch (EOFException ignored) {
-                    break;
-                }
-            }
-
-            return things;
-        });
-    }
-
+    @Nullable
     public BackendAvatar getAvatar(UUID owner, String id) {
-        return new BackendAvatar(owner, id);
+        Bucket bucket = avatarStorage.getBucket(owner.toString(), id);
+        return bucket == null ? null : new BackendAvatar(bucket);
     }
 
+    public BackendAvatar createAvatar(UUID owner, String id, byte[] bytes) {
+        return new BackendAvatar(
+                avatarStorage
+                        .createBucket(owner.toString(), id)
+                        .data(AVATAR_DATA, bytes)
+                        .data(AVATAR_USE, List.of())
+                        .data(TIME, Instant.now())
+                        .data(AVATAR_HASH, Util.hashBytes(bytes))
+                        .create()
+        );
+    }
+
+    public BackendUser getOrCreateUser(UUID user) {
+        BackendUser backendUser = getUser(user);
+        if (backendUser == null) {
+            return createUser(user);
+        }
+        return backendUser;
+    }
+
+    @Nullable
     public BackendUser getUser(UUID id) {
-        return new BackendUser(id);
+        Bucket bucket = playerStorage.getBucket(id.toString());
+        return bucket == null ? null : new BackendUser(bucket);
+    }
+
+    public BackendUser createUser(UUID user) {
+        return new BackendUser(
+                playerStorage.createBucket(user.toString())
+                        .data(TIME, Instant.now())
+                        .data(USER_EQUIPPED, List.of())
+                        .data(USER_PRIDE_BADGES, new BitSet())
+                        .data(USER_SPECIAL_BADGES, new BitSet())
+                        .create()
+        );
     }
 
     public Iterable<BackendAvatar> getAvatars() {
-        return () -> {
-            File file = avatarPath.toFile();
-            if (!file.exists()) {
-                return new Iterator<>() {
-                    @Override
-                    public boolean hasNext() {
-                        return false;
-                    }
+        return () -> new Iterator<>() {
+            final Iterator<Bucket> bucketIterator = avatarStorage.iterator();
 
-                    @Override
-                    public BackendAvatar next() {
-                        throw new NoSuchElementException();
-                    }
-                };
+            @Override
+            public boolean hasNext() {
+                return bucketIterator.hasNext();
             }
-            return Arrays.stream(
-                            Objects.requireNonNull(file.list())
-                    )
-                    .filter(l -> avatarPath.resolve(l).toFile().isDirectory())
-                    .flatMap(l ->
-                            Arrays.stream(
-                                            Objects.requireNonNull(avatarPath.resolve(l).toFile().list())
-                                    )
-                                    .filter(o -> o.endsWith(".content"))
-                                    .map(o -> new Tuple<>(l, o.substring(0, o.length() - ".content".length())))
-                    )
-                    .map(t -> new BackendAvatar(UUID.fromString(t.getA()), t.getB())).iterator();
+
+            @Override
+            public BackendAvatar next() {
+                return new BackendAvatar(bucketIterator.next());
+            }
         };
     }
 
     public Iterable<BackendUser> getUsers() {
-        return () -> {
-            File file = equipmentPath.toFile();
-            if (!file.exists()) {
-                return new Iterator<>() {
-                    @Override
-                    public boolean hasNext() {
-                        return false;
-                    }
+        return () -> new Iterator<>() {
+            final Iterator<Bucket> bucketIterator = playerStorage.iterator();
 
-                    @Override
-                    public BackendUser next() {
-                        throw new NoSuchElementException();
-                    }
-                };
+            @Override
+            public boolean hasNext() {
+                return bucketIterator.hasNext();
             }
-            return Arrays.stream(
-                            Objects.requireNonNull(file.list())
-                    )
-                    .filter(s -> s.endsWith(".equipped"))
-                    .map(s -> new BackendUser(UUID.fromString(s.substring(0, s.length() - ".equipped".length()))))
-                    .iterator();
+
+            @Override
+            public BackendUser next() {
+                return new BackendUser(bucketIterator.next());
+            }
         };
-    }
-
-    interface CapriciousConsumer<T> {
-        void accept(T thing) throws IOException;
-    }
-
-    interface CapriciousFunction<T, V> {
-        V apply(T thing) throws IOException;
     }
 
     public record Collateral(List<BackendUser> changedUsers) {
     }
 
-    public class BackendAvatar extends CleanableBackendObject<Collateral> {
-        private final UUID owner;
-        private final String id;
-
-        public BackendAvatar(UUID owner, String id) {
-            this.owner = owner;
-            this.id = id;
-        }
-
-        public UUID getOwner() {
-            return owner;
-        }
-
-        public String getId() {
-            return id;
+    public class BackendAvatar extends UpkeptObject {
+        public BackendAvatar(Bucket next) {
+            super(next);
         }
 
         public byte[] getContent() {
-            checkExists();
-            return Objects.requireNonNull(
-                    read(getExtension("content"), InputStream::readAllBytes)
-            );
+            return in.get(AVATAR_DATA);
         }
 
         public void setContent(byte[] bytes) {
-            if (!exists()) {
-                write(getExtension("use"), new byte[0]);
-            }
-            write(getExtension("content"), bytes);
-            MessageDigest instance;
-            try {
-                instance = MessageDigest.getInstance("SHA-256");
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException(e);
-            }
-            Formatter formatter = new Formatter();
-            for (byte b : instance.digest(bytes)) {
-                formatter.format("%02x", b);
-            }
-            String hash = formatter.toString();
-            write(getExtension("hash"), o -> o.writeUTF(hash));
-            upkeep();
+            in.set(AVATAR_DATA, bytes);
+            in.set(AVATAR_HASH, Util.hashBytes(bytes));
         }
 
-        public BackendUser[] getUsers() {
-            checkExists();
-            return repeatedRead(getExtension("use"), i -> new BackendUser(new UUID(i.readLong(), i.readLong())))
-                    .toArray(new BackendUser[0]);
-        }
-
-        public String getHash() {
-            checkExists();
-            return read(getExtension("hash"), DataInput::readUTF);
+        public byte[] getHash() {
+            return in.get(AVATAR_HASH);
         }
 
         public Collateral delete() {
-            checkExists();
             Collateral collateral = new Collateral(new ArrayList<>());
             for (BackendUser user : getUsers()) {
                 user.setEquippedAvatars(
                         Arrays.stream(user.getEquippedAvatars())
-                                .filter(avatar -> !(avatar.id.equals(this.id) && avatar.owner.equals(this.owner)))
+                                .filter(avatar -> !(avatar.getId().equals(this.getId()) && avatar.getOwner().equals(this.getOwner())))
                                 .toArray(BackendAvatar[]::new),
                         collateral
                 );
             }
-            for (String ext : new String[]{"content", "hash", "use", "time"}) {
-                ReceptionistServerBackend.this.delete(getExtension(ext));
-            }
+            in.delete();
             return collateral;
         }
 
+        public BackendUser[] getUsers() {
+            return in.get(AVATAR_USE)
+                    .stream()
+                    .map(p -> playerStorage.getBucket(p.toString()))
+                    .filter(Objects::nonNull)
+                    .map(BackendUser::new)
+                    .toArray(BackendUser[]::new);
+        }
+
+        public String getId() {
+            return in.getBuckets()[1];
+        }
+
+        public UUID getOwner() {
+            return UUID.fromString(in.getBuckets()[0]);
+        }
+
         public void addUser(UUID user) {
-            checkExists();
-            write(getExtension("use"), o -> {
-                o.writeLong(user.getMostSignificantBits());
-                o.writeLong(user.getLeastSignificantBits());
-            }, true);
-            upkeep();
+            List<UUID> uuids = in.get(AVATAR_USE);
+            uuids.add(user);
+            in.set(AVATAR_USE, uuids);
         }
 
         public void removeUser(UUID user) {
-            checkExists();
-            byte[] users = read(getExtension("use"));
-            assert users != null;
-            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(users));
-            write(getExtension("use"), o -> {
-                while (true) {
-                    long most;
-                    long least;
-                    try {
-                        most = dis.readLong();
-                        least = dis.readLong();
-                    } catch (EOFException ignored) {
-                        break;
-                    }
-                    if (most == user.getMostSignificantBits() && least == user.getLeastSignificantBits()) {
-                        dis.transferTo(o);
-                        break;
-                    } else {
-                        o.writeLong(most);
-                        o.writeLong(least);
-                    }
-                }
-            });
-            upkeep();
-        }
-
-        @Override
-        protected Path getContainer() {
-            return avatarPath.resolve(owner.toString());
-        }
-
-        @Override
-        protected String getSelfName() {
-            return id;
-        }
-
-        @Override
-        public boolean exists() {
-            return getExtension("content").toFile().exists();
+            List<UUID> uuids = in.get(AVATAR_USE);
+            uuids.remove(user);
+            in.set(AVATAR_USE, uuids);
         }
     }
 
-    public class BackendUser extends CleanableBackendObject<Void> {
 
-        private final UUID uuid;
+    public class BackendUser extends UpkeptObject {
 
-        public BackendUser(UUID uuid) {
-            this.uuid = uuid;
-        }
-
-        public BackendAvatar[] getEquippedAvatars() {
-            checkExists();
-            return repeatedRead(getExtension("equipped"), i -> new BackendAvatar(
-                    new UUID(i.readLong(), i.readLong()),
-                    i.readUTF()
-            )).toArray(new BackendAvatar[0]);
+        public BackendUser(Bucket next) {
+            super(next);
         }
 
         public Iterable<BackendAvatar> getUploadedAvatars() {
-            return () -> {
-                File folder = avatarPath.resolve(uuid.toString()).toFile();
-                if (!folder.exists()) {
-                    return new Iterator<>() {
-                        @Override
-                        public boolean hasNext() {
-                            return false;
-                        }
+            return () -> Streams.stream(avatarStorage.iterate(getUuid().toString()))
+                    .map(BackendAvatar::new)
+                    .iterator();
+        }
 
-                        @Override
-                        public BackendAvatar next() {
-                            throw new NoSuchElementException();
-                        }
-                    };
-                }
-                return Arrays.stream(
-                                Objects.requireNonNull(folder.list())
-                        )
-                        .filter(o -> o.endsWith(".content"))
-                        .map(o -> o.substring(0, o.length() - ".content".length()))
-                        .map(s -> new BackendAvatar(uuid, s))
-                        .iterator();
-            };
+        public UUID getUuid() {
+            return UUID.fromString(in.getBuckets()[0]);
         }
 
         public Collateral setEquippedAvatars(BackendAvatar[] newAvatars) {
@@ -363,113 +246,66 @@ public class ReceptionistServerBackend {
         }
 
         protected void setEquippedAvatars(BackendAvatar[] newAvatars, Collateral collateral) {
-            boolean p = !exists();
-            BackendAvatar[] avatars = exists() ? getEquippedAvatars() : new BackendAvatar[0];
-            write(getExtension("equipped"), o -> {
-                for (BackendAvatar newAvatar : newAvatars) {
-                    o.writeLong(newAvatar.getOwner().getMostSignificantBits());
-                    o.writeLong(newAvatar.getOwner().getLeastSignificantBits());
-                    o.writeUTF(newAvatar.getId());
-                }
-            });
+            BackendAvatar[] oldAvatars = getEquippedAvatars();
+            in.set(USER_EQUIPPED, Arrays.stream(newAvatars).map(a -> new Tuple<>(a.getOwner(), a.getId())).toList());
+
             for (BackendAvatar newAvatar : newAvatars) {
-                newAvatar.addUser(uuid);
+                newAvatar.addUser(getUuid());
             }
-            for (BackendAvatar avatar : avatars) {
-                avatar.removeUser(uuid);
+            for (BackendAvatar avatar : oldAvatars) {
+                avatar.removeUser(getUuid());
             }
+
             collateral.changedUsers().add(this);
-            upkeep();
-            if (p) {
-                setPrideBadges(new BitSet());
-                setSpecialBadges(new BitSet());
-            }
+        }
+
+        public BackendAvatar[] getEquippedAvatars() {
+            return in.get(USER_EQUIPPED)
+                    .stream()
+                    .map(p -> avatarStorage.getBucket(p.getA().toString(), p.getB()))
+                    .filter(Objects::nonNull)
+                    .map(BackendAvatar::new)
+                    .toArray(BackendAvatar[]::new);
         }
 
         public BitSet getPrideBadges() {
-            checkExists();
-            return BitSet.valueOf(Objects.requireNonNull(read(getExtension("pbadges"))));
+            return in.get(USER_PRIDE_BADGES);
         }
 
         public void setPrideBadges(BitSet badges) {
-            checkExists();
-            write(getExtension("pbadges"), badges.toByteArray());
+            in.set(USER_PRIDE_BADGES, badges);
         }
 
         public BitSet getSpecialBadges() {
-            checkExists();
-            return BitSet.valueOf(Objects.requireNonNull(read(getExtension("sbadges"))));
+            return in.get(USER_SPECIAL_BADGES);
         }
 
         public void setSpecialBadges(BitSet badges) {
-            checkExists();
-            write(getExtension("sbadges"), badges.toByteArray());
+            in.set(USER_SPECIAL_BADGES, badges);
         }
 
-        public UUID getUuid() {
-            return uuid;
-        }
+        public void delete() {
+            for (BackendAvatar user : getEquippedAvatars()) {
+                user.removeUser(getUuid());
+            }
 
-        @Override
-        protected Path getContainer() {
-            return equipmentPath;
-        }
-
-        @Override
-        protected String getSelfName() {
-            return uuid.toString();
-        }
-
-        @Override
-        public boolean exists() {
-            return getExtension("equipped").toFile().exists();
-        }
-
-        @Override
-        public Void delete() {
-            setEquippedAvatars(new BackendAvatar[0]);
-            ReceptionistServerBackend.this.delete(getExtension("equipped"));
-            ReceptionistServerBackend.this.delete(getExtension("time"));
-            ReceptionistServerBackend.this.delete(getExtension("sbadges"));
-            ReceptionistServerBackend.this.delete(getExtension("pbadges"));
-            return null;
+            in.delete();
         }
     }
 
-    abstract class CleanableBackendObject<COLLATERAL> {
-        abstract protected Path getContainer();
+    protected class UpkeptObject {
+        protected final Bucket in;
 
-        abstract protected String getSelfName();
-
-        abstract public boolean exists();
-
-        abstract public COLLATERAL delete();
-
-        public Date getUpkeep() {
-            checkExists();
-            return Objects.requireNonNull(
-                    read(getExtension("time"), i -> new Date(new DataInputStream(i).readLong()))
-            );
+        public UpkeptObject(Bucket next) {
+            in = next;
         }
 
         public void upkeep() {
-            checkExists();
-            write(getExtension("time"), o -> o.writeLong(System.currentTimeMillis()));
+            in.set(TIME, Instant.now());
         }
 
-        protected void checkExists() {
-            if (!exists()) {
-                throw new NoSuchElementException();
-            }
-        }
-
-        Path getExtension(String name) {
-            Path container = getContainer();
-
-            return container.resolve(getSelfName()
-                    .replace("\\", "")
-                    .replace("/", "")
-                    .replace(container.getFileSystem().getSeparator(), "") + "." + name);
+        public Instant getUpkeep() {
+            return in.get(TIME);
         }
     }
 }

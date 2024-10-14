@@ -2,6 +2,9 @@ package com.github.applejuiceyy.figuraextras;
 
 
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
+import com.github.applejuiceyy.figuraextras.fsstorage.CommonOps;
+import com.github.applejuiceyy.figuraextras.fsstorage.DataId;
+import com.github.applejuiceyy.figuraextras.fsstorage.storage.Storage;
 import com.github.applejuiceyy.figuraextras.ipc.IPCManager;
 import com.github.applejuiceyy.figuraextras.ipc.ReceptionistServer;
 import com.github.applejuiceyy.figuraextras.ipc.backend.ReceptionistServerBackend;
@@ -59,10 +62,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.time.Duration;
+import java.util.*;
 import java.util.function.UnaryOperator;
 
 public class FiguraExtras implements ClientModInitializer {
@@ -75,6 +76,8 @@ public class FiguraExtras implements ClientModInitializer {
     private static final ConfigType.BoolConfig localBackend;
     private static final ConfigType.Category category;
 
+    public static final DataId<byte[]> HOST_AVATAR = DataId.of(DataId.PASS_THROUGH, "data", false);
+
     public static ArrayList<DetachedWindow> windows = new ArrayList<>();
     public static Object2IntArrayMap<UUID> showSoundPositions = new Object2IntArrayMap<>();
     public static Logger logger = LogUtils.getLogger();
@@ -84,6 +87,8 @@ public class FiguraExtras implements ClientModInitializer {
 
     private static UUID instanceUUID;
     public static SymmetricSigner avatarSigner;
+
+    public static Storage hostSideStorage;
 
 
 
@@ -323,6 +328,10 @@ public class FiguraExtras implements ClientModInitializer {
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
+
+        hostSideStorage = Storage.create(globalMinecraftDirectory.resolve("host-avatar-nbt"), Set.of(CommonOps.TIME, HOST_AVATAR), 1);
+
+        CommonOps.pruneBucketsByTime(hostSideStorage, Duration.ofDays(30));
 
         updateInformation();
         IPCManager.INSTANCE.enableConnections(true);

@@ -13,9 +13,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import org.figuramc.figura.avatar.Badges;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Date;
 
 public class PlayerInstance implements Lifecycle {
     private final ArrayList<Button> prideButtons;
@@ -30,7 +32,7 @@ public class PlayerInstance implements Lifecycle {
 
         root.setSurface(Surface.contextBackground());
 
-        root.add(user.getUuid().toString() + " (getting deleted in " + (10 - (new Date().getTime() - user.getUpkeep().getTime()) / 1000 / 60 / 60 / 24) + " days)");
+        root.add(user.getUuid().toString() + " (getting deleted in " + ChronoUnit.HOURS.between(Instant.now(), user.getUpkeep().plus(Duration.ofDays(10))) + " hours)");
 
         Grid pride = new Grid();
         prideButtons = new ArrayList<>();

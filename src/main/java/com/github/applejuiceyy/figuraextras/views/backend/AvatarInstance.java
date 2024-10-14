@@ -12,7 +12,9 @@ import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
-import java.util.Date;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 public class AvatarInstance implements Lifecycle {
 
@@ -23,7 +25,7 @@ public class AvatarInstance implements Lifecycle {
 
         root.setSurface(Surface.contextBackground());
 
-        root.add(user.getId() + " by " + user.getOwner().toString() + " (getting deleted in " + (10 - (new Date().getTime() - user.getUpkeep().getTime()) / 1000 / 60 / 60 / 24) + " days)");
+        root.add(user.getId() + " by " + user.getOwner().toString() + " (getting deleted in " + ChronoUnit.HOURS.between(Instant.now(), user.getUpkeep().plus(Duration.ofDays(10))) + " hours)");
 
         ParentElement<Grid.GridSettings> deleteButton = Button.minimal().addAnd(Component.literal("Delete Avatar").withStyle(ChatFormatting.RED));
         deleteButton.activation.getSource().subscribe(evt -> user.delete());

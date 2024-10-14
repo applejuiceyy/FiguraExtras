@@ -119,7 +119,7 @@ public class Event<T> {
     }
 
     public boolean hasSubscribers() {
-        return subscribers.size() > 0;
+        return !subscribers.isEmpty();
     }
 
     private void doWhenAppropriate(Runnable runnable) {

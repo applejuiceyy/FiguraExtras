@@ -17,6 +17,8 @@ import org.joml.Matrix4f;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
@@ -164,6 +166,16 @@ public class Util {
         if (exception != null) {
             throw exception;
         }
+    }
+
+    public static byte[] hashBytes(byte[] bytes) {
+        MessageDigest instance;
+        try {
+            instance = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        return instance.digest(bytes);
     }
 
     public interface SetterGetter<T> {

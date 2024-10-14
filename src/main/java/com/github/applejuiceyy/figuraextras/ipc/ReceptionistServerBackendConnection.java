@@ -11,6 +11,9 @@ import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
 import org.figuramc.figura.FiguraMod;
 
 import java.io.ByteArrayInputStream;
@@ -134,7 +137,7 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
         String avatarId = args.get("id");
         ReceptionistServerBackend.BackendAvatar avatar = owner.backend.getAvatar(getStoringId(), avatarId);
 
-        if (!avatar.exists()) {
+        if (avatar == null) {
             return CompletableFuture.completedFuture("");
         }
 
@@ -210,7 +213,12 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
     @Override
     public CompletableFuture<String> putAvatar(HashMap<String, String> args) {
         try {
-            owner.backend.getAvatar(getStoringId(), args.get("id")).setContent(Hex.decodeHex(args.get("body")));
+            ReceptionistServerBackend.BackendAvatar avatar = owner.backend.getAvatar(getStoringId(), args.get("id"));
+            if (avatar != null) {
+                avatar.setContent(Hex.decodeHex(args.get("body")));
+            } else {
+                owner.backend.createAvatar(getStoringId(), args.get("id"), Hex.decodeHex(args.get("body")));
+            }
         } catch (DecoderException e) {
             throw new RuntimeException(e);
         }
@@ -232,7 +240,7 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
             String id = object.get("id").getAsString();
             avatars.add(owner.backend.getAvatar(UUID.fromString(uuid), id));
         }
-        owner.backend.getUser(getStoringId()).setEquippedAvatars(avatars.toArray(new ReceptionistServerBackend.BackendAvatar[0]));
+        owner.backend.getOrCreateUser(getStoringId()).setEquippedAvatars(avatars.toArray(new ReceptionistServerBackend.BackendAvatar[0]));
         UUID uuid = getStoringId();
         ByteBuffer buffer = ByteBuffer.allocate(1 + 8 + 8);
         buffer.put((byte) 2);
@@ -250,7 +258,7 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
     @Override
     public CompletableFuture<String> getUser(HashMap<String, String> args) {
         ReceptionistServerBackend.BackendUser user = owner.backend.getUser(convertToStoringId(UUID.fromString(args.get("id"))));
-        if (!user.exists()) {
+        if (user == null) {
             return CompletableFuture.completedFuture("{\"equipped\":[],\"equippedBadges\":{\"pride\":[],\"special\":[]}}");
         }
 
@@ -258,17 +266,19 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
 
         JsonObject json = new JsonObject();
         JsonArray equipped = new JsonArray();
-        boolean exists = user.exists();
-        if (exists) {
-            ReceptionistServerBackend.BackendAvatar[] avatars = user.getEquippedAvatars();
-            for (ReceptionistServerBackend.BackendAvatar element : avatars) {
-                JsonObject object = new JsonObject();
-                object.addProperty("owner", element.getOwner().toString());
-                object.addProperty("id", element.getId());
-                object.addProperty("hash", element.getHash());
 
-                equipped.add(object);
+        ReceptionistServerBackend.BackendAvatar[] avatars = user.getEquippedAvatars();
+        for (ReceptionistServerBackend.BackendAvatar element : avatars) {
+            JsonObject object = new JsonObject();
+            object.addProperty("owner", element.getOwner().toString());
+            object.addProperty("id", element.getId());
+            Formatter formatter = new Formatter();
+            for (byte b : element.getHash()) {
+                formatter.format("%02x", b);
             }
+            object.addProperty("hash", formatter.toString());
+
+            equipped.add(object);
         }
 
         json.add("equipped", equipped);
@@ -279,16 +289,16 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
         JsonArray prideBadges = new JsonArray();
         JsonArray specialBadges = new JsonArray();
 
-        if (exists) {
-            BitSet prideBitSet = user.getPrideBadges();
-            for (int i = 0; i < prideBitSet.length(); i++) {
-                prideBadges.add(prideBitSet.get(i) ? 1 : 0);
-            }
-            BitSet specialBitSet = user.getSpecialBadges();
-            for (int i = 0; i < specialBitSet.length(); i++) {
-                specialBadges.add(specialBitSet.get(i) ? 1 : 0);
-            }
+
+        BitSet prideBitSet = user.getPrideBadges();
+        for (int i = 0; i < prideBitSet.length(); i++) {
+            prideBadges.add(prideBitSet.get(i) ? 1 : 0);
         }
+        BitSet specialBitSet = user.getSpecialBadges();
+        for (int i = 0; i < specialBitSet.length(); i++) {
+            specialBadges.add(specialBitSet.get(i) ? 1 : 0);
+        }
+
 
         badgesRoot.add("pride", prideBadges);
         badgesRoot.add("special", specialBadges);
@@ -298,6 +308,9 @@ public class ReceptionistServerBackendConnection implements C2CServer.C2CServerB
     @Override
     public CompletableFuture<String> getAvatar(HashMap<String, String> args) {
         ReceptionistServerBackend.BackendAvatar avatar = owner.backend.getAvatar(UUID.fromString(args.get("owner")), args.get("id"));
+        if (avatar == null) {
+            return CompletableFuture.failedFuture(new ResponseErrorException(new ResponseError(ResponseErrorCode.InvalidParams, "No avatar", null)));
+        }
         avatar.upkeep();
         return CompletableFuture.completedFuture(Hex.encodeHexString(avatar.getContent()));
     }

@@ -21,8 +21,11 @@ import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
 import com.mojang.blaze3d.audio.OggAudioStream;
 import com.mojang.blaze3d.audio.SoundBuffer;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.chat.Component;
 import org.apache.logging.log4j.util.TriConsumer;
+import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.lua.FiguraLuaRuntime;
 import org.figuramc.figura.model.rendering.AvatarRenderer;
@@ -38,6 +41,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -52,7 +56,8 @@ public class AvatarMixin implements AvatarAccess {
     @Shadow
     public AvatarRenderer renderer;
 
-    @SuppressWarnings("unchecked")
+    @Shadow
+    public String name;
     @Unique
     Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> chatRedirector = new Event<>((subs, firing) -> (a, b) -> {
         firing.startFiring();
@@ -103,6 +108,10 @@ public class AvatarMixin implements AvatarAccess {
             modelRootUpdater.getSource());
     @Unique
     boolean cleaned = false;
+    @Unique
+    private CompoundTag guestNbt = null;
+    @Unique
+    private int guestSize;
 
     @Inject(method = "clean", at = @At("HEAD"))
     void b(CallbackInfo ci) {
@@ -154,5 +163,29 @@ public class AvatarMixin implements AvatarAccess {
     @Override
     public Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtrass$getNetworkLogger() {
         return networkEvent;
+    }
+
+    @Override
+    public CompoundTag figuraExtrass$getGuestNbt() {
+        return guestNbt;
+    }
+
+    @Override
+    public int figuraExtrass$getGuestFileSize() {
+        return guestSize;
+    }
+
+    @Override
+    public void figuraExtrass$setGuestNbt(CompoundTag tag) {
+        guestNbt = tag;
+        try {
+            // get size
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            NbtIo.writeCompressed(guestNbt, baos);
+            guestSize = baos.size();
+        } catch (Exception e) {
+            FiguraMod.LOGGER.warn("Failed to generate file size for guest nbt of avatar " + name, e);
+            guestSize = 0;
+        }
     }
 }

@@ -4,6 +4,7 @@ import com.github.applejuiceyy.figuraextras.ducks.statics.FiguraLuaPrinterDuck;
 import com.github.applejuiceyy.figuraextras.tech.trees.core.Expander;
 import com.github.applejuiceyy.figuraextras.tech.trees.dummy.DummyExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.luaj.vm2.LuaValue;
@@ -24,4 +25,10 @@ public interface AvatarAccess {
     Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect();
 
     Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtrass$getNetworkLogger();
+
+    CompoundTag figuraExtrass$getGuestNbt();
+
+    int figuraExtrass$getGuestFileSize();
+
+    void figuraExtrass$setGuestNbt(CompoundTag tag);
 }
