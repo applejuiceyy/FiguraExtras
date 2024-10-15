@@ -20,8 +20,22 @@ public class Head extends Storage {
         this.path = path;
         this.creator = creator;
         if (Files.exists(path)) {
-            delegate = creator.createFromExisting(path, new String[0], this::delete);
+            create();
         }
+    }
+
+    private void create() {
+        delegate = creator.createFromExisting(path, new String[0], this::delete);
+    }
+
+    @Override
+    protected Bucket _getBucket(String[] buckets, int pos) {
+        return bound() ? delegate._getBucket(buckets, pos) : null;
+    }
+
+    @Override
+    protected Iterator<Bucket> _iterate(String[] buckets, int pos) {
+        return bound() ? delegate._iterate(buckets, pos) : Iterators.forArray();
     }
 
     private void delete() {
@@ -35,7 +49,7 @@ public class Head extends Storage {
 
     @Override
     protected Bucket _createBucket(String[] buckets, int pos, Map<DataId<?>, Object> values) {
-        if (delegate == null) {
+        if (!bound()) {
             try {
                 Files.createDirectory(path);
             } catch (IOException e) {
@@ -43,22 +57,31 @@ public class Head extends Storage {
             }
             delegate = creator.createFromNew(path, new String[0], this::delete, values);
         }
+
         return delegate._createBucket(buckets, pos, values);
     }
 
-    @Override
-    protected Bucket _getBucket(String[] buckets, int pos) {
-        if (delegate == null) {
-            return null;
+    private boolean bound() {
+        if (Files.exists(path)) {
+            ensureExisting();
+            return true;
+        } else {
+            ensureNonExisting();
+            return false;
         }
-        return delegate._getBucket(buckets, pos);
     }
 
-    @Override
-    protected Iterator<Bucket> _iterate(String[] buckets, int pos) {
+    private void ensureExisting() {
         if (delegate == null) {
-            return Iterators.forArray();
+            logger.warn("Unexpected creation of head folder {}", this.path);
+            create();
         }
-        return delegate._iterate(buckets, pos);
+    }
+
+    private void ensureNonExisting() {
+        if (delegate != null) {
+            logger.warn("Unexpected deletion of head folder {}", this.path);
+            delegate = null;
+        }
     }
 }

@@ -6,6 +6,8 @@ import com.github.applejuiceyy.figuraextras.fsstorage.FolderManager;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Streams;
 import net.minecraft.util.Tuple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -15,22 +17,36 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class Segment extends Storage {
-
+    public static Logger logger = LoggerFactory.getLogger("FiguraExtras:Storage/Segment");
 
     private final String[] buckets;
     private final Runnable deleter;
     private final FolderManager folderManager;
     private final Map<String, Storage> mapping = new HashMap<>();
     private final ChildCreator creator;
+    private final Path path;
+
     Segment(StorageState state, String[] buckets, Path path, Runnable deleter, ChildCreator creator) {
         super(state);
         folderManager = FolderManager.open(path);
         this.deleter = deleter;
         this.creator = creator;
         this.buckets = buckets;
+        this.path = path;
 
         for (Tuple<String, Path> directories : folderManager) {
             createChildFromExisting(directories.getA(), directories.getB());
+        }
+    }
+
+    private void checkMapping() {
+        for (Map.Entry<String, Storage> entry : mapping.entrySet()) {
+            if (folderManager.getFolder(entry.getKey()) == null) {
+                ensureNonExistent(entry.getKey());
+            }
+        }
+        for (Tuple<String, Path> tuple : folderManager) {
+            ensureExistent(tuple.getA(), tuple.getB());
         }
     }
 
@@ -115,25 +131,56 @@ public class Segment extends Storage {
         if (pos >= buckets.length) {
             throw new IllegalArgumentException("Invalid bucket length");
         }
-        if (mapping.containsKey(buckets[pos])) {
-            return mapping.get(buckets[pos])._getBucket(buckets, pos + 1);
-        }
 
-        return null;
+        String name = buckets[pos];
+
+        Path path = folderManager.getFolder(name);
+        if (path == null) {
+            ensureNonExistent(name);
+            return null;
+        } else {
+            ensureExistent(name, path);
+            return mapping.get(name)._getBucket(buckets, pos + 1);
+        }
+    }
+
+    private void ensureNonExistent(String name) {
+        if (mapping.containsKey(name)) {
+            logger.warn("Unexpected deletion of folder {} in {}", name, this.path);
+            mapping.remove(name);
+        }
+    }
+
+    private void ensureExistent(String name, Path path) {
+        if (!mapping.containsKey(name)) {
+            logger.warn("Unexpected creation of folder {} in {}", name, this.path);
+            createChildFromExisting(name, path);
+        }
     }
 
     @Override
     protected Iterator<Bucket> _iterate(String[] buckets, int pos) {
         if (pos >= buckets.length) {
-            return mapping.values().stream()
+            checkMapping();
+            return Streams.stream(folderManager.iterator())
+                    .map(t -> {
+                        String a = t.getA();
+                        ensureExistent(a, t.getB());
+                        return mapping.get(a);
+                    })
                     .map(storage -> storage._iterate(buckets, pos + 1))
                     .flatMap(Streams::stream)
                     .iterator();
         }
         String name = buckets[pos];
-        if (mapping.containsKey(name)) {
+
+        Path path = folderManager.getFolder(name);
+        if (path == null) {
+            ensureNonExistent(name);
+            return Iterators.forArray();
+        } else {
+            ensureExistent(name, path);
             return mapping.get(name)._iterate(buckets, pos + 1);
         }
-        return Iterators.forArray();
     }
 }
