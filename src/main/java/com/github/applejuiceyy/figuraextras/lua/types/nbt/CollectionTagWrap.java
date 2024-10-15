@@ -9,6 +9,7 @@ import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CollectionTag;
 import net.minecraft.nbt.Tag;
 import org.luaj.vm2.LuaError;
+import org.luaj.vm2.LuaValue;
 
 @LuaClass(wraps = CollectionTag.class)
 public class CollectionTagWrap {
@@ -20,6 +21,11 @@ public class CollectionTagWrap {
     @LuaMethod
     public static boolean add(CollectionTag<?> tag, @IsIndex int idx, Tag child) {
         return tag.addTag(idx, child);
+    }
+
+    @LuaMethod
+    public static void remove(CollectionTag<?> tag, @IsIndex int idx) {
+        tag.remove(idx);
     }
 
     @LuaMethod
@@ -61,5 +67,10 @@ public class CollectionTagWrap {
     @LuaMetatable
     public static void __newindex(CollectionTag<?> tag, @IsIndex int key, Tag child) {
         tag.setTag(key, child);
+    }
+
+    @LuaMetatable
+    public static void __newindex(CollectionTag<?> tag, @IsIndex int key, LuaValue child) {
+        __newindex(tag, key, TagWrap.convertLuaToNbt(child));
     }
 }

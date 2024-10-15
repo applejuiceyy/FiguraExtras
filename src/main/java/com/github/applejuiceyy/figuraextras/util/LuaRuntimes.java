@@ -34,6 +34,7 @@ public class LuaRuntimes {
                 .addClass(StringTagWrap.class)
                 .addClass(TagUtils.class)
                 .addClass(Resources.class)
+                .addClass(IteratorWrap.class)
                 .build();
         LuaTypeManager manager = new LuaTypeManager();
         manager.generateMetatableFor(FiguraVec2.class);
