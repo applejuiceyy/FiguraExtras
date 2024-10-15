@@ -131,9 +131,9 @@ public class Bridge implements OverloadedMethodHook {
 
                         @Override
                         public Varargs invoke(Varargs args) {
-                            Varargs apply = meta.apply(args);
+                            Varargs apply = indexTable.get(args.arg(2));
                             if (apply.isnil(1)) {
-                                return indexTable.get(args.arg(2));
+                                return meta.apply(args);
                             }
                             return apply;
                         }
@@ -194,6 +194,8 @@ public class Bridge implements OverloadedMethodHook {
     public LuaValue toLua(Object val, boolean isIndex) {
         if (val instanceof LuaValue l)
             return l;
+        else if (val instanceof Varargs v)
+            return v.arg1();
         else if (val instanceof Double d)
             return LuaValue.valueOf(d);
         else if (val instanceof String s)

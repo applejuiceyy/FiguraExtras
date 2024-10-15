@@ -3,7 +3,10 @@ package com.github.applejuiceyy.figuraextras.lua.types.nbt;
 
 import com.github.applejuiceyy.luabridge.annotation.LuaClass;
 import com.github.applejuiceyy.luabridge.annotation.LuaMethod;
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.nbt.*;
+import org.luaj.vm2.LuaError;
 
 @LuaClass
 public class TagUtils {
@@ -60,5 +63,15 @@ public class TagUtils {
     @LuaMethod
     public IntArrayTag newIntArrayTag() {
         return new IntArrayTag(new int[0]);
+    }
+
+    @LuaMethod
+    public Tag readNbt(String nbt) {
+        TagParser parser = new TagParser(new StringReader(nbt));
+        try {
+            return parser.readValue();
+        } catch (CommandSyntaxException e) {
+            throw new LuaError(e.getMessage());
+        }
     }
 }

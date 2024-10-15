@@ -22,6 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -123,22 +124,36 @@ public class Util {
     }
 
     public static Iterable<Tuple<LuaValue, LuaValue>> iterateLua(LuaValue value) {
+        return iterateLua(value, LuaValue::next);
+    }
+
+    public static Iterable<Tuple<LuaValue, LuaValue>> iterateLua(LuaValue value, BiFunction<LuaValue, LuaValue, Varargs> pair) {
         return () -> new Iterator<>() {
             LuaValue k = LuaValue.NIL;
+            Varargs currentResult = null;
 
             @Override
             public boolean hasNext() {
-                Varargs n = value.next(k);
-                return !n.arg1().isnil();
+                return !fetch().arg1().isnil();
             }
 
             @Override
             public Tuple<LuaValue, LuaValue> next() {
-                Varargs n = value.next(k);
-                if ((k = n.arg1()).isnil())
+                Varargs n = fetch();
+                LuaValue key = n.arg1();
+                if (key.isnil())
                     throw new NoSuchElementException();
+                currentResult = null;
+                k = key;
                 LuaValue v = n.arg(2);
-                return new Tuple<>(k, v);
+                return new Tuple<>(key, v);
+            }
+
+            private Varargs fetch() {
+                if (currentResult == null) {
+                    currentResult = pair.apply(value, k);
+                }
+                return currentResult;
             }
         };
     }
