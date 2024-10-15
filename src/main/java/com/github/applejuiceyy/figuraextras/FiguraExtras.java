@@ -268,6 +268,8 @@ public class FiguraExtras implements ClientModInitializer {
             } catch (FileAlreadyExistsException ignored) {
             }
 
+            Files.createDirectory(globalMinecraftDirectory.resolve("backend"));
+
             Path file = figuraExtrasDirectory.resolve("id");
             if (Files.exists(file)) {
                 try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(file))) {
