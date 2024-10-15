@@ -39,7 +39,7 @@ public class UserDataMixin implements UserDataAccess {
     @Unique
     public CompoundTag guestNbt;
 
-    @Inject(method = "loadAvatar", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "loadAvatar", at = @At("HEAD"), cancellable = true, remap = true)
     void verify(CompoundTag n, CallbackInfo ci, @Local(argsOnly = true) LocalRef<CompoundTag> nbtVar) {
         if (!id.equals(FiguraMod.getLocalPlayerUUID())) {
             return;

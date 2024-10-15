@@ -31,7 +31,9 @@ public class ClassGenerator {
 
     ClassGenerator(ASMDispatchGenerator generator, ASMDispatchGenerator.Node rootNode, int handleCount) {
         this.generator = generator;
-        classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        // dummy anonymous class because of classloaders
+        classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS) {
+        };
         compiled = compile(rootNode, handleCount);
     }
 
