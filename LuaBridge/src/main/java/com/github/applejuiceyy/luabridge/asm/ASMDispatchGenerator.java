@@ -10,6 +10,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleInfo;
@@ -19,10 +20,13 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -33,11 +37,13 @@ public class ASMDispatchGenerator implements DispatchGenerator {
     final ClassMap<CTMethodArgumentConverterHandler> argumentConverters;
     final ClassMap<CTMethodArgumentResolverHandler> argumentResolvers;
     private final HashMap<ImmutableList<HashCodeableOverload>, BiFunction<String, MethodHandle[], Dispatch>> cache = new HashMap<>();
+    private final Path path;
 
 
-    public ASMDispatchGenerator(ClassMap<CTMethodArgumentConverterHandler> argumentConverters, ClassMap<CTMethodArgumentResolverHandler> argumentResolvers) {
+    public ASMDispatchGenerator(ClassMap<CTMethodArgumentConverterHandler> argumentConverters, ClassMap<CTMethodArgumentResolverHandler> argumentResolvers, Path path) {
         this.argumentConverters = argumentConverters;
         this.argumentResolvers = argumentResolvers;
+        this.path = path;
     }
 
     public static ASMDispatchGeneratorBuilder create() {
@@ -86,7 +92,15 @@ public class ASMDispatchGenerator implements DispatchGenerator {
                         0
                 );
             }
-            cache.put(hashable, new ClassGenerator(this, node, overloads.size()).getAssigner());
+            ClassGenerator classGenerator = new ClassGenerator(this, node, overloads.size());
+            if (path != null) {
+                try {
+                    Files.write(path.resolve(appliers.stream().map(o -> o.type.toString()).collect(Collectors.joining(";")) + ".class"), classGenerator.compiledClass);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            cache.put(hashable, classGenerator.getAssigner());
         }
 
         MethodHandle[] array = overloads.stream().map(OverloadedMethod.Overload::handle).toArray(MethodHandle[]::new);
@@ -371,6 +385,7 @@ public class ASMDispatchGenerator implements DispatchGenerator {
     public static class ASMDispatchGeneratorBuilder {
         ClassMap<CTMethodArgumentConverterHandler> argumentConverters = new ClassMap<>();
         ClassMap<CTMethodArgumentResolverHandler> argumentResolvers = new ClassMap<>();
+        Path path = null;
 
         public ASMDispatchGeneratorBuilder addArgumentPlugin(CTMethodArgumentConverterHandler type) {
             for (Class<?> handled : type.getHandlingTypes()) {
@@ -386,8 +401,13 @@ public class ASMDispatchGenerator implements DispatchGenerator {
             return this;
         }
 
+        public ASMDispatchGeneratorBuilder setCompileExportPath(Path path) {
+            this.path = path;
+            return this;
+        }
+
         public ASMDispatchGenerator build() {
-            return new ASMDispatchGenerator(argumentConverters, argumentResolvers);
+            return new ASMDispatchGenerator(argumentConverters, argumentResolvers, path);
         }
     }
 }

@@ -67,6 +67,8 @@ import java.util.*;
 import java.util.function.UnaryOperator;
 
 public class FiguraExtras implements ClientModInitializer {
+    public static boolean DEBUG = false;
+
     public static final ConfigType.StringConfig progName;
     public static final ConfigType.BoolConfig disableServerToasts;
     public static final ConfigType.BoolConfig disableCachedRendering;
@@ -261,6 +263,13 @@ public class FiguraExtras implements ClientModInitializer {
                 figuraExtrasDirectory = gameDir.resolve("figura_extras");
                 Files.createDirectories(figuraExtrasDirectory);
             } catch (FileAlreadyExistsException ignored) {
+            }
+
+            if (DEBUG) {
+                try {
+                    Files.createDirectory(figuraExtrasDirectory.resolve("compile_debug"));
+                } catch (FileAlreadyExistsException ignored) {
+                }
             }
 
             try {

@@ -10,10 +10,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
+import org.spongepowered.include.com.google.common.collect.Iterators;
 
 import java.util.Iterator;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @LuaClass(wraps = CompoundTag.class)
 public class CompoundTagWrap {
@@ -38,41 +38,14 @@ public class CompoundTagWrap {
     }
 
     @LuaMethod
-    public static Iterator<String> keys(CompoundTag tag) {
-        return Set.copyOf(tag.getAllKeys()).iterator();
-    }
-
-    @LuaMethod
-    public static Iterator<Tag> values(CompoundTag tag) {
-        Iterator<Tag> allKeys = tag.getAllKeys().stream().map(tag::get).collect(Collectors.toSet()).iterator();
-        return new Iterator<>() {
-            @Override
-            public boolean hasNext() {
-                return allKeys.hasNext();
-            }
-
-            @Override
-            public Tag next() {
-                return allKeys.next();
-            }
-        };
-    }
-
-    @LuaMethod
     public static Iterator<Varargs> entries(Converter converter, CompoundTag tag) {
-        Iterator<String> allKeys = Set.copyOf(tag.getAllKeys()).iterator();
-        return new Iterator<>() {
-            @Override
-            public boolean hasNext() {
-                return allKeys.hasNext();
-            }
-
-            @Override
-            public Varargs next() {
-                String next = allKeys.next();
-                return LuaValue.varargsOf(converter.toLua(next), converter.toLua(tag.get(next), false));
-            }
-        };
+        Set<String> keys = tag.getAllKeys();
+        Varargs[] tuples = new Varargs[keys.size()];
+        int i = 0;
+        for (String key : keys) {
+            tuples[i++] = LuaValue.varargsOf(converter.toLua(key), converter.toLua(tag.get(key)));
+        }
+        return Iterators.forArray(tuples);
     }
 
     @LuaMetatable
