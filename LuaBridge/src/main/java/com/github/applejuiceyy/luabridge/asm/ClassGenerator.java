@@ -28,6 +28,7 @@ public class ClassGenerator {
     private final ClassWriter classWriter;
     private final GeneratedWrap compiled;
     private final ASMDispatchGenerator generator;
+    byte[] compiledClass;
 
     ClassGenerator(ASMDispatchGenerator generator, ASMDispatchGenerator.Node rootNode, int handleCount) {
         this.generator = generator;
@@ -194,20 +195,36 @@ public class ClassGenerator {
         }
         // Object
         if (returnType == Object.class) {
-            // Object -> Object Bridge
-            visitor.visitVarInsn(ALOAD, 2);
-            // Object Bridge -> Bridge Object Bridge
-            visitor.visitInsn(DUP_X1);
-            // Bridge Object Bridge -> Bridge Object
-            visitor.visitInsn(POP);
-            // Bridge Object -> Bridge Object int
+            // Object -> Object int
             visitor.visitLdcInsn(isIndex);
-            // Bridge Object int -> Varargs
+            // Object int -> int Object
+            visitor.visitInsn(SWAP);
+            // int Object -> int Object Bridge
+            visitor.visitVarInsn(ALOAD, 2);
+            // int Object Bridge -> Bridge int Object Bridge
+            visitor.visitInsn(DUP_X2);
+            // Bridge int Object Bridge -> Bridge int Object
+            visitor.visitInsn(POP);
+            // Bridge int Object -> Bridge int Object 1
+            visitor.visitInsn(ICONST_1);
+            // Bridge int Object 1 -> Bridge int Object Object[]
+            visitor.visitTypeInsn(ANEWARRAY, Type.getInternalName(Object.class));
+            // Bridge int Object Object[] -> Bridge int Object[] Object Object[]
+            visitor.visitInsn(DUP_X1);
+            // Bridge int Object[] Object Object[] -> Bridge int Object[] Object Object[] 0
+            visitor.visitInsn(ICONST_0);
+            // Bridge int Object[] Object Object[] 0 -> Bridge int Object[] Object[] 0 Object Object[] 0
+            visitor.visitInsn(DUP2_X1);
+            // Bridge int Object[] Object[] 0 Object Object[] 0 -> Bridge int Object[] Object[] 0 Object
+            visitor.visitInsn(POP2);
+            // Bridge int Object[] Object[] 0 Object -> Bridge int Object[]
+            visitor.visitInsn(AASTORE);
+            // Bridge int Object[] -> Varargs
             visitor.visitMethodInsn(
                     INVOKEINTERFACE,
                     Type.getType(Converter.class).getInternalName(),
-                    "toLua",
-                    "(Ljava/lang/Object;Z)" + Consts.LUA_VALUE.getDescriptor(),
+                    "toLuaVarargs",
+                    "(Z[Ljava/lang/Object;)" + Consts.VARARGS.getDescriptor(),
                     true
             );
             visitor.visitLabel(after);
@@ -232,7 +249,7 @@ public class ClassGenerator {
                         INVOKESTATIC,
                         Consts.LUA_VALUE.getInternalName(),
                         "valueOf",
-                        "(D)Lorg/luaj/vm2/LuaValue;",
+                        "(D)Lorg/luaj/vm2/LuaNumber;",
                         false
                 );
             }
@@ -242,7 +259,7 @@ public class ClassGenerator {
                         INVOKESTATIC,
                         Consts.LUA_VALUE.getInternalName(),
                         "valueOf",
-                        "(Ljava/lang/String;)Lorg/luaj/vm2/LuaValue;",
+                        "(Ljava/lang/String;)Lorg/luaj/vm2/LuaString;",
                         false
                 );
             }
@@ -263,7 +280,7 @@ public class ClassGenerator {
                         INVOKESTATIC,
                         Consts.LUA_VALUE.getInternalName(),
                         "valueOf",
-                        "(Z)Lorg/luaj/vm2/LuaValue;",
+                        "(Z)Lorg/luaj/vm2/LuaBoolean;",
                         false
                 );
             }
@@ -286,7 +303,7 @@ public class ClassGenerator {
                         INVOKESTATIC,
                         Consts.LUA_VALUE.getInternalName(),
                         "valueOf",
-                        "(D)Lorg/luaj/vm2/LuaValue;",
+                        "(D)Lorg/luaj/vm2/LuaNumber;",
                         false
                 );
             }
@@ -313,7 +330,7 @@ public class ClassGenerator {
                         INVOKESTATIC,
                         Consts.LUA_VALUE.getInternalName(),
                         "valueOf",
-                        "(I)Lorg/luaj/vm2/LuaValue;",
+                        "(I)Lorg/luaj/vm2/LuaInteger;",
                         false
                 );
             }
@@ -342,7 +359,7 @@ public class ClassGenerator {
                         INVOKESTATIC,
                         Consts.LUA_VALUE.getInternalName(),
                         "valueOf",
-                        "(I)Lorg/luaj/vm2/LuaValue;",
+                        "(I)Lorg/luaj/vm2/LuaInteger;",
                         false
                 );
             }
@@ -369,7 +386,7 @@ public class ClassGenerator {
                         INVOKESTATIC,
                         Consts.LUA_VALUE.getInternalName(),
                         "valueOf",
-                        "(B)Lorg/luaj/vm2/LuaValue;",
+                        "(I)Lorg/luaj/vm2/LuaInteger;",
                         false
                 );
             }
@@ -396,7 +413,7 @@ public class ClassGenerator {
                         INVOKESTATIC,
                         Consts.LUA_VALUE.getInternalName(),
                         "valueOf",
-                        "(S)Lorg/luaj/vm2/LuaValue;",
+                        "(I)Lorg/luaj/vm2/LuaInteger;",
                         false
                 );
             }
@@ -770,7 +787,7 @@ public class ClassGenerator {
             // LuaValue -> anything
             String name = type.getName();
             switch (name) {
-                case "org.luaj.vm2.LuaValue" -> {
+                case "org.luaj.vm2.LuaValue", "org.luaj.vm2.Varargs" -> {
                 }
                 case "java.lang.Object" -> {
                     // LuaValue -> LuaValue LuaValue
@@ -959,12 +976,13 @@ public class ClassGenerator {
         method.visitEnd();
 
         classWriter.visitEnd();
-        byte[] array = classWriter.toByteArray();
+        byte[] c;
+        compiledClass = c = classWriter.toByteArray();
 
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         MethodHandles.Lookup childLookup;
         try {
-            childLookup = lookup.defineHiddenClass(array, true);
+            childLookup = lookup.defineHiddenClass(c, true);
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }

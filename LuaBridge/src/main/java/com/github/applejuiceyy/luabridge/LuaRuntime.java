@@ -1,17 +1,13 @@
 package com.github.applejuiceyy.luabridge;
 
 import com.github.applejuiceyy.luabridge.limiting.InstructionLimiter;
-import org.luaj.vm2.Globals;
-import org.luaj.vm2.LuaError;
-import org.luaj.vm2.LuaValue;
-import org.luaj.vm2.Varargs;
+import org.luaj.vm2.*;
 import org.luaj.vm2.compiler.LuaC;
 import org.luaj.vm2.lib.*;
 import org.luaj.vm2.lib.jse.JseBaseLib;
 import org.luaj.vm2.lib.jse.JseMathLib;
 import org.luaj.vm2.lib.jse.JseStringLib;
 
-import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -22,7 +18,8 @@ public abstract class LuaRuntime<BRIDGE extends Bridge> {
     private final Globals globals;
     private final ReentrantLock reentrantLock;
     private final InstructionLimiter limiter;
-    private final HashMap<String, LuaValue> requireCache = new HashMap<>();
+    private final LuaValue packageLib;
+    private final LuaValue require;
 
     private boolean running = false;
 
@@ -32,6 +29,17 @@ public abstract class LuaRuntime<BRIDGE extends Bridge> {
         globals = new Globals();
         reentrantLock = new ReentrantLock();
         LuaC.install(globals);
+
+        globals.load(new PackageLib());
+
+        packageLib = globals.get("package");
+        packageLib.set("config", LuaValue.NIL);
+        packageLib.set("path", LuaValue.NIL);
+        packageLib.set("searchpath", LuaValue.NIL);
+        LuaValue preload = packageLib.get("searchers").get(1);
+        packageLib.set("searchers", new LuaTable(preload));
+
+        require = globals.get("require");
 
         globals.load(new JseBaseLib());
         globals.load(new Bit32Lib());
@@ -54,27 +62,34 @@ public abstract class LuaRuntime<BRIDGE extends Bridge> {
                 return NIL;
             }
         });
-        globals.set("require", new OneArgFunction() {
-            @Override
-            public LuaValue call(LuaValue arg) {
-                return requireFile(arg.checkjstring());
-            }
-        });
+    }
+
+    public void addSearcher(LuaFileSearcher searcher) {
+        if (isRunning()) {
+            LuaValue searchers = packageLib.get("searchers");
+            searchers.set(searchers.len().checkint() + 1, new VarArgFunction() {
+                @Override
+                public Varargs invoke(Varargs args) {
+                    try {
+                        return searcher.fetch(args.checkjstring(1));
+                    } catch (SearchException e) {
+                        return LuaValue.valueOf(e.getMessage());
+                    }
+                }
+            });
+            return;
+        }
+        run(() -> {
+            addSearcher(searcher);
+            return LuaValue.NIL;
+        }, 400);
     }
 
     protected abstract void printImplementation(Varargs args);
 
     public LuaValue requireFile(String path) {
-        path = sanitizeRequirePath(path);
-        if (!requireCache.containsKey(path)) {
-            requireCache.put(path, requireImplementation(path));
-        }
-        return requireCache.get(path);
+        return require.call(path);
     }
-
-    protected abstract String sanitizeRequirePath(String path);
-
-    protected abstract LuaValue requireImplementation(String path);
 
     public Object get(String var) {
         return get(var, false);
@@ -134,6 +149,10 @@ public abstract class LuaRuntime<BRIDGE extends Bridge> {
             varargs = toRun.get();
         } catch (StackOverflowError err) {
             throw new LuaError("Stack Overflow");
+        } catch (LuaError err) {
+            throw err;
+        } catch (Throwable throwable) {
+            throw new LuaError("Catastrophic error: " + throwable);
         } finally {
             running = false;
             reentrantLock.unlock();
@@ -155,5 +174,15 @@ public abstract class LuaRuntime<BRIDGE extends Bridge> {
 
     public LuaValue load(String chunkName, String content) {
         return globals.load(content, chunkName);
+    }
+
+    public interface LuaFileSearcher {
+        LuaValue fetch(String name) throws SearchException;
+    }
+
+    public static class SearchException extends Exception {
+        public SearchException(String message) {
+            super(message);
+        }
     }
 }

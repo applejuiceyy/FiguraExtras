@@ -8,7 +8,6 @@ import com.github.applejuiceyy.figuraextras.lua.types.resource.Resources;
 import com.github.applejuiceyy.figuraextras.util.LuaRuntimes;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.github.applejuiceyy.luabridge.LuaRuntime;
-import com.github.applejuiceyy.luabridge.limiting.DefaultInstructionLimiter;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import net.minecraft.ChatFormatting;
@@ -20,7 +19,6 @@ import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.UserData;
 import org.figuramc.figura.avatar.local.LocalAvatarLoader;
-import org.figuramc.figura.lua.FiguraLuaPrinter;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
@@ -31,15 +29,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 @Mixin(value = LocalAvatarLoader.class, remap = false)
 public class LocalAvatarLoaderMixin {
@@ -62,43 +56,19 @@ public class LocalAvatarLoaderMixin {
         CompoundTag guestFiguraExtras = new CompoundTag();
 
         if (resolve.toFile().isDirectory() && resolve.resolve("main.lua").toFile().isFile()) {
-            LuaRuntime<MinecraftLuaBridge> luaRuntime = new LuaRuntime<>(
-                    LuaRuntimes.buildDefaultBridge(),
-                    DefaultInstructionLimiter::new
-            ) {
-                @Override
-                protected void printImplementation(Varargs text) {
-                    FiguraLuaPrinter.sendLuaMessage(
-                            bridge.getPrintableValue(text),
-                            Minecraft.getInstance().getUser().getName() + "-preprocessor"
-                    );
+            LuaRuntime<MinecraftLuaBridge> luaRuntime = LuaRuntimes.buildDefaultRuntime(
+                    Minecraft.getInstance().getUser().getName() + "-preprocessor",
+                    resolve
+            );
+            luaRuntime.addSearcher(path -> {
+                path = LuaRuntimes.sanitizePath(path);
+                String prefix = "@avatar" + FileSystems.getDefault().getSeparator();
+                if (!path.startsWith(prefix)) {
+                    throw new LuaRuntime.SearchException("Not relevant");
                 }
-
-                @Override
-                protected String sanitizeRequirePath(String path) {
-                    path = path.trim();
-                    FileSystem fileSystem = FileSystems.getDefault();
-                    path = path
-                            .replace(".", fileSystem.getSeparator())
-                            .replace("\\", fileSystem.getSeparator())
-                            .replace("/", fileSystem.getSeparator());
-                    path = Pattern.compile(Pattern.quote(fileSystem.getSeparator() + "+")).matcher(path).replaceAll(fileSystem.getSeparator());
-                    return path + ".lua";
-                }
-
-                @Override
-                protected LuaValue requireImplementation(String path) {
-                    LuaValue load;
-                    try (FileReader reader = new FileReader(resolve.resolve(path).toFile())) {
-                        load = getGlobals().load(reader, path);
-                    } catch (FileNotFoundException e) {
-                        throw new LuaError("File \"" + path + "\" not found");
-                    } catch (IOException e) {
-                        throw new LuaError("File \"" + path + "\" not able to be read: " + e.getMessage());
-                    }
-                    return load.call();
-                }
-            };
+                path = path.substring(prefix.length());
+                return LuaRuntimes.importPath(luaRuntime, finalPath, path);
+            });
 
             LuaRuntimes.fillUtilities(luaRuntime);
             luaRuntime.set("resource", new Resources(finalPath));

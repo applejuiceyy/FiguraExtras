@@ -218,6 +218,18 @@ public class Bridge implements OverloadedMethodHook {
         return wrap(val);
     }
 
+    @Override
+    public Varargs toLuaVarargs(boolean isIndex, Object... object) {
+        if (object.length == 1) {
+            Object o = object[0];
+            if (o instanceof Varargs v) {
+                return v;
+            }
+            return toLua(o, isIndex);
+        }
+        return LuaValue.varargsOf(Arrays.stream(object).map(l -> toLua(l, isIndex)).toArray(LuaValue[]::new));
+    }
+
     public OverloadedMethod createOverload(String name) {
         return new OverloadedMethod(name, this);
     }
