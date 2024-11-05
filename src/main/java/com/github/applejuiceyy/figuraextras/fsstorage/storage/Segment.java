@@ -73,7 +73,7 @@ public class Segment extends Storage {
         }));
     }
 
-    static ChildCreator creator(StorageState state, ChildCreator childCreator) {
+    public static ChildCreator creator(StorageState state, ChildCreator childCreator) {
         return new ChildCreator() {
             @Override
             public Storage createFromExisting(Path path, String[] buckets, Runnable deleter) {

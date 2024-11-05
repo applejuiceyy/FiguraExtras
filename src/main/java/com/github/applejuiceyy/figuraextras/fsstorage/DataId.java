@@ -21,8 +21,8 @@ public class DataId<O> {
         }
     };
     public final String name;
-    final RW<O> readWriter;
-    final boolean buffered;
+    public final RW<O> readWriter;
+    public final boolean buffered;
 
 
     DataId(RW<O> readWriter, String name, boolean buffered) {

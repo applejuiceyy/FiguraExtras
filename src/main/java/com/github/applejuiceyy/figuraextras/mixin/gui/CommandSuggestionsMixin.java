@@ -178,6 +178,10 @@ public abstract class CommandSuggestionsMixin implements CommandSuggestionsAcces
 
         shouldShowBadges = false;
 
+        if (currentBehaviour != null) {
+            currentBehaviour.cancel(true);
+        }
+
         // TODO
         if (false) {
             return;
@@ -187,9 +191,7 @@ public abstract class CommandSuggestionsMixin implements CommandSuggestionsAcces
         if (avatar == null || avatar.luaRuntime == null)
             return;
 
-        if (currentBehaviour != null) {
-            currentBehaviour.cancel(true);
-        }
+
         currentBehaviour = chatAutocompleteEvent(avatar, string, i);
         if (currentBehaviour == null) {
             return;
