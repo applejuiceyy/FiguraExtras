@@ -7,7 +7,9 @@ import com.github.applejuiceyy.figuraextras.ducks.statics.LuaRuntimeDuck;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.SourceListener;
 import com.github.applejuiceyy.figuraextras.lua.figura.DebuggerAPI;
 import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
+import com.github.applejuiceyy.figuraextras.tech.captures.figura.FiguraData;
 import com.github.applejuiceyy.figuraextras.util.Event;
+import com.llamalad7.mixinextras.sugar.Local;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.util.Tuple;
@@ -109,8 +111,8 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
         }
     }
 
-    @Inject(method = "run", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;setInstructionLimit(I)V", shift = At.Shift.AFTER), locals = LocalCapture.CAPTURE_FAILHARD)
-    void e(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir, LuaValue[] values, Varargs val) {
+    @Inject(method = "run", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;setInstructionLimit(I)V", shift = At.Shift.AFTER))
+    void e(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir, @Local Varargs val) {
 
         ((GlobalsAccess) userGlobals)
                 .figuraExtrass$getCaptureState()
@@ -135,7 +137,7 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
             } else if (toRun instanceof LuaValue ev) {
                 reason = "Execution of " + ev;
             }
-            hook.startEvent(reason, toRun, val);
+            hook.startEvent(new FiguraData(reason, limit, toRun, val));
         }
     }
 

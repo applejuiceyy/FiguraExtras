@@ -2,21 +2,16 @@ package com.github.applejuiceyy.figuraextras.components.graph;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
-import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
-import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
-import com.github.applejuiceyy.figuraextras.util.Event;
-import com.github.applejuiceyy.figuraextras.views.View;
-import com.mojang.blaze3d.vertex.*;
-import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import net.minecraft.FieldsAreNonnullByDefault;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 @FieldsAreNonnullByDefault
@@ -24,10 +19,11 @@ import java.util.function.UnaryOperator;
 public class GraphComponent extends Element {
     private final List<DataCollection> dataCollections = new ArrayList<>();
     private @Nullable Axis axisRenderer = Axis.createDefault();
+    private final List<InGraphRendererBaker> renderers = new ArrayList<>();
 
-
-    private final Map<DataCollection, Runnable> invalidators = new HashMap<>();
+    private final Map<DataCollection, Runnable> dataCollectionsInvalidators = new HashMap<>();
     private @Nullable Runnable axisRendererInvalidator;
+    private final Map<InGraphRendererBaker, Runnable> renderersInvalidators = new HashMap<>();
 
 
     private @Nullable Float xMin, xMax, yMin, yMax;
@@ -36,8 +32,9 @@ public class GraphComponent extends Element {
     private boolean recalculateElements = true;
 
 
-    private final List<DataCollection.BakedDataRendering> bakedPlots = new ArrayList<>();
+    private final List<InGraphRenderer> bakedPlots = new ArrayList<>();
     private @Nullable Axis.BakedAxisRenderer axisRendererBaked = null;
+    private final List<InGraphRenderer> bakedRenderers = new ArrayList<>();
 
     private @Nullable Rectangle bakedGraphRealEstate = null;
     private @Nullable Bounds bakedDataBounds = null;
@@ -140,9 +137,9 @@ public class GraphComponent extends Element {
     @Nullable
     private Bounds calculateDataBounds(boolean allWanted) {
         boolean hasBounds = false;
-        float ax, ay, bx, by;
-        ax = ay = Float.MAX_VALUE;
-        bx = by = Float.MIN_VALUE;
+        double ax, ay, bx, by;
+        ax = ay = Float.POSITIVE_INFINITY;
+        bx = by = Float.NEGATIVE_INFINITY;
         for (DataCollection plot : dataCollections) {
             Bounds dataBounds = allWanted ?
                     plot.getDataBounds(true, true, true, true) :
@@ -184,7 +181,7 @@ public class GraphComponent extends Element {
         Bounds calculatedDataBounds = calculateDataBounds(false);
         if(calculatedDataBounds == null) return null;
         if(xMin == null && yMin == null && xMax == null && yMax == null) return calculatedDataBounds;
-        float xMin, yMin, xMax, yMax;
+        double xMin, yMin, xMax, yMax;
 
         xMin = calculatedDataBounds.xMin();
         yMin = calculatedDataBounds.yMin();
@@ -201,15 +198,30 @@ public class GraphComponent extends Element {
 
     public GraphComponent addCollection(DataCollection dataCollection) {
         Runnable un = dataCollection.getInvalidator().subscribe(this::invalidate);
-        invalidators.put(dataCollection, un);
+        dataCollectionsInvalidators.put(dataCollection, un);
         dataCollections.add(dataCollection);
         invalidate();
         return this;
     }
 
     public GraphComponent removeCollection(DataCollection collection) {
-        invalidators.remove(collection).run();
+        dataCollectionsInvalidators.remove(collection).run();
         dataCollections.remove(collection);
+        invalidate();
+        return this;
+    }
+
+    public GraphComponent addRenderer(InGraphRendererBaker renderer) {
+        Runnable un = renderer.getInvalidator().subscribe(this::invalidate);
+        renderersInvalidators.put(renderer, un);
+        renderers.add(renderer);
+        invalidate();
+        return this;
+    }
+
+    public GraphComponent removeRenderer(InGraphRendererBaker renderer) {
+        renderersInvalidators.remove(renderer).run();
+        renderers.remove(renderer);
         invalidate();
         return this;
     }
@@ -315,20 +327,25 @@ public class GraphComponent extends Element {
             bakedGraphRealEstate = axisRendererBaked.getInnerGraph();
         }
 
-        BakingContext bakingContext = new BakingContext(bakedDataBounds, bakedGraphRealEstate);
+        BakingContext bakingContext = new BakingContext(bakedDataBounds, bakedGraphRealEstate.getWidth(), bakedGraphRealEstate.getHeight());
 
-        for (int i = 0; i < dataCollections.size(); i++) {
-            DataCollection plot = dataCollections.get(i);
-            DataCollection.BakedDataRendering baked = plot.getBaked(bakingContext);
-            if(bakedPlots.size() <= i) {
-                bakedPlots.add(baked);
+        transfer(dataCollections, c -> c.getBaked(bakingContext), bakedPlots);
+        transfer(renderers, c -> c.getBaked(bakingContext), bakedRenderers);
+    }
+
+    private <T, V> void transfer(List<T> data, Function<T, V> operation, List<V> destination) {
+        for (int i = 0; i < data.size(); i++) {
+            T plot = data.get(i);
+            V baked = operation.apply(plot);
+            if(destination.size() <= i) {
+                destination.add(baked);
             }
             else {
-                bakedPlots.set(i, baked);
+                destination.set(i, baked);
             }
         }
-        if(bakedPlots.size() < dataCollections.size()) {
-            bakedPlots.subList(dataCollections.size(), bakedPlots.size()).clear();
+        if(destination.size() < data.size()) {
+            destination.subList(data.size(), destination.size()).clear();
         }
     }
 
@@ -365,12 +382,20 @@ public class GraphComponent extends Element {
         matrices.pushPose();
 
         if(axisRendererBaked != null) {
-            axisRendererBaked.render(context);
+            axisRendererBaked.renderAxis(context);
             matrices.translate(bakedGraphRealEstate.getX(), bakedGraphRealEstate.getY(), 0);
         }
 
-        for (DataCollection.BakedDataRendering bakedPlot : bakedPlots) {
+        for (InGraphRenderer bakedPlot : bakedPlots) {
             bakedPlot.render(context);
+        }
+
+        if(axisRendererBaked != null) {
+            axisRendererBaked.render(context);
+        }
+
+        for (InGraphRenderer renderer : bakedRenderers) {
+            renderer.render(context);
         }
 
         matrices.popPose();
@@ -388,19 +413,19 @@ public class GraphComponent extends Element {
 
     @Override
     protected void defaultMouseDownBehaviour(DefaultCancellableEvent.MousePositionButtonEvent event) {
-        if(event.button == 2) {
-            Elements.spawnContextMenu(getState(), event.x, event.y, (flow, deleter) -> {
-                View.doOnContext("flamegraph", flow.adder(s -> {}), a -> {
-                    ParentElement<?> googleEnPassant = View.forNewWindow(null, (v, c) -> View.error("Google en passant").apply(c));
-                    googleEnPassant.activation.subscribe(ev -> deleter.run());
-                    a.accept(googleEnPassant);
-                });
-            });
-        }
-        else if(event.button == 1) {
-            for (DataCollection.BakedDataRendering bakedPlot : bakedPlots) {
-                if (bakedPlot.handleMouseDown(event.x, event.y, event.button)) {
-                    break;
+        if(bakedGraphRealEstate == null) return;
+        if(event.button == GLFW.GLFW_MOUSE_BUTTON_1) {
+            for (InGraphRenderer bakedPlot : bakedPlots) {
+                if (bakedPlot.handleMouseDown(event.x - getX() - bakedGraphRealEstate.getX(), event.y - getY() - bakedGraphRealEstate.getY(), event.button)) {
+                    return;
+                }
+            }
+            if(axisRendererBaked != null && axisRendererBaked.handleMouseDown(event.x - getX() - bakedGraphRealEstate.getX(), event.y - getY() - bakedGraphRealEstate.getY(), event.button)) {
+                return;
+            }
+            for (InGraphRenderer bakedPlot : bakedRenderers) {
+                if (bakedPlot.handleMouseDown(event.x - getX() - bakedGraphRealEstate.getX(), event.y - getY() - bakedGraphRealEstate.getY(), event.button)) {
+                    return;
                 }
             }
         }
@@ -410,9 +435,17 @@ public class GraphComponent extends Element {
     protected void defaultToolTipBehaviour(DefaultCancellableEvent.ToolTipEvent event) {
         if(bakedGraphRealEstate == null) return;
         tooltipDisposer = event::invalidate;
-        for (DataCollection.BakedDataRendering bakedPlot : bakedPlots) {
+        for (InGraphRenderer bakedPlot : bakedPlots) {
             if (bakedPlot.doTooltip(event, event.x - getX() - bakedGraphRealEstate.getX(), event.y - getY() - bakedGraphRealEstate.getY())) {
-                break;
+                return;
+            }
+        }
+        if(axisRendererBaked != null && axisRendererBaked.doTooltip(event, event.x - getX() - bakedGraphRealEstate.getX(), event.y - getY() - bakedGraphRealEstate.getY())) {
+            return;
+        }
+        for (InGraphRenderer bakedPlot : bakedRenderers) {
+            if (bakedPlot.doTooltip(event, event.x - getX() - bakedGraphRealEstate.getX(), event.y - getY() - bakedGraphRealEstate.getY())) {
+                return;
             }
         }
     }

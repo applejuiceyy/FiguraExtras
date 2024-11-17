@@ -50,7 +50,7 @@ public class ChatLikeView implements Lifecycle {
         additionPoint.accept(root);
 
         // FlowLayout controls = Containers.horizontalFlow(Sizing.fill(100), Sizing.fill(10));
-        // root.add(controls);
+        // button.add(controls);
 
         // CheckboxComponent showPings = Components.checkbox(net.minecraft.network.chat.Component.literal("Show pings"));
         // CheckboxComponent showLogs = Components.checkbox(net.minecraft.network.chat.Component.literal("Show logs"));

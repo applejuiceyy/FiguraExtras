@@ -1,8 +1,7 @@
 package com.github.applejuiceyy.figuraextras.components.graph;
 
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
-import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
-import com.github.applejuiceyy.figuraextras.util.Util;
+import com.github.applejuiceyy.figuraextras.util.MathUtil;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.gui.GuiGraphics;
@@ -57,11 +56,10 @@ public class LineCollection extends DataCollection {
     public static LineGraphRenderer defaultLineGraphRenderer(LineRenderer lineRenderer, Consumer<GuiGraphics> markerRenderer) {
         return (graphics, dataPoints, context) -> {
             Bounds bounds = context.renderingBounds();
-            Rectangle rectangle = context.viewportBounds();
 
             int index = Collections.binarySearch(dataPoints, null, (a, b) -> {
                 assert b == null;
-                return Float.compare(a.getX(), bounds.xMin());
+                return Double.compare(a.getX(), bounds.xMin());
             });
 
             if(index < 0) {
@@ -73,28 +71,30 @@ public class LineCollection extends DataCollection {
                 index = 1;
             }
             PoseStack pose = graphics.pose();
+            int viewportHeight = context.viewportHeight();
+            int viewportWidth = context.viewportWidth();
             for(; index < dataPoints.size() && bounds.xMax() > dataPoints.get(index).getX(); index++) {
                 DataPoint current = dataPoints.get(index);
                 DataPoint previous = dataPoints.get(index - 1);
 
                 pose.pushPose();
 
-                float x2 = Util.map(current.getX(), bounds.xMin(), bounds.xMax(), 0, rectangle.getWidth());
-                float y2 = Util.map(current.getY(), bounds.yMin(), bounds.yMax(), rectangle.getHeight(), 0);
-                float x1 = Util.map(previous.getX(), bounds.xMin(), bounds.xMax(), 0, rectangle.getWidth());
-                float y1 = Util.map(previous.getY(), bounds.yMin(), bounds.yMax(), rectangle.getHeight(), 0);
+                double x2 = MathUtil.map(current.getX(), bounds.xMin(), bounds.xMax(), 0, viewportWidth);
+                double y2 = MathUtil.map(current.getY(), bounds.yMin(), bounds.yMax(), viewportHeight, 0);
+                double x1 = MathUtil.map(previous.getX(), bounds.xMin(), bounds.xMax(), 0, viewportWidth);
+                double y1 = MathUtil.map(previous.getY(), bounds.yMin(), bounds.yMax(), viewportHeight, 0);
                 pose.translate(x1, y1, 0);
-                pose.rotateAround(Axis.ZP.rotation((float) Util.angleTo(x1, y1, x2, y2)), 0, 0, 0);
+                pose.rotateAround(Axis.ZP.rotation((float) MathUtil.angleTo(x1, y1, x2, y2)), 0, 0, 0);
 
-                lineRenderer.render(graphics, context, (float) Util.length(x1, y1, x2, y2));
+                lineRenderer.render(graphics, context, (float) MathUtil.length(x1, y1, x2, y2));
 
                 pose.popPose();
             }
 
             for(; dotIndex < dataPoints.size() && bounds.xMax() > dataPoints.get(dotIndex).getX(); dotIndex++) {
                 DataPoint current = dataPoints.get(dotIndex);
-                float x = Util.map(current.getX(), bounds.xMin(), bounds.xMax(), 0, rectangle.getWidth());
-                float y = Util.map(current.getY(), bounds.yMin(), bounds.yMax(), rectangle.getHeight(), 0);
+                double x = MathUtil.map(current.getX(), bounds.xMin(), bounds.xMax(), 0, viewportWidth);
+                double y = MathUtil.map(current.getY(), bounds.yMin(), bounds.yMax(), viewportHeight, 0);
                 pose.pushPose();
                 pose.translate(x, y, 0);
 
@@ -117,7 +117,7 @@ public class LineCollection extends DataCollection {
         if(dataPoints.isEmpty()) return null;
         if(dataBounds != null) return dataBounds;
 
-        float ax, ay, bx, by;
+        double ax, ay, bx, by;
         ax = ay = bx = by = 0;
 
         if(hintWantsMinX || hintWantsMaxX) {
@@ -128,11 +128,11 @@ public class LineCollection extends DataCollection {
         }
 
         if(hintWantsMinY || hintWantsMaxY) {
-            ay = Float.MAX_VALUE;
-            by = Float.MIN_VALUE;
+            ay = Float.POSITIVE_INFINITY;
+            by = Float.NEGATIVE_INFINITY;
 
             for (DataPoint dataPoint : dataPoints) {
-                float image = dataPoint.getY();
+                double image = dataPoint.getY();
                 by = Math.max(by, image);
                 ay = Math.min(ay, image);
             }
@@ -143,8 +143,8 @@ public class LineCollection extends DataCollection {
     }
 
     @Override
-    public BakedDataRendering getBaked(BakingContext bakingContext) {
-        return new BakedDataRendering() {
+    public InGraphRenderer getBaked(BakingContext bakingContext) {
+        return new InGraphRenderer() {
             @Override
             public void render(GuiGraphics context) {
                 graphRenderer.render(context, dataPoints, bakingContext);
@@ -153,11 +153,10 @@ public class LineCollection extends DataCollection {
             @Override
             public boolean doTooltip(DefaultCancellableEvent.ToolTipEvent toolTipEvent, double x, double y) {
                 Bounds bounds = bakingContext.renderingBounds();
-                Rectangle rectangle = bakingContext.viewportBounds();
 
                 int index = Collections.binarySearch(dataPoints, null, (a, b) -> {
                     assert b == null;
-                    return Float.compare(a.getX(), bounds.xMin());
+                    return Double.compare(a.getX(), bounds.xMin());
                 });
 
                 if(index < 0) {
@@ -166,10 +165,10 @@ public class LineCollection extends DataCollection {
 
                 for(; index < dataPoints.size() && bounds.xMax() > dataPoints.get(index).getX(); index++) {
                     DataPoint current = dataPoints.get(index);
-                    float px = Util.map(current.getX(), bounds.xMin(), bounds.xMax(), 0, rectangle.getWidth());
-                    float py = Util.map(current.getY(), bounds.yMin(), bounds.yMax(), rectangle.getHeight(), 0);
+                    double px = MathUtil.map(current.getX(), bounds.xMin(), bounds.xMax(), 0, bakingContext.viewportWidth());
+                    double py = MathUtil.map(current.getY(), bounds.yMin(), bounds.yMax(), bakingContext.viewportHeight(), 0);
 
-                    if(Util.length(px, py, (float) x, (float) y) < 2) {
+                    if(MathUtil.length(px, py, (float) x, (float) y) < 2) {
                         current.onHover(toolTipEvent);
                         return true;
                     }
@@ -181,11 +180,10 @@ public class LineCollection extends DataCollection {
             @Override
             public boolean handleMouseDown(double x, double y, int button) {
                 Bounds bounds = bakingContext.renderingBounds();
-                Rectangle rectangle = bakingContext.viewportBounds();
 
                 int index = Collections.binarySearch(dataPoints, null, (a, b) -> {
                     assert b == null;
-                    return Float.compare(a.getX(), bounds.xMin());
+                    return Double.compare(a.getX(), bounds.xMin());
                 });
 
                 if(index < 0) {
@@ -194,10 +192,10 @@ public class LineCollection extends DataCollection {
 
                 for(; index < dataPoints.size() && bounds.xMax() > dataPoints.get(index).getX(); index++) {
                     DataPoint current = dataPoints.get(index);
-                    float px = Util.map(current.getX(), bounds.xMin(), bounds.xMax(), 0, rectangle.getWidth());
-                    float py = Util.map(current.getY(), bounds.yMin(), bounds.yMax(), rectangle.getHeight(), 0);
+                    double px = MathUtil.map(current.getX(), bounds.xMin(), bounds.xMax(), 0, bakingContext.viewportWidth());
+                    double py = MathUtil.map(current.getY(), bounds.yMin(), bounds.yMax(), bakingContext.viewportHeight(), 0);
 
-                    if(Util.length(px, py, (float) x, (float) y) < 2) {
+                    if(MathUtil.length(px, py, (float) x, (float) y) < 2) {
                         current.onClick(x, y);
                         return true;
                     }
@@ -229,12 +227,12 @@ public class LineCollection extends DataCollection {
     public void add(float x, float y) {
         add(new DataPoint() {
             @Override
-            public float getY() {
+            public double getY() {
                 return y;
             }
 
             @Override
-            public float getX() {
+            public double getX() {
                 return x;
             }
 
@@ -261,9 +259,9 @@ public class LineCollection extends DataCollection {
 
     public interface DataPoint {
         @Contract(pure = true)
-        float getY();
+        double getY();
         @Contract(pure = true)
-        float getX();
+        double getX();
 
         default void onHover(DefaultCancellableEvent.ToolTipEvent event) {
             event.add(Component.literal("(%s, %s)".formatted(getX(), getY())));

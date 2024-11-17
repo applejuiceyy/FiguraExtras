@@ -1,9 +1,10 @@
 package com.github.applejuiceyy.figuraextras.components.graph;
 
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.DefaultCancellableEvent;
 import com.github.applejuiceyy.figuraextras.tech.gui.geometry.Rectangle;
-import com.github.applejuiceyy.figuraextras.util.Util;
+import com.github.applejuiceyy.figuraextras.util.MathUtil;
 import com.mojang.blaze3d.vertex.PoseStack;
-import it.unimi.dsi.fastutil.floats.FloatFloatPair;
+import it.unimi.dsi.fastutil.doubles.DoubleDoublePair;
 import it.unimi.dsi.fastutil.objects.Object2IntFunction;
 import net.minecraft.FieldsAreNonnullByDefault;
 import net.minecraft.MethodsReturnNonnullByDefault;
@@ -20,8 +21,8 @@ public abstract class Axis extends Invalidates {
 
     abstract BakedAxisRenderer getBaked(int width, int height, Bounds dataBounds);
 
-    public interface BakedAxisRenderer {
-        void render(GuiGraphics context);
+    public interface BakedAxisRenderer extends InGraphRenderer {
+        void renderAxis(GuiGraphics context);
         Rectangle getInnerGraph();
     }
 
@@ -91,9 +92,9 @@ public abstract class Axis extends Invalidates {
             throw new IllegalStateException(kind + " not expected");
         }
 
-        private FloatFloatPair computeBestSpace(float dataMinSpace, float dataMaxSpace, float physicalSpace, float spacePerDot) {
-            float step = 1;
-            float dataWorkingSpace = dataMaxSpace - dataMinSpace;
+        private DoubleDoublePair computeBestSpace(double dataMinSpace, double dataMaxSpace, float physicalSpace, float spacePerDot) {
+            double step = 1;
+            double dataWorkingSpace = dataMaxSpace - dataMinSpace;
             float realEstate = physicalSpace / spacePerDot;
 
             if((dataWorkingSpace / step) > realEstate) {
@@ -107,7 +108,7 @@ public abstract class Axis extends Invalidates {
                 }
             }
 
-            return FloatFloatPair.of(step, (float) (Math.ceil(dataMinSpace / step) * step));
+            return DoubleDoublePair.of(step, Math.ceil(dataMinSpace / step) * step);
         }
 
         @Override
@@ -120,14 +121,14 @@ public abstract class Axis extends Invalidates {
 
             int verticalSpace = height - topOccupation - bottomOccupation;
 
-            FloatFloatPair verticalNumbers = computeBestSpace(dataBounds.yMin(), dataBounds.yMax(), verticalSpace, font.lineHeight * 2);
+            DoubleDoublePair verticalNumbers = computeBestSpace(dataBounds.yMin(), dataBounds.yMax(), verticalSpace, font.lineHeight * 2);
 
-            float verticalStepSize = verticalNumbers.firstFloat();
-            float verticalStepStart = verticalNumbers.secondFloat();
+            double verticalStepSize = verticalNumbers.firstDouble();
+            double verticalStepStart = verticalNumbers.secondDouble();
 
             if(right == SideKind.NUMBERS || left == SideKind.NUMBERS) {
-                for(float i = verticalStepStart; i < dataBounds.yMax(); i += verticalStepSize) {
-                    String string = i % 1 == 0 ? Integer.toString((int) i) : Float.toString(i);
+                for(double i = verticalStepStart; i < dataBounds.yMax(); i += verticalStepSize) {
+                    String string = i % 1 == 0 ? Integer.toString((int) i) : Double.toString(i);
                     textSize = Math.max(textSize, font.width(string));
                 }
             }
@@ -137,17 +138,42 @@ public abstract class Axis extends Invalidates {
 
             int horizontalSpace = width - leftOccupation - rightOccupation;
 
-            FloatFloatPair horizontalNumbers = computeBestSpace(dataBounds.xMin(), dataBounds.xMax(), verticalSpace, 50);
+            DoubleDoublePair horizontalNumbers = computeBestSpace(dataBounds.xMin(), dataBounds.xMax(), verticalSpace, 50);
 
-            float horizontalStepSize = horizontalNumbers.firstFloat();
-            float horizontalStepStart = horizontalNumbers.secondFloat();
+            double horizontalStepSize = horizontalNumbers.firstDouble();
+            double horizontalStepStart = horizontalNumbers.secondDouble();
 
 
-            Rectangle innerGraph = Rectangle.of(leftOccupation, topOccupation, width - rightOccupation, height - bottomOccupation);
+            Rectangle innerGraph = Rectangle.of(leftOccupation, topOccupation, width - leftOccupation - rightOccupation, height - topOccupation - bottomOccupation);
 
             return new BakedAxisRenderer() {
                 @Override
                 public void render(GuiGraphics context) {
+
+                    for(double i = verticalStepStart; i <= dataBounds.yMax(); i += verticalStepSize) {
+                        int mapped = (int) MathUtil.map(i, dataBounds.yMin(), dataBounds.yMax(), verticalSpace, 0);
+
+                        context.fill(0, mapped, innerGraph.getWidth(), mapped + 1, 0x33ffffff);
+                    }
+                    for(double i = horizontalStepStart; i <= dataBounds.xMax(); i += horizontalStepSize) {
+                        int mapped = (int) MathUtil.map(i, dataBounds.xMin(), dataBounds.xMax(), 0, horizontalSpace);
+
+                        context.fill(mapped, 0, mapped + 1, innerGraph.getHeight(), 0x33ffffff);
+                    }
+                }
+
+                @Override
+                public boolean doTooltip(DefaultCancellableEvent.ToolTipEvent toolTipEvent, double x, double y) {
+                    return false;
+                }
+
+                @Override
+                public boolean handleMouseDown(double x, double y, int button) {
+                    return false;
+                }
+
+                @Override
+                public void renderAxis(GuiGraphics context) {
                     PoseStack pose = context.pose();
                     pose.pushPose();
 
@@ -176,34 +202,23 @@ public abstract class Axis extends Invalidates {
                         case NONE:
                             break;
                         case NUMBERS:
-                            boolean forceRenderLast = false;
-                            if((dataBounds.yMax() - verticalStepStart) % verticalStepSize != 0) {
-                                renderVerticalNumber(context, calculateTextPos, dataBounds.yMax());
-                                forceRenderLast = true;
-                            }
-                            for(float i = verticalStepStart; i <= dataBounds.yMax(); i += verticalStepSize) {
-                                if(forceRenderLast) {
-                                    float mapped = Util.map(i, dataBounds.yMin(), dataBounds.yMax(), verticalSpace, 0);
-                                    if(mapped - 4 < dataBounds.yMax() + font.lineHeight) {
-                                        continue;
-                                    }
-                                }
+                            for(double i = verticalStepStart; i <= dataBounds.yMax(); i += verticalStepSize) {
                                 renderVerticalNumber(context, calculateTextPos, i);
                             }
                         case NOTCHES:
-                            for(float i = verticalStepStart; i <= dataBounds.yMax(); i += verticalStepSize) {
-                                int mapped = (int) Util.map(i, dataBounds.yMin(), dataBounds.yMax(), verticalSpace, 0);
-                                context.fill(notchPos, mapped, notchPos - 1, mapped + 1, 0xffffffff);
+                            for(double i = verticalStepStart; i <= dataBounds.yMax(); i += verticalStepSize) {
+                                int mapped = (int) MathUtil.map(i, dataBounds.yMin(), dataBounds.yMax(), verticalSpace, 0);
+                                context.fill(notchPos, mapped, notchPos - 1, mapped + 1, 0xffaaaaaa);
                             }
                         case BAR:
-                            context.fill(barPos, 0, barPos - 1, verticalSpace, 0xffffffff);
+                            context.fill(barPos, 0, barPos - 1, verticalSpace, 0xffaaaaaa);
                     }
                 }
 
-                private void renderVerticalNumber(GuiGraphics context, Object2IntFunction<String> calculateTextPos, float i) {
-                    String string = i % 1 == 0 ? Integer.toString((int) i) : Float.toString(i);
-                    int mapped = (int) Util.map(i, dataBounds.yMin(), dataBounds.yMax(), verticalSpace, 0);
-                    context.drawString(Minecraft.getInstance().font, string, calculateTextPos.applyAsInt(string), (int) Util.constrain(mapped - 4, 0, verticalSpace), 0xffffffff);
+                private void renderVerticalNumber(GuiGraphics context, Object2IntFunction<String> calculateTextPos, double i) {
+                    String string = i % 1 == 0 ? Integer.toString((int) i) : Double.toString(i);
+                    int mapped = (int) MathUtil.map(i, dataBounds.yMin(), dataBounds.yMax(), verticalSpace, 0);
+                    context.drawString(Minecraft.getInstance().font, string, calculateTextPos.applyAsInt(string), (int) MathUtil.constrain(mapped - 4, 0, verticalSpace), 0xffaaaaaa);
                 }
 
                 private void renderHorizontally(GuiGraphics context, SideKind sideKind, int barPos, int notchPos, int textPos) {
@@ -211,19 +226,19 @@ public abstract class Axis extends Invalidates {
                         case NONE:
                             break;
                         case NUMBERS:
-                            for(float i = horizontalStepStart; i <= dataBounds.xMax(); i += horizontalStepSize) {
-                                String string = i % 1 == 0 ? Integer.toString((int) i) : Float.toString(i);
-                                int mapped = (int) Util.map(i, dataBounds.xMin(), dataBounds.xMax(), 0, horizontalSpace);
+                            for(double i = horizontalStepStart; i <= dataBounds.xMax(); i += horizontalStepSize) {
+                                String string = i % 1 == 0 ? Integer.toString((int) i) : Double.toString(i);
+                                int mapped = (int) MathUtil.map(i, dataBounds.xMin(), dataBounds.xMax(), 0, horizontalSpace);
                                 int size = font.width(string);
-                                context.drawString(Minecraft.getInstance().font, string, (int) Util.constrain(mapped - size / 2f, 0, horizontalSpace - size), textPos, 0xffffffff);
+                                context.drawString(Minecraft.getInstance().font, string, (int) MathUtil.constrain(mapped - size / 2f, 0, horizontalSpace - size), textPos, 0xffaaaaaa);
                             }
                         case NOTCHES:
-                            for(float i = horizontalStepStart; i <= dataBounds.xMax(); i += horizontalStepSize) {
-                                int mapped = (int) Util.map(i, dataBounds.xMin(), dataBounds.xMax(), 0, horizontalSpace);
-                                context.fill(mapped, notchPos, mapped + 1, notchPos - 1, 0xffffffff);
+                            for(double i = horizontalStepStart; i <= dataBounds.xMax(); i += horizontalStepSize) {
+                                int mapped = (int) MathUtil.map(i, dataBounds.xMin(), dataBounds.xMax(), 0, horizontalSpace);
+                                context.fill(mapped, notchPos, mapped + 1, notchPos - 1, 0xffaaaaaa);
                             }
                         case BAR:
-                            context.fill(0, barPos, horizontalSpace, barPos - 1, 0xffffffff);
+                            context.fill(0, barPos, horizontalSpace, barPos - 1, 0xffaaaaaa);
                     }
                 }
             };

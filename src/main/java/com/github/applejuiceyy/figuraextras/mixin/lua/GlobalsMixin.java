@@ -13,7 +13,6 @@ import org.spongepowered.asm.mixin.Unique;
 public class GlobalsMixin implements GlobalsAccess {
     @Unique
     CaptureState captureState = new CaptureState((Globals) (Object) this);
-    Event<Hook> hooks = Event.interfacing(Hook.class);
     @Unique
     LuaTable offTheShelfDebugLib;
 

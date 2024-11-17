@@ -94,16 +94,13 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
                             tabView.add("Object View", ensureScript(ObjectView::new));
                             tabView.add("Model View", ensureScript(ModelView::new));
                             tabView.add(Elements.separator());
-                            tabView.add("Tick Instructions", ensureScript((c, ap) -> new MetricsView(c, ap, c.getValue().tick)));
-                            tabView.add("Render Instructions", ensureScript((c, ap) -> new MetricsView(c, ap, c.getValue().render)));
+                            tabView.add("Activity", ensureScript(ActivityView::new));
                             tabView.add(Elements.separator());
                             tabView.add("Textures", TextureView::new);
                             tabView.add("Sounds", SoundView::new);
                             tabView.add(Elements.separator());
                             tabView.add("Output", ChatLikeView::new);
                             tabView.add("Network", NetworkView::new);
-                            tabView.add(Elements.separator());
-                            tabView.add("Capturer", CaptureView::new);
                             tabView.add(Elements.separator());
                             tabView.add(Button.minimal().addAnd("Download Avatar"));
                             return tabView;

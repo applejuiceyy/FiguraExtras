@@ -18,7 +18,6 @@
     "figura.UserDataMixin",
     "figura.gui.AvatarInfoMixin",
     "figura.gui.StatusWidgetMixin",
-    "figura.lua.InstructionsMixin",
     "figura.lua.LuaRuntimeAccessor",
     "figura.lua.LuaRuntimeMixin",
     "figura.lua.LuaSoundAccessor",

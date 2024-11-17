@@ -10,6 +10,7 @@ import com.github.applejuiceyy.figuraextras.ipc.DisconnectAware;
 import com.github.applejuiceyy.figuraextras.ipc.underlying.IPCFactory;
 import com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura.LuaRuntimeAccessor;
 import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
+import com.github.applejuiceyy.figuraextras.tech.captures.figura.FiguraData;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -777,7 +778,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 }
 
                 @Override
-                public void startEvent(String runReason, Object toRun, Varargs val) {
+                public void startEvent(Discernible discernible) {
                     if (stackTrace.isActive) {
                         // onPlaySound event causes Avatar.run to be reentrant
                         // we will discard it under a compromise
@@ -786,7 +787,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                     }
                     stackTrace.frameList.clear();
                     stackTrace.isActive = true;
-                    stackTrace.kickstarter = runReason;
+                    Optional<FiguraData> as = discernible.getAs(FiguraData.class);
+                    stackTrace.kickstarter = as.orElseThrow().reason();
                 }
 
                 @Override

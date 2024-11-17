@@ -774,7 +774,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
 
         @Override
         public void accept(ReadableRectangle rectangle) {
-            if (dirtySection != null && dirtySection.intersection(root) == null) {
+            if (rectangle.intersection(root) == null) {
                 return;
             }
 

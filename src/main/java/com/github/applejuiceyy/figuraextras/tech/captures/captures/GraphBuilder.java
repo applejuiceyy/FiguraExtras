@@ -24,10 +24,16 @@ public class GraphBuilder implements Hook {
     private Frame currentFrame = new Frame(null, LuaDuck.CallType.NORMAL, null, null, null);
     private IntArrayList instructions = new IntArrayList();
     private IntArrayList lines = new IntArrayList();
+    private int eventCount = 0;
 
     public GraphBuilder(LuaTypeManager manager, Consumer<Frame> after) {
         this.after = after;
         this.manager = manager;
+    }
+
+    @Override
+    public void startEvent(Discernible discernible) {
+        eventCount++;
     }
 
     @Override
@@ -109,7 +115,9 @@ public class GraphBuilder implements Hook {
 
     @Override
     public void end() {
-        after.accept(currentFrame);
+        if(--eventCount == 0) {
+            after.accept(currentFrame);
+        }
     }
 
     @Override
@@ -138,7 +146,7 @@ public class GraphBuilder implements Hook {
     }
 
     private void flushInstructions() {
-        if (instructions.size() > 0) {
+        if (!instructions.isEmpty()) {
             Space space = new Space(instructions, lines);
             currentFrame.children.add(space);
             instructions = new IntArrayList();

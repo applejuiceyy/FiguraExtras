@@ -1,4 +1,4 @@
 package com.github.applejuiceyy.figuraextras.components.graph;
 
-public record Bounds(float xMin, float yMin, float xMax, float yMax) {
+public record Bounds(double xMin, double yMin, double xMax, double yMax) {
 }
