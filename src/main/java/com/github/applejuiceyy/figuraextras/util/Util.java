@@ -27,6 +27,22 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Util {
+    public static float map(float value, float min, float max, float rmin, float rmax) {
+        return (value - min) / (max - min) * (rmax - rmin) + rmin;
+    }
+
+    public static double length(float x1, float y1, float x2, float y2) {
+        return Math.sqrt(Math.pow(Math.abs(x1 - x2), 2) + Math.pow(Math.abs(y1 - y2), 2));
+    }
+
+    public static float constrain(float v, float min, float max) {
+        return Math.min(max, Math.max(min, v));
+    }
+
+    public static double angleTo(float x1, float y1, float x2, float y2) {
+        return Math.atan2(y2 - y1, x2 - x1);
+    }
+
     public static void setupTransforms(Window window) {
         Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float) ((double) window.getGuiScaledWidth()), (float) ((double) window.getGuiScaledHeight()), 0.0F, 1000.0F, 21000.0F);
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);

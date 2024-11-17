@@ -1,14 +1,19 @@
 package com.github.applejuiceyy.figuraextras.views;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
+import com.github.applejuiceyy.figuraextras.tech.gui.basics.Element;
 import com.github.applejuiceyy.figuraextras.tech.gui.basics.ParentElement;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Button;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
+import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
+import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.util.Differential;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.screen.ViewScreen;
 import com.github.applejuiceyy.figuraextras.window.DetachedWindow;
 import com.github.applejuiceyy.figuraextras.window.WindowContext;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatar.Avatar;
 import org.jetbrains.annotations.Nullable;
@@ -17,6 +22,32 @@ import java.util.Objects;
 import java.util.function.*;
 
 public class View {
+    public static void doOnContext(String dataName, ParentElement.AdditionPoint additionPoint, Consumer<Consumer<Element>> c) {
+        Flow flow = new Flow();
+
+        flow.add(Elements.separator());
+        flow.add(new Label(Component.literal("About the " + dataName + ":").withStyle(ChatFormatting.GRAY)));
+
+        c.accept(flow::add);
+        additionPoint.accept(flow);
+    }
+
+    public static <T> ParentElement<?> forNewWindow(T value, ViewConstructor<Context<T>, ?> constructor) {
+        ParentElement<Grid.GridSettings> button = Button.minimal().addAnd("View in new window");
+        button.activation.subscribe(ev -> {
+            newWindow(value, constructor);
+        });
+        return button;
+    }
+
+    public static <T> ParentElement<?> forInPlace(T value, ViewConstructor<Context<T>, ?> constructor, ViewContainer container) {
+        ParentElement<Grid.GridSettings> button = Button.minimal().addAnd("View here");
+        button.activation.subscribe(ev -> {
+            container.setView(constructor, value);
+        });
+        return button;
+    }
+
     public static <T> void newWindow(T value, ViewConstructor<Context<T>, ?> constructor) {
         FiguraExtras.windows.add(new DetachedWindow(() -> new ViewScreen<>(value, constructor)));
     }

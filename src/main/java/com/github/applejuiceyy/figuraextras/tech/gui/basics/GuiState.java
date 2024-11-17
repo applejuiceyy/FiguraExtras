@@ -204,7 +204,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                 }
                 dirtySectionHolder.dirtySection = root;
                 toUpdate = root;
-                logger.info("starting full repaint");
+                logger.debug("starting full repaint");
                 repaint = true;
             } else if (dirtySectionHolder.dirtySection != null) {
                 dirtySectionHolder.dirtySection = dirtySectionHolder.dirtySection.intersection(root);
@@ -215,7 +215,7 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
                     toUpdate.setWidth(toUpdate.getWidth() + 2);
                     toUpdate.setHeight(toUpdate.getHeight() + 2);
                     dirtySectionHolder.dirtySection = toUpdate;
-                    logger.info("starting repainting section");
+                    logger.debug("starting repainting section");
                     repaint = true;
                 }
             }
@@ -281,10 +281,17 @@ public class GuiState implements Renderable, GuiEventListener, LayoutElement, Na
         if (shouldDoTooltips) {
             Minecraft.getInstance().getProfiler().popPush("Tooltip");
             if (activeTooltipEvent == null && !currentHoverStack.isEmpty()) {
-                activeTooltipEvent = new DefaultCancellableEvent.ToolTipEvent(mouseX, mouseY, () -> {
-                    activeTooltipEvent.disposing.getSink().run();
-                    activeTooltipEvent = null;
-                });
+                activeTooltipEvent = new DefaultCancellableEvent.ToolTipEvent(mouseX, mouseY) {
+                    boolean disposed = false;
+                    @Override
+                    public void invalidate() {
+                        if(disposed) return;
+                        disposed = true;
+                        this.disposing.getSink().run();
+                        if(activeTooltipEvent != this) return;
+                        activeTooltipEvent = null;
+                    }
+                };
 
                 doSweepEvent(currentHoverStack, e -> e.tooltip, null, Element::defaultToolTipBehaviour, element -> element.mouseHoverIntent(mouseX, mouseY) != Element.HoverIntent.NONE, activeTooltipEvent);
             }
