@@ -55,7 +55,7 @@ public class CompoundTagWrap {
 
     @LuaMetatable
     public static void __newindex(CompoundTag tag, String key, LuaValue child) {
-        __newindex(tag, key, TagWrap.convertLuaToNbt(child));
+        __newindex(tag, key, TagUtils.convertLuaToNbt(child));
     }
 
     @LuaMetatable
