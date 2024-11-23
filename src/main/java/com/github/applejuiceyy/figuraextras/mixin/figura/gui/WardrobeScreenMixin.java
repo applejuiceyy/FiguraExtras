@@ -31,7 +31,7 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
         super(parentScreen, title);
     }
 
-    @Inject(method = "tick", at = @At("HEAD"))
+    @Inject(method = "tick", at = @At("HEAD"), remap = true)
     void scootButton(CallbackInfo ci) {
         int x = xAnchor - 16;
         if (!AvatarManager.localUploaded && LocalAvatarLoader.getLoadError() != null) {

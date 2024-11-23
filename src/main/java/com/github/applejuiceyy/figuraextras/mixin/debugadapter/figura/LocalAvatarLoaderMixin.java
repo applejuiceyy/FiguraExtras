@@ -56,7 +56,7 @@ public class LocalAvatarLoaderMixin {
         }
     }
 
-    @WrapOperation(method = "lambda$loadAvatar$2", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/avatar/local/LocalAvatarLoader;loadScripts(Ljava/nio/file/Path;Lnet/minecraft/nbt/CompoundTag;)V"))
+    @WrapOperation(method = "lambda$loadAvatar$2", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/avatar/local/LocalAvatarLoader;loadScripts(Ljava/nio/file/Path;Lnet/minecraft/nbt/CompoundTag;)V", remap = true))
     private static void disableMinifier(Path name, CompoundTag script, Operation<Void> original) {
         if (willPreprocess(name) && Configs.FORMAT_SCRIPT.value != 0) {
             Integer value = Configs.FORMAT_SCRIPT.value;
