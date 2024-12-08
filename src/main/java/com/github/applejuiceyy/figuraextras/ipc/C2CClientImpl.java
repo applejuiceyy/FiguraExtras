@@ -118,7 +118,7 @@ public class C2CClientImpl implements C2CClient {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        });
+        }, "DAP Starter");
 
         try {
             Thread.sleep(1000);

@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
+import com.github.applejuiceyy.figuraextras.constants.Identities;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.UserDataAccess;
 import com.github.applejuiceyy.figuraextras.fsstorage.Bucket;
@@ -53,7 +54,7 @@ public class UserDataMixin implements UserDataAccess {
                 nbt.remove("figura-extras");
                 if (figuraExtras.contains("signature", Tag.TAG_BYTE_ARRAY)) {
                     byte[] signature = figuraExtras.getByteArray("signature");
-                    verified = FiguraExtras.avatarSigner.verify(nbt.getAsString().getBytes(StandardCharsets.UTF_8), signature);
+                    verified = Identities.avatarSigner.verify(nbt.getAsString().getBytes(StandardCharsets.UTF_8), signature);
                 }
                 nbt.put("figura-extras", figuraExtras);
             }

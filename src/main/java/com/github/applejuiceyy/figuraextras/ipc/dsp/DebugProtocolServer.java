@@ -235,7 +235,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     @Override
     public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
         clientCapabilities = args;
-        Util.after(client::initialized, 1000);
+        Util.after(client::initialized, 1000, "Initialize");
         return CompletableFuture.completedFuture(capabilities);
     }
 
