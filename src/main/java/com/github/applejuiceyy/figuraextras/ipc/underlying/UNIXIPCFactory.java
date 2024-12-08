@@ -101,7 +101,6 @@ public class UNIXIPCFactory extends IPCFactory {
             if (new File(path).delete()) {
                 throw new IOException("Could not delete file");
             }
-            ;
         }
 
         @Override
@@ -110,6 +109,11 @@ public class UNIXIPCFactory extends IPCFactory {
                 super._continuousConnect(consumer);
             } catch (AsynchronousCloseException ignored) {
             }
+        }
+
+        @Override
+        public Path getUnderlyingFSPath() {
+            return Path.of(path);
         }
     }
 
@@ -168,7 +172,6 @@ public class UNIXIPCFactory extends IPCFactory {
             if (openStreams.decrementAndGet() == 0) {
                 closer.close();
             }
-            ;
         }
     }
 
@@ -238,7 +241,6 @@ public class UNIXIPCFactory extends IPCFactory {
             if (openStreams.decrementAndGet() == 0) {
                 closer.close();
             }
-            ;
         }
     }
 }

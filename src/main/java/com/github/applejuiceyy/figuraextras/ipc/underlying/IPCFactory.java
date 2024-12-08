@@ -7,6 +7,7 @@ import org.apache.commons.lang3.SystemUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.function.BiConsumer;
 
 public abstract class IPCFactory {
@@ -41,7 +42,7 @@ public abstract class IPCFactory {
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-            });
+            }, "IPC Server Connector");
         }
 
         protected void _continuousConnect(BiConsumer<InputStream, OutputStream> consumer) throws IOException {
@@ -50,6 +51,8 @@ public abstract class IPCFactory {
                 consumer.accept(connect.getA(), connect.getB());
             }
         }
+
+        public abstract Path getUnderlyingFSPath();
 
         @Override
         public void close() throws IOException {

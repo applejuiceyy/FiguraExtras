@@ -137,7 +137,7 @@ public class IPCManager {
                     Util.after(() -> {
                         connectionTransition = false;
                         assertStatesTrampoline();
-                    }, 5000);
+                    }, 5000, "Connection Retry");
                 }
             }
             if (!connectionTransition) {
@@ -156,7 +156,6 @@ public class IPCManager {
         if (_attemptConnection()) {
             isHost = true;
         }
-        ;
         connectionTransition = false;
         connected = true;
     }
@@ -202,7 +201,7 @@ public class IPCManager {
                     Util.after(() -> {
                         connectionTransition = false;
                         assertStatesTrampoline();
-                    }, random.nextInt(1000, 2000));
+                    }, random.nextInt(1000, 2000), "Connection Retry After Disconnect");
 
                 }
             });
@@ -217,7 +216,7 @@ public class IPCManager {
                         Util.after(() -> {
                             connectionTransition = false;
                             assertStatesTrampoline();
-                        }, random.nextInt(1000, 2000));
+                        }, random.nextInt(1000, 2000), "Connection Retry After Disconnect");
 
                     }
                 });

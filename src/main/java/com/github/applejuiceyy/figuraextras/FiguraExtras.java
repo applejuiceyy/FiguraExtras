@@ -1,6 +1,8 @@
 package com.github.applejuiceyy.figuraextras;
 
 
+import com.github.applejuiceyy.figuraextras.constants.Identities;
+import com.github.applejuiceyy.figuraextras.constants.Paths;
 import com.github.applejuiceyy.figuraextras.ducks.SoundEngineAccess;
 import com.github.applejuiceyy.figuraextras.fsstorage.CommonOps;
 import com.github.applejuiceyy.figuraextras.fsstorage.DataId;
@@ -11,6 +13,7 @@ import com.github.applejuiceyy.figuraextras.ipc.backend.ReceptionistServerBacken
 import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.ipc.protocol.ClientInformation;
 import com.github.applejuiceyy.figuraextras.ipc.protocol.WorldInformation;
+import com.github.applejuiceyy.figuraextras.settings.Settings;
 import com.github.applejuiceyy.figuraextras.views.TabView;
 import com.github.applejuiceyy.figuraextras.views.View;
 import com.github.applejuiceyy.figuraextras.views.backend.AvatarInstance;
@@ -24,7 +27,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.SharedConstants;
 import net.minecraft.Util;
@@ -51,19 +53,13 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
-import javax.crypto.KeyGenerator;
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.UnaryOperator;
 
 public class FiguraExtras implements ClientModInitializer {
@@ -84,17 +80,19 @@ public class FiguraExtras implements ClientModInitializer {
     public static Object2IntArrayMap<UUID> showSoundPositions = new Object2IntArrayMap<>();
     public static Logger logger = LogUtils.getLogger();
 
-    private static Path globalMinecraftDirectory;
-    private static Path figuraExtrasDirectory;
-
-    private static UUID instanceUUID;
-    public static SymmetricSigner avatarSigner;
-
     public static Storage hostSideStorage;
 
 
 
     static {
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
+        try {
+            lookup.ensureInitialized(Paths.class);
+            lookup.ensureInitialized(Identities.class);
+            lookup.ensureInitialized(Settings.class);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
 
         try {
             Class.forName("org.figuramc.figura.config.Configs");
@@ -204,15 +202,15 @@ public class FiguraExtras implements ClientModInitializer {
     }
 
     public static UUID getInstanceUUID() {
-        return instanceUUID;
+        return Identities.instanceUUID;
     }
 
     public static Path getFiguraExtrasDirectory() {
-        return figuraExtrasDirectory;
+        return Paths.figuraExtrasDirectory;
     }
 
     public static Path getGlobalMinecraftDirectory() {
-        return globalMinecraftDirectory;
+        return Paths.globalMinecraftDirectory;
     }
 
     public static void updateInformation() {
@@ -251,100 +249,7 @@ public class FiguraExtras implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        Path gameDir = FabricLoader.getInstance().getGameDir();
-        String s = switch (Util.getPlatform()) {
-            case WINDOWS -> System.getenv("APPDATA") + "/.minecraft";
-            case OSX -> System.getProperty("user.home") + "/Library/Application Support/minecraft";
-            default -> System.getProperty("user.home") + "/.minecraft";
-        };
-        globalMinecraftDirectory = Path.of(s, "figura_extras", "global");
-        try {
-            try {
-                figuraExtrasDirectory = gameDir.resolve("figura_extras");
-                Files.createDirectories(figuraExtrasDirectory);
-            } catch (FileAlreadyExistsException ignored) {
-            }
-
-            if (DEBUG) {
-                try {
-                    Files.createDirectory(figuraExtrasDirectory.resolve("compile_debug"));
-                } catch (FileAlreadyExistsException ignored) {
-                }
-            }
-
-            try {
-                Files.createDirectories(globalMinecraftDirectory);
-            } catch (FileAlreadyExistsException ignored) {
-            }
-
-            try {
-                Files.createDirectory(globalMinecraftDirectory.resolve("backend"));
-            } catch (FileAlreadyExistsException ignored) {
-            }
-            ;
-
-            Path file = figuraExtrasDirectory.resolve("id");
-            if (Files.exists(file)) {
-                try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(file))) {
-                    char[] uuid = new char[36];
-                    if (reader.read(uuid) == 36 && reader.read() == -1) {
-                        instanceUUID = UUID.fromString(String.valueOf(uuid));
-                    }
-                }
-            }
-            if (instanceUUID == null) {
-                instanceUUID = UUID.randomUUID();
-                Files.write(file, instanceUUID.toString().getBytes());
-            }
-
-            SecretKey key = null;
-
-            file = globalMinecraftDirectory.resolve("avatarkey");
-            Mac mac = Mac.getInstance("HmacSHA256");
-            reading:
-            if (Files.exists(file)) {
-                logger.info("Sourcing generated secret key");
-                SecretKeySpec hmacSHA256 = new SecretKeySpec(Files.readAllBytes(file), "HmacSHA256");
-
-                try {
-                    mac.init(hmacSHA256);
-                } catch (InvalidKeyException e) {
-                    logger.warn("Deleting key file because apparently it's invalid");
-                    Files.delete(file);
-                    break reading;
-                }
-
-                key = hmacSHA256;
-            }
-
-            if (key == null) {
-                logger.info("Generating a new secret key");
-                KeyGenerator generator = KeyGenerator.getInstance("HmacSHA256");
-                generator.init(1024 * 8);
-                key = generator.generateKey();
-                try {
-                    mac.init(key);
-                } catch (InvalidKeyException e) {
-                    throw new RuntimeException(e);
-                }
-                Files.write(file, key.getEncoded());
-            }
-            avatarSigner = new SymmetricSigner() {
-                @Override
-                public byte[] sign(byte[] bytes) {
-                    return mac.doFinal(bytes);
-                }
-
-                @Override
-                public boolean verify(byte[] message, byte[] signature) {
-                    return Arrays.equals(sign(message), signature);
-                }
-            };
-        } catch (IOException | NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-
-        hostSideStorage = Storage.create(globalMinecraftDirectory.resolve("host-avatar-nbt"), Set.of(CommonOps.TIME, HOST_AVATAR), 1);
+        hostSideStorage = Storage.create(Paths.globalMinecraftDirectory.resolve("host-avatar-nbt"), Set.of(CommonOps.TIME, HOST_AVATAR), 1);
 
         CommonOps.pruneBucketsByTime(hostSideStorage, Duration.ofDays(30));
 
@@ -415,9 +320,5 @@ public class FiguraExtras implements ClientModInitializer {
         });
     }
 
-    public interface SymmetricSigner {
-        byte[] sign(byte[] bytes);
 
-        boolean verify(byte[] message, byte[] signature);
-    }
 }

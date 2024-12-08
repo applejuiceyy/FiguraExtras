@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -212,6 +213,11 @@ public class WindowsIPCFactory extends IPCFactory {
         }
 
         @Override
+        public Path getUnderlyingFSPath() {
+            return Path.of(toNamedPipePath(path));
+        }
+
+        @Override
         public void close() {
 
         }
@@ -307,7 +313,6 @@ public class WindowsIPCFactory extends IPCFactory {
             if (read(bytes) == -1) {
                 return -1;
             }
-            ;
             return bytes[0] & 0xFF;
         }
 

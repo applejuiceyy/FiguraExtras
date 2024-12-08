@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
+import com.github.applejuiceyy.figuraextras.constants.Identities;
 import com.github.applejuiceyy.figuraextras.ducks.UserDataAccess;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.lua.MinecraftLuaBridge;
@@ -173,10 +174,9 @@ public class LocalAvatarLoaderMixin {
 
 
         if (FiguraExtras.signAvatars.value > 0) {
-            byte[] signature = FiguraExtras.avatarSigner.sign((guestCompoundTag == null ? hostCompoundTag : guestCompoundTag).getAsString().getBytes(StandardCharsets.UTF_8));
+            byte[] signature = Identities.avatarSigner.sign((guestCompoundTag == null ? hostCompoundTag : guestCompoundTag).getAsString().getBytes(StandardCharsets.UTF_8));
             (guestCompoundTag == null ? hostFiguraExtras : guestFiguraExtras).put("signature", new ByteArrayTag(signature));
         }
-        ;
 
         if (guestCompoundTag != null) {
             try {
