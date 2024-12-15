@@ -603,7 +603,6 @@ public class ClassGenerator {
                     // -> LuaValue
                     luaValuePusher.run();
                 }
-                ;
 
                 visitor.visitLabel(continuer);
             } else {

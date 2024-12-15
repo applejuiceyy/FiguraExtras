@@ -18,7 +18,7 @@ import java.util.function.Function;
 public class OverloadedMethod {
     private final String name;
     private final Bridge bridge;
-    private List<Overload> overloads = new ArrayList<>();
+    private final List<Overload> overloads = new ArrayList<>();
 
     public OverloadedMethod(String name, Bridge bridge) {
         this.name = name;

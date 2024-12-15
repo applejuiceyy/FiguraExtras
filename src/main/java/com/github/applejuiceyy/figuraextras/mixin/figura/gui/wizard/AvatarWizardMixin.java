@@ -88,4 +88,5 @@ public abstract class AvatarWizardMixin implements AvatarWizardAccess {
     public String[] figuraExtrass$getPostProcessors() {
         return postProcessor;
     }
+
 }

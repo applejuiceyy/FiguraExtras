@@ -1,6 +1,5 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura.gui;
 
-import com.github.applejuiceyy.figuraextras.ducks.AvatarListAccess;
 import com.github.applejuiceyy.figuraextras.views.View;
 import com.github.applejuiceyy.figuraextras.views.avatar.main.MainAvatarsView;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -11,7 +10,6 @@ import org.figuramc.figura.avatar.local.LocalAvatarLoader;
 import org.figuramc.figura.gui.screens.AbstractPanelScreen;
 import org.figuramc.figura.gui.screens.WardrobeScreen;
 import org.figuramc.figura.gui.widgets.Button;
-import org.figuramc.figura.gui.widgets.SearchBar;
 import org.figuramc.figura.gui.widgets.StatusWidget;
 import org.figuramc.figura.gui.widgets.lists.AvatarList;
 import org.spongepowered.asm.mixin.Mixin;
@@ -59,12 +57,6 @@ public abstract class WardrobeScreenMixin extends AbstractPanelScreen {
                 null,
                 o -> View.newWindow(null, MainAvatarsView::new)
         );
-
-
-        SearchBar searchBar = ((AvatarListAccess) avatarList).figuraExtrass$getSearchBar();
-        setFocused(avatarList);
-        avatarList.setFocused(searchBar);
-        searchBar.setFocused(searchBar.getField());
 
         addRenderableWidget(BButton);
     }

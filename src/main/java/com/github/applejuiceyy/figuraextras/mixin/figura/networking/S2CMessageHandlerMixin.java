@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 public class S2CMessageHandlerMixin {
     @Inject(method = "toast", at = @At("HEAD"), cancellable = true)
     private static void cancel(ByteBuffer bytes, CallbackInfo ci) {
+        // TODO: smallchange
         if (FiguraExtras.disableServerToasts.value) {
             ci.cancel();
         }

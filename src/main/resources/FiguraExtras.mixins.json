@@ -56,7 +56,6 @@
     "figura.EventsMixin",
     "figura.FiguraTextureMixin",
     "figura.ModelPartMixin",
-    "figura.gui.AvatarListMixin",
     "figura.gui.AvatarWidgetMixin",
     "figura.gui.AvatarWidgetMixin$AButtonMixin",
     "figura.gui.WardrobeScreenMixin",

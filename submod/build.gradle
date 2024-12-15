@@ -1,0 +1,167 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+def containerProject = project
+
+project.subprojects { sub ->
+    apply plugin: 'fabric-loom'
+
+    version = sub.mod_version
+    group = sub.maven_group
+
+    includeFigura = sub.includeFigura
+
+    repositories {
+        maven { url = "https://maven.quiltmc.org/repository/release/" }
+        maven { url 'https://jitpack.io' }
+        maven { url 'https://maven.wispforest.io' }
+        maven { url "https://repo.maven.apache.org/maven2/" }
+        maven { url "https://maven.figuramc.org/releases" }
+
+
+        maven {
+            name = "Modrinth"
+            url = "https://api.modrinth.com/maven"
+        }
+    }
+
+
+    dependencies {
+        minecraft "com.mojang:minecraft:${project.minecraft_version}"
+        mappings loom.layered {
+            mappings("org.quiltmc:quilt-mappings:${project.minecraft_version}+build.1:intermediary-v2")
+            officialMojangMappings()
+        }
+
+        modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+        if (includeFigura == "true") {
+            modImplementation "org.figuramc:figura-fabric:${project.figura}+1.20.1"
+            modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+        }
+    }
+
+    processResources {
+        inputs.property "version", project.version
+        inputs.property "minecraft_version", project.minecraft_version
+        inputs.property "loader_version", project.loader_version
+        filteringCharset "UTF-8"
+
+        filesMatching("fabric.mod.json") {
+            expand "version": project.version,
+                    "minecraft_version": project.minecraft_version,
+                    "loader_version": project.loader_version
+
+            filter(FabricModChildFilterReader)
+        }
+
+        doLast {
+            def path = destinationDir.toPath()
+            def things = new JsonSlurper()
+                    .parse(path.resolve("fabric.mod.json").newReader())
+            def icon = containerProject.file("./abstract.png")
+
+            def destination = path.resolve("assets").resolve((String) things.id)
+            destination.toFile().mkdirs()
+
+            def outputStream = destination.resolve("icon.png").newOutputStream()
+            def inputStream = icon.newInputStream()
+            inputStream.transferTo(outputStream)
+            outputStream.close()
+            inputStream.close()
+
+        }
+    }
+
+    def targetJavaVersion = 17
+    tasks.withType(JavaCompile).configureEach {
+        // ensure that the encoding is set to UTF-8, no matter what the system default is
+        // this fixes some edge cases with special characters not displaying correctly
+        // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
+        // If Javadoc is generated, this must be specified in that task too.
+        it.options.encoding = "UTF-8"
+        if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+            it.options.release = targetJavaVersion
+        }
+    }
+
+    java {
+        def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+        if (JavaVersion.current() < javaVersion) {
+            toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+        }
+        archivesBaseName = project.archives_base_name + project.name + "-" + project.minecraft_version
+        // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+        // if it is present.
+        // If you remove this line, sources will not be generated.
+        withSourcesJar()
+    }
+
+    jar {
+        from("LICENSE") {
+            rename { "${it}_${project.archivesBaseName}" }
+        }
+    }
+
+
+}
+
+class FabricModChildFilterReader extends FilterReader {
+    CharArrayReader underlying
+    Reader reader
+
+    FabricModChildFilterReader(Reader reader) {
+        super(reader)
+        this.reader = reader
+    }
+
+    Reader getReader() {
+        if (underlying != null) return underlying
+        def parse = new JsonSlurper().parse(reader)
+        parse.custom = new LinkedHashMap<>()
+        parse.custom.modmenu = new LinkedHashMap<>()
+        parse.custom.modmenu.parent = "figuraextras"
+        parse.icon = "assets/" + (String) parse.id + "/icon.png"
+        return underlying = new CharArrayReader(JsonOutput.prettyPrint(JsonOutput.toJson(parse)).toCharArray())
+    }
+
+    @Override
+    int read() throws IOException {
+        return getReader().read()
+    }
+
+    @Override
+    int read(char[] cbuf, int off, int len) throws IOException {
+        return getReader().read(cbuf, off, len)
+    }
+
+    @Override
+    long skip(long n) throws IOException {
+        return getReader().skip(n)
+    }
+
+    @Override
+    boolean ready() throws IOException {
+        return getReader().ready()
+    }
+
+    @Override
+    boolean markSupported() {
+        return getReader().markSupported()
+    }
+
+    @Override
+    void mark(int readAheadLimit) throws IOException {
+        getReader().mark(readAheadLimit)
+    }
+
+    @Override
+    void reset() throws IOException {
+        getReader().reset()
+    }
+
+    @Override
+    void close() throws IOException {
+        getReader().close()
+    }
+}

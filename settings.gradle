@@ -7,5 +7,15 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-include 'LuaBridge'
 
+include("submod")
+project(":submod").name = "SubMods"
+
+include("SubMods:SmallChange")
+
+for (final def f in file("./libs").listFiles()) {
+    include(f.name)
+    project(":" + f.name).projectDir = file("./libs/" + f.name)
+}
+
+rootProject.name = "FiguraExtras"

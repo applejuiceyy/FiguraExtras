@@ -37,6 +37,7 @@ public class AvatarWidgetMixin {
             )
     )
     void a(int depth, int width, LocalAvatarFetcher.AvatarPath avatar, AvatarList parent, CallbackInfo ci) {
+        // TODO: figure out if this is a small change
         ContextMenu menu = ((AvatarWidgetAccessor) this).getContextMenu();
         menu.addAction(Component.literal("Open with " + FiguraExtras.progName.value), null, button -> {
             try {
