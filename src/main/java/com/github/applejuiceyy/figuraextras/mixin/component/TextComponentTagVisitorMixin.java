@@ -104,7 +104,7 @@ public class TextComponentTagVisitorMixin implements TextComponentTagVisitorAcce
             at = @At(value = "NEW", args = "class=net/minecraft/nbt/TextComponentTagVisitor")
     )
     TextComponentTagVisitor compounds(TextComponentTagVisitor original) {
-        ((TextComponentTagVisitorAccess) original).figuraExtrass$setElementLimit(limit);
+        ((TextComponentTagVisitorAccess) original).figuraExtras$setElementLimit(limit);
         return original;
     }
 
@@ -113,7 +113,7 @@ public class TextComponentTagVisitorMixin implements TextComponentTagVisitorAcce
             at = @At(value = "NEW", args = "class=net/minecraft/nbt/TextComponentTagVisitor")
     )
     TextComponentTagVisitor lists(TextComponentTagVisitor original) {
-        ((TextComponentTagVisitorAccess) original).figuraExtrass$setElementLimit(limit);
+        ((TextComponentTagVisitorAccess) original).figuraExtras$setElementLimit(limit);
         return original;
     }
 
@@ -145,7 +145,7 @@ public class TextComponentTagVisitorMixin implements TextComponentTagVisitorAcce
 
 
     @Override
-    public void figuraExtrass$setElementLimit(int limit) {
+    public void figuraExtras$setElementLimit(int limit) {
         this.limit = limit;
     }
 }

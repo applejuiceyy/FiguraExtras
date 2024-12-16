@@ -16,9 +16,9 @@ public class AvatarInfoMixin {
 
     @ModifyExpressionValue(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;", ordinal = 2))
     MutableComponent modifySize(MutableComponent original, @Local Avatar avatar) {
-        if (((AvatarAccess) avatar).figuraExtrass$getGuestNbt() != null) {
+        if (((AvatarAccess) avatar).figuraExtras$getGuestNbt() != null) {
             String host = MathUtils.asFileSize(avatar.fileSize);
-            String guest = MathUtils.asFileSize(((AvatarAccess) avatar).figuraExtrass$getGuestFileSize());
+            String guest = MathUtils.asFileSize(((AvatarAccess) avatar).figuraExtras$getGuestFileSize());
             return Component.literal(host + "(H) " + guest + "(G)");
         }
         return original;

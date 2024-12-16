@@ -7,7 +7,7 @@ import org.figuramc.figura.lua.api.sound.LuaSound;
 import java.util.List;
 
 public interface SoundEngineAccess {
-    ChannelAccess.ChannelHandle figuraExtrass$createHandle(Library.Pool mode);
+    ChannelAccess.ChannelHandle figuraExtras$createHandle(Library.Pool mode);
 
-    List<LuaSound> figuraExtrass$getFiguraHandles();
+    List<LuaSound> figuraExtras$getFiguraHandles();
 }

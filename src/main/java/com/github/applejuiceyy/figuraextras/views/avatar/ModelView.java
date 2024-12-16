@@ -28,7 +28,7 @@ public class ModelView extends ObjectTreeView<DummyExpander.Dummy> {
 
     @Override
     protected Expander<DummyExpander.Dummy> getRootExpander() {
-        return ((AvatarAccess) context.getValue()).figuraExtrass$getModelViewTree();
+        return ((AvatarAccess) context.getValue()).figuraExtras$getModelViewTree();
     }
 
     static class ModelPartExpander implements ObjectExpander<FiguraModelPart, String, FiguraModelPart> {

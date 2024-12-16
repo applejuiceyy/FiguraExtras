@@ -15,7 +15,7 @@ public class VirtualScreenMixin implements VirtualScreenAccess {
     WindowEventHandler currentHandler;
 
     @Override
-    public void figuraExtrass$setEventListener(@Nullable WindowEventHandler handler) {
+    public void figuraExtras$setEventListener(@Nullable WindowEventHandler handler) {
         currentHandler = handler;
     }
 

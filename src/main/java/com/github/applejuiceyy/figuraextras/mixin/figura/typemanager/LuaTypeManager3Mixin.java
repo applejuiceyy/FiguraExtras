@@ -39,10 +39,10 @@ public abstract class LuaTypeManager3Mixin {
     @SuppressWarnings("InvalidInjectorMethodSignature")
     @Inject(method = "invoke", at = @At(value = "RETURN"), locals = LocalCapture.CAPTURE_FAILHARD)
     void outOfJava(Varargs args, CallbackInfoReturnable<Varargs> cir, int i, Object result) {
-        Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtrass$getAvatar();
+        Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtras$getAvatar();
         if (avatar != null) {
             Hook hook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
-                    .figuraExtrass$getCaptureState().getSink();
+                    .figuraExtras$getCaptureState().getSink();
 
             if (hook != null) {
                 hook.outOfJavaFunction(args, val$method, result, LuaDuck.ReturnType.NORMAL);
@@ -57,10 +57,10 @@ public abstract class LuaTypeManager3Mixin {
             try {
                 cir.setReturnValue(invoke(args));
             } catch (Throwable e) {
-                Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtrass$getAvatar();
+                Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtras$getAvatar();
                 if (avatar != null) {
                     Hook hook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
-                            .figuraExtrass$getCaptureState().getSink();
+                            .figuraExtras$getCaptureState().getSink();
 
                     if (hook != null) {
                         hook.outOfJavaFunction(args,
@@ -78,10 +78,10 @@ public abstract class LuaTypeManager3Mixin {
             LuaDuck.CallType type = LuaDuck.currentCallType;
             LuaDuck.currentCallType = LuaDuck.CallType.NORMAL;
 
-            Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtrass$getAvatar();
+            Avatar avatar = ((LuaTypeManagerAccess) this$0).figuraExtras$getAvatar();
             if (avatar != null) {
                 Hook hook = ((GlobalsAccess) ((LuaRuntimeAccessor) avatar.luaRuntime).getUserGlobals())
-                        .figuraExtrass$getCaptureState().getSink();
+                        .figuraExtras$getCaptureState().getSink();
 
                 if (hook != null) {
                     hook.intoJavaFunction(args, val$method, type);

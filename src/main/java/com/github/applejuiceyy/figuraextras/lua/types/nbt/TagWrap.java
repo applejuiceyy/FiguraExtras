@@ -4,7 +4,8 @@ import com.github.applejuiceyy.figuraextras.ducks.TextComponentTagVisitorAccess;
 import com.github.applejuiceyy.luabridge.annotation.LuaClass;
 import com.github.applejuiceyy.luabridge.annotation.LuaMethod;
 import com.github.applejuiceyy.luabridge.annotation.LuaPrint;
-import net.minecraft.nbt.*;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TextComponentTagVisitor;
 import net.minecraft.network.chat.Component;
 
 
@@ -28,7 +29,7 @@ public class TagWrap {
     @LuaPrint
     public static Component print(Tag tag, boolean expand) {
         TextComponentTagVisitor visitor = new TextComponentTagVisitor("    ", 0);
-        ((TextComponentTagVisitorAccess) visitor).figuraExtrass$setElementLimit(10);
+        ((TextComponentTagVisitorAccess) visitor).figuraExtras$setElementLimit(10);
         return visitor.visit(tag);
     }
 

@@ -1,7 +1,11 @@
 package com.github.applejuiceyy.figuraextras.mixin.gui;
 
 import com.github.applejuiceyy.figuraextras.ducks.CommandSuggestionsAccess;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.brigadier.suggestion.Suggestion;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.renderer.Rect2i;
@@ -14,15 +18,11 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.List;
 
 @Mixin(CommandSuggestions.SuggestionsList.class)
-public class SuggestionListMixin {
+public abstract class SuggestionListMixin {
     @Shadow
     @Final
     CommandSuggestions field_21615;
@@ -37,30 +37,15 @@ public class SuggestionListMixin {
     @Final
     private List<Suggestion> suggestionList;
 
-    @ModifyArg(
+    @WrapOperation(
             method = "render",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)I"),
-            index = 1
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)I")
     )
-    String figura_jankCancelRender(String text) {
+    int renderWithBadge(GuiGraphics instance, Font renderer, String text, int x, int y, int color, Operation<Integer> original, @Local(ordinal = 4) int l) {
         if (!((CommandSuggestionsAccess) field_21615).figuraExtras$shouldShowFiguraBadges()) {
-            return text;
-        }
-        // jank-cancel
-        return "";
-    }
-
-    @Inject(
-            method = "render",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)I"),
-            locals = LocalCapture.CAPTURE_FAILHARD
-    )
-    void figura_renderOwn(GuiGraphics graphics, int mouseX, int mouseY, CallbackInfo ci, int i, int j, boolean bl, boolean bl2, boolean bl3, boolean bl4, boolean bl5, int l) {
-        if (!((CommandSuggestionsAccess) field_21615).figuraExtras$shouldShowFiguraBadges()) {
-            return;
+            return original.call(instance, renderer, text, x, y, color);
         }
 
-        // jank-redo
         Suggestion suggestion = this.suggestionList.get(l + this.offset);
 
         MutableComponent component = Component.empty();
@@ -70,6 +55,6 @@ public class SuggestionListMixin {
         component.append(" ");
         component.append(suggestion.getText());
 
-        graphics.drawString(((CommandSuggestionsAccess) field_21615).figuraExtras$getFont(), component, rect.getX() + 1, this.rect.getY() + 2 + 12 * l, l + this.offset == this.current ? -256 : -5592406);
+        return instance.drawString(((CommandSuggestionsAccess) field_21615).figuraExtras$getFont(), component, rect.getX() + 1, this.rect.getY() + 2 + 12 * l, l + this.offset == this.current ? -256 : -5592406);
     }
 }

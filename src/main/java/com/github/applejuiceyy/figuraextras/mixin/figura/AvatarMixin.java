@@ -136,47 +136,47 @@ public class AvatarMixin implements AvatarAccess {
 
     @Inject(method = "loadSound", at = @At(value = "INVOKE", target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"), locals = LocalCapture.CAPTURE_FAILSOFT)
     void e(String name, byte[] data, CallbackInfo ci, ByteArrayInputStream inputStream, OggAudioStream oggAudioStream, SoundBuffer sound) {
-        ((SoundBufferAccess) sound).figuraExtrass$keepBuffer();
+        ((SoundBufferAccess) sound).figuraExtras$keepBuffer();
     }
 
 
     @Override
-    public boolean figuraExtrass$isCleaned() {
+    public boolean figuraExtras$isCleaned() {
         return cleaned;
     }
 
     @Override
-    public Expander<LuaValue> figuraExtrass$getObjectViewTree() {
+    public Expander<LuaValue> figuraExtras$getObjectViewTree() {
         return objectRoot;
     }
 
     @Override
-    public Expander<DummyExpander.Dummy> figuraExtrass$getModelViewTree() {
+    public Expander<DummyExpander.Dummy> figuraExtras$getModelViewTree() {
         return modelRoot;
     }
 
     @Override
-    public Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect() {
+    public Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtras$getChatRedirect() {
         return chatRedirector;
     }
 
     @Override
-    public Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtrass$getNetworkLogger() {
+    public Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtras$getNetworkLogger() {
         return networkEvent;
     }
 
     @Override
-    public CompoundTag figuraExtrass$getGuestNbt() {
+    public CompoundTag figuraExtras$getGuestNbt() {
         return guestNbt;
     }
 
     @Override
-    public int figuraExtrass$getGuestFileSize() {
+    public int figuraExtras$getGuestFileSize() {
         return guestSize;
     }
 
     @Override
-    public void figuraExtrass$setGuestNbt(CompoundTag tag) {
+    public void figuraExtras$setGuestNbt(CompoundTag tag) {
         guestNbt = tag;
         try {
             // get size

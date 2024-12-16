@@ -61,7 +61,7 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Ljava/util/Map;putAll(Ljava/util/Map;)V"))
     void init(Avatar avatar, Map<String, String> scripts, CallbackInfo ci) {
-        ((LuaTypeManagerAccess) typeManager).figuraExtrass$setAvatar(avatar);
+        ((LuaTypeManagerAccess) typeManager).figuraExtras$setAvatar(avatar);
         prototypesMarkedAsLoadStringed = new WeakHashMap<>();
         sourceName = new HashMap<>();
         nextSource = 1;
@@ -79,7 +79,7 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
 
     @Inject(method = "init", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;error(Ljava/lang/Throwable;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
     void initError(ListTag autoScripts, CallbackInfoReturnable<Boolean> cir, Throwable e) {
-        Hook hook = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+        Hook hook = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getSink();
         if (hook != null) {
             hook.endError(e);
         }
@@ -89,7 +89,7 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     void initScript(String str, CallbackInfoReturnable<Varargs> cir) {
         if (initCount != -1) {
             if (initCount == 0) {
-                Hook hook = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+                Hook hook = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getSink();
                 if (hook != null) {
                     hook.startInit(str);
                 }
@@ -104,7 +104,7 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
         initCount--;
         if (initCount == 0) {
             initCount = -1;
-            Hook hook = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+            Hook hook = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getSink();
             if (hook != null) {
                 hook.end();
             }
@@ -115,10 +115,10 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     void e(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir, @Local Varargs val) {
 
         ((GlobalsAccess) userGlobals)
-                .figuraExtrass$getCaptureState()
+                .figuraExtras$getCaptureState()
                 .startEvent(toRun);
 
-        Hook hook = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+        Hook hook = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getSink();
         if (hook != null) {
             String reason = "Unknown";
             if (LuaRuntimeDuck.runReason != null) {
@@ -143,7 +143,7 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
 
     @Inject(method = "run", at = @At(value = "RETURN", ordinal = 0))
     void runNormal(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir) {
-        Hook capture = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+        Hook capture = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getSink();
         if (capture != null) {
             capture.end();
         }
@@ -151,7 +151,7 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
 
     @Inject(method = "run", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;error(Ljava/lang/Throwable;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
     void runFail(Object toRun, Avatar.Instructions limit, Object[] args, CallbackInfoReturnable<Varargs> cir, LuaValue[] values, Varargs val, Throwable e) {
-        Hook capture = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getSink();
+        Hook capture = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getSink();
         if (capture != null) {
             capture.endError(e);
         }
@@ -162,24 +162,23 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
         LuaValue loaded = instance.load(script, chunkname);
 
         if (loaded instanceof LuaClosure closure) {
-            this.figuraExtrass$newDynamicLoad(closure.p, script);
+            this.figuraExtras$newDynamicLoad(closure.p, script);
         }
-        ;
         return loaded;
     }
 
     @Override
-    public WeakHashMap<Prototype, Integer> figuraExtrass$getPrototypesMarkedAsLoadStringed() {
-        return prototypesMarkedAsLoadStringed;
+    public Event<SourceListener>.Source figuraExtras$dynamicLoadsEvent() {
+        return dynamicLoadEvent.getSource();
     }
 
     @Override
-    public HashMap<Integer, Tuple<String, String>> figuraExtrass$getRegisteredDynamicSources() {
+    public HashMap<Integer, Tuple<String, String>> figuraExtras$getRegisteredDynamicSources() {
         return sourceName;
     }
 
     @Override
-    public int figuraExtrass$newDynamicLoad(Prototype prototype, String source) {
+    public int figuraExtras$newDynamicLoad(Prototype prototype, String source) {
         if (sourceName.size() > 10) {
             IntArraySet seen = new IntArraySet();
             for (Map.Entry<Prototype, Integer> entry : prototypesMarkedAsLoadStringed.entrySet()) {
@@ -208,12 +207,12 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     }
 
     @Override
-    public String figuraExtrass$getSource(int i) {
+    public String figuraExtras$getSource(int i) {
         return sourceName.get(i).getA();
     }
 
     @Override
-    public Event<SourceListener>.Source figuraExtrass$dynamicLoadsEvent() {
-        return dynamicLoadEvent.getSource();
+    public WeakHashMap<Prototype, Integer> figuraExtras$getPrototypesMarkedAsLoadStringed() {
+        return prototypesMarkedAsLoadStringed;
     }
 }

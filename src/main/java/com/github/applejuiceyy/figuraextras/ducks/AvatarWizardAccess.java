@@ -1,7 +1,7 @@
 package com.github.applejuiceyy.figuraextras.ducks;
 
 public interface AvatarWizardAccess {
-    void figuraExtrass$setPostProcessors(String[] processor);
+    void figuraExtras$setPostProcessors(String[] processor);
 
-    String[] figuraExtrass$getPostProcessors();
+    String[] figuraExtras$getPostProcessors();
 }

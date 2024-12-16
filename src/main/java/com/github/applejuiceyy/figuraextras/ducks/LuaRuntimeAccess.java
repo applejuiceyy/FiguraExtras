@@ -10,15 +10,15 @@ import java.util.HashMap;
 import java.util.WeakHashMap;
 
 public interface LuaRuntimeAccess {
-    HashMap<Object, PossibleCapture> figuraExtrass$getNoticedPotentialCaptures();
+    HashMap<Object, PossibleCapture> figuraExtras$getNoticedPotentialCaptures();
 
-    Event<SourceListener>.Source figuraExtrass$dynamicLoadsEvent();
+    Event<SourceListener>.Source figuraExtras$dynamicLoadsEvent();
 
-    HashMap<Integer, Tuple<String, String>> figuraExtrass$getRegisteredDynamicSources();
+    HashMap<Integer, Tuple<String, String>> figuraExtras$getRegisteredDynamicSources();
 
-    int figuraExtrass$newDynamicLoad(Prototype prototype, String source);
+    int figuraExtras$newDynamicLoad(Prototype prototype, String source);
 
-    String figuraExtrass$getSource(int i);
+    String figuraExtras$getSource(int i);
 
-    WeakHashMap<Prototype, Integer> figuraExtrass$getPrototypesMarkedAsLoadStringed();
+    WeakHashMap<Prototype, Integer> figuraExtras$getPrototypesMarkedAsLoadStringed();
 }

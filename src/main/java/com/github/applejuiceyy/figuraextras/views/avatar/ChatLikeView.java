@@ -33,7 +33,7 @@ public class ChatLikeView implements Lifecycle {
 
     public ChatLikeView(View.Context<Avatar> context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
-        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getValue()).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getValue()).figuraExtras$getChatRedirect();
         if (!event.hasSubscribers() && (Configs.LOG_OTHERS.value || FiguraMod.isLocal(context.getValue().owner))) {
             FiguraExtras.sendBrandedMessage("Redirecting output to informational screens");
         }
@@ -118,7 +118,7 @@ public class ChatLikeView implements Lifecycle {
     @Override
     public void dispose() {
         sub.run();
-        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getValue()).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getValue()).figuraExtras$getChatRedirect();
         if (!event.hasSubscribers() && (Configs.LOG_OTHERS.value || FiguraMod.isLocal(context.getValue().owner))) {
             FiguraExtras.sendBrandedMessage("No longer redirecting output to informational screens");
         }

@@ -41,7 +41,7 @@ public class HttpRequestBuilderMixin {
     HttpResponse.BodyHandler<InputStream> e(HttpResponse.BodyHandler<InputStream> responseBodyHandler) {
 
         if (((AvatarAccess) ((NetworkingAPIAccessor) ((HttpRequestsAPIAccessor) parent).getParent()).getOwner())
-                .figuraExtrass$getNetworkLogger().hasSubscribers()) {
+                .figuraExtras$getNetworkLogger().hasSubscribers()) {
             CompletableFuture<String> thisWrapped = new CompletableFuture<>();
             wireTapped = thisWrapped;
             HttpResponse.BodyHandler<String> bodyHandler = HttpResponse.BodyHandlers.ofString();
@@ -91,7 +91,7 @@ public class HttpRequestBuilderMixin {
     )
     void e(CallbackInfoReturnable<FiguraFuture<HttpRequestsAPI.HttpResponse>> cir, @Local HttpRequest req, @Local CompletableFuture<HttpResponse<InputStream>> asyncResponse) {
         ((AvatarAccess) ((NetworkingAPIAccessor) ((HttpRequestsAPIAccessor) parent).getParent()).getOwner())
-                .figuraExtrass$getNetworkLogger()
+                .figuraExtras$getNetworkLogger()
                 .getSink()
                 .accept(asyncResponse, req, wireTapped);
         wireTapped = null;

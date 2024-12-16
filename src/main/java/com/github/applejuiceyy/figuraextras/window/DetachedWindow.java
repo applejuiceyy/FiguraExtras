@@ -165,7 +165,7 @@ public class DetachedWindow implements WindowContext {
 
             @Override
             protected <T> T _withContext(Supplier<T> running) {
-                return ((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$withWindow(window.window, window.renderTarget, running);
+                return ((MinecraftAccess) Minecraft.getInstance()).figuraExtras$withWindow(window.window, window.renderTarget, running);
             }
 
             @Override

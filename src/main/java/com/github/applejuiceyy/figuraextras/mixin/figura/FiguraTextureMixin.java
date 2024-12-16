@@ -87,18 +87,18 @@ public abstract class FiguraTextureMixin implements FiguraTextureAccess {
     }
 
     @Override
-    public boolean figuraExtrass$hasRealTimePendingModifications() {
+    public boolean figuraExtras$hasRealTimePendingModifications() {
         return realTimePendingModifications;
     }
 
     @Override
-    public boolean figuraExtrass$hasPendingModifications() {
+    public boolean figuraExtras$hasPendingModifications() {
         return pendingModifications;
     }
 
 
     @Override
-    public void figuraExtrass$lockUpdatedTexture() {
+    public void figuraExtras$lockUpdatedTexture() {
         locks++;
         if (locks == 1) {
             generateUpdatedTexture();
@@ -106,12 +106,12 @@ public abstract class FiguraTextureMixin implements FiguraTextureAccess {
     }
 
     @Override
-    public ResourceLocation figuraExtrass$getUpdatedTexture() {
+    public ResourceLocation figuraExtras$getUpdatedTexture() {
         return realTimeTextureIdentifier;
     }
 
     @Override
-    public void figuraExtrass$refreshUpdatedTexture() {
+    public void figuraExtras$refreshUpdatedTexture() {
         if (realTimeTexture != null) {
             if (!realTimeTextureIsRegistered) {
                 Minecraft.getInstance().getTextureManager().register(realTimeTextureIdentifier, realTimeTexture);
@@ -139,7 +139,7 @@ public abstract class FiguraTextureMixin implements FiguraTextureAccess {
     }
 
     @Override
-    public void figuraExtrass$unlockUpdatedTexture() {
+    public void figuraExtras$unlockUpdatedTexture() {
         locks--;
         if (locks == 0) {
             ungenerateUpdatedTexture();

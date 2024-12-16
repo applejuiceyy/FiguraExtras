@@ -22,6 +22,6 @@ public class DebugLibMixin {
             locals = LocalCapture.CAPTURE_FAILHARD
     )
     void e(LuaValue modname, LuaValue env, CallbackInfoReturnable<LuaValue> cir, LuaTable debug) {
-        ((GlobalsAccess) globals).figuraExtrass$setOffTheShelfDebugLib(debug);
+        ((GlobalsAccess) globals).figuraExtras$setOffTheShelfDebugLib(debug);
     }
 }

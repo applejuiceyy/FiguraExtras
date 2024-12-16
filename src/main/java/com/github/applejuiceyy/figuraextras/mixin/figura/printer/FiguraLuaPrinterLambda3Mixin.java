@@ -30,7 +30,7 @@ class FiguraLuaPrinterLambda3Mixin {
 
     @Inject(method = "invoke(Lorg/luaj/vm2/Varargs;)Lorg/luaj/vm2/Varargs;", at = @At("HEAD"), remap = false)
     private void e(Varargs args, CallbackInfoReturnable<Varargs> cir) {
-        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) val$runtime.owner).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> redirect = ((AvatarAccess) val$runtime.owner).figuraExtras$getChatRedirect();
         FiguraLuaPrinterDuck.currentAvatar = val$runtime.owner;
         FiguraLuaPrinterDuck.currentKind = FiguraLuaPrinterDuck.Kind.PRINT;
         FiguraLuaPrinterDuck.logOthers = switchLogOthersBack = Configs.LOG_OTHERS.value;

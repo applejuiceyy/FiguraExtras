@@ -1,6 +1,6 @@
-package com.github.applejuiceyy.figuraextras.mixin.figura.gui;
+package com.github.applejuiceyy.figuraextras.smallchange.mixin;
 
-import com.github.applejuiceyy.figuraextras.ducks.AvatarListAccess;
+import com.github.applejuiceyy.figuraextras.smallchange.accessors.AvatarListAccess;
 import org.figuramc.figura.gui.widgets.SearchBar;
 import org.figuramc.figura.gui.widgets.lists.AvatarList;
 import org.spongepowered.asm.mixin.Mixin;
@@ -24,7 +24,7 @@ public class AvatarListMixin implements AvatarListAccess {
     }
 
     @Override
-    public SearchBar figuraExtrass$getSearchBar() {
+    public SearchBar figuraExtras$getSearchBar() {
         return searchBar;
     }
 }

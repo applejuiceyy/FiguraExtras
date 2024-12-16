@@ -144,7 +144,7 @@ public class MetricsView implements Lifecycle {
 
 
         Globals globals = ((LuaRuntimeAccessor) value.luaRuntime).getUserGlobals();
-        CaptureState captureState = ((GlobalsAccess) globals).figuraExtrass$getCaptureState();
+        CaptureState captureState = ((GlobalsAccess) globals).figuraExtras$getCaptureState();
 
         unsubscriber = captureState.getEvent().subscribe(new MetricHook(value.luaRuntime.typeManager, toMeasure, result -> {
             if(!collecting) return;

@@ -3,7 +3,7 @@ package com.github.applejuiceyy.figuraextras.ducks;
 import java.nio.ByteBuffer;
 
 public interface SoundBufferAccess {
-    void figuraExtrass$keepBuffer();
+    void figuraExtras$keepBuffer();
 
-    ByteBuffer figuraExtrass$getKeptBuffer();
+    ByteBuffer figuraExtras$getKeptBuffer();
 }

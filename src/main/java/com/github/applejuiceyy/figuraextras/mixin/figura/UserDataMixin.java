@@ -99,14 +99,14 @@ public class UserDataMixin implements UserDataAccess {
     @ModifyExpressionValue(method = "loadAvatar", at = @At(value = "NEW", target = "(Ljava/util/UUID;)Lorg/figuramc/figura/avatar/Avatar;"))
     Avatar setGuestNbt(Avatar original) {
         if (guestNbt != null) {
-            ((AvatarAccess) original).figuraExtrass$setGuestNbt(guestNbt);
+            ((AvatarAccess) original).figuraExtras$setGuestNbt(guestNbt);
             guestNbt = null;
         }
         return original;
     }
 
     @Override
-    public void figuraExtrass$setFutureAvatarGuestNbt(CompoundTag tag) {
+    public void figuraExtras$setFutureAvatarGuestNbt(CompoundTag tag) {
         guestNbt = tag;
     }
 }

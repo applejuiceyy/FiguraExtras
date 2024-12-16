@@ -80,12 +80,12 @@ public abstract class AvatarWizardMixin implements AvatarWizardAccess {
     }
 
     @Override
-    public void figuraExtrass$setPostProcessors(String[] postProcessor) {
+    public void figuraExtras$setPostProcessors(String[] postProcessor) {
         this.postProcessor = postProcessor;
     }
 
     @Override
-    public String[] figuraExtrass$getPostProcessors() {
+    public String[] figuraExtras$getPostProcessors() {
         return postProcessor;
     }
 

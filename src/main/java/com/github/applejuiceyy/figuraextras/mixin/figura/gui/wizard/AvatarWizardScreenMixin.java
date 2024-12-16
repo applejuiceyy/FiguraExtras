@@ -55,14 +55,14 @@ public abstract class AvatarWizardScreenMixin extends Screen {
             if (retained) {
                 Settings.INSTANCE.setDefaultSelectedPostProcessors(ppArray);
             }
-            ((AvatarWizardAccess) wizard).figuraExtrass$setPostProcessors(ppArray);
+            ((AvatarWizardAccess) wizard).figuraExtras$setPostProcessors(ppArray);
 
             for (String suggestion : list) {
                 int i = suggestion.lastIndexOf('.');
                 Component name = Component.literal(i == -1 ? suggestion : suggestion.substring(0, i));
                 Component greenName = name.copy().withStyle(ChatFormatting.GREEN);
                 menu.addAction(defaultPP.contains(suggestion) ? greenName : name, null, o -> {
-                    String[] strings = ((AvatarWizardAccess) wizard).figuraExtrass$getPostProcessors();
+                    String[] strings = ((AvatarWizardAccess) wizard).figuraExtras$getPostProcessors();
                     List<String> stringList = Arrays.asList(strings);
                     int index = stringList.indexOf(suggestion);
                     String[] modified;
@@ -80,7 +80,7 @@ public abstract class AvatarWizardScreenMixin extends Screen {
                         }
                     }
                     o.setMessage(index == -1 ? greenName : name);
-                    ((AvatarWizardAccess) wizard).figuraExtrass$setPostProcessors(modified);
+                    ((AvatarWizardAccess) wizard).figuraExtras$setPostProcessors(modified);
                     setDefaultButtonVisibility();
                 });
             }
@@ -93,7 +93,7 @@ public abstract class AvatarWizardScreenMixin extends Screen {
 
     @Unique
     void setDefaultButtonVisibility() {
-        String[] strings = ((AvatarWizardAccess) wizard).figuraExtrass$getPostProcessors();
+        String[] strings = ((AvatarWizardAccess) wizard).figuraExtras$getPostProcessors();
         String[] defaults = Settings.INSTANCE.getDefaultSelectedPostProcessors();
         setDefaultButton.setVisible(!Arrays.deepEquals(strings, defaults));
     }
@@ -109,7 +109,7 @@ public abstract class AvatarWizardScreenMixin extends Screen {
 
         setDefaultButton = addRenderableWidget(
                 new Button(x, 30 + menu.getHeight(), menu.getWidth(), 12, Component.literal("Set Default"), null, button -> {
-                    String[] strings = ((AvatarWizardAccess) wizard).figuraExtrass$getPostProcessors();
+                    String[] strings = ((AvatarWizardAccess) wizard).figuraExtras$getPostProcessors();
                     Settings.INSTANCE.setDefaultSelectedPostProcessors(strings);
                     setDefaultButton.setVisible(false);
                 })
@@ -119,6 +119,6 @@ public abstract class AvatarWizardScreenMixin extends Screen {
 
     @ModifyArg(method = "lambda$init$1", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/gui/FiguraToast;sendToast(Ljava/lang/Object;)V"))
     Object cancelFunnyToast(Object title) {
-        return ((AvatarWizardAccess) wizard).figuraExtrass$getPostProcessors().length == 0 ? title : "Your avatar is being post-processed";
+        return ((AvatarWizardAccess) wizard).figuraExtras$getPostProcessors().length == 0 ? title : "Your avatar is being post-processed";
     }
 }

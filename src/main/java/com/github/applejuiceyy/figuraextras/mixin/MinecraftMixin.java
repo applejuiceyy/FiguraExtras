@@ -75,12 +75,12 @@ public abstract class MinecraftMixin implements MinecraftAccess {
     protected abstract ProfilerFiller constructProfiler(boolean active, @Nullable SingleTickProfiler monitor);
 
     @Override
-    public VirtualScreen figuraExtrass$getScreenManager() {
+    public VirtualScreen figuraExtras$getScreenManager() {
         return virtualScreen;
     }
 
     @Override
-    public <T> T figuraExtrass$withWindow(Window newWindow, RenderTarget target, Supplier<T> runnable) {
+    public <T> T figuraExtras$withWindow(Window newWindow, RenderTarget target, Supplier<T> runnable) {
         Window actualWindow = window;
         RenderTarget actualTarget = mainRenderTarget;
         window = newWindow;
@@ -92,7 +92,7 @@ public abstract class MinecraftMixin implements MinecraftAccess {
     }
 
     @Override
-    public <T> T figuraExtrass$withSetScreen(Consumer<Screen> setScreen, Supplier<T> runnable) {
+    public <T> T figuraExtras$withSetScreen(Consumer<Screen> setScreen, Supplier<T> runnable) {
         Consumer<Screen> original = screenSetter;
         screenSetter = setScreen;
         T ret = runnable.get();
@@ -120,6 +120,36 @@ public abstract class MinecraftMixin implements MinecraftAccess {
         host.render(guiGraphics, mouseHandler.xpos(), mouseHandler.ypos(), getDeltaFrameTime());
         Util.endTransforms();
         profiler.pop();
+    }
+
+    public WindowContentPopOutHost figuraExtras$getContentPopOutHost() {
+        return host;
+    }
+
+    @Override
+    public MonitorContentPopOutHost figuraExtras$getMonitorPopUpHost() {
+        return monitorHost;
+    }
+
+    @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
+    void b(Screen screen, CallbackInfo ci) {
+        if (screenSetter != null) {
+            screenSetter.accept(screen);
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "clearLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("RETURN"))
+    void e(CallbackInfo ci) {
+        FiguraExtras.updateInformation();
+    }
+
+    @Inject(method = "setLevel", at = @At("RETURN"))
+    void e(ClientLevel world, CallbackInfo ci) {
+        if (IPCManager.INSTANCE.isConnected()) {
+            IPCManager.INSTANCE.getC2CClient().joinedWorld();
+        }
+        FiguraExtras.updateInformation();
     }
 
     @Inject(
@@ -153,7 +183,7 @@ public abstract class MinecraftMixin implements MinecraftAccess {
 
 
             profiler.pop();
-            figuraExtrass$withWindow(detachedWindow.window.window, detachedWindow.window.renderTarget, () -> {
+            figuraExtras$withWindow(detachedWindow.window.window, detachedWindow.window.renderTarget, () -> {
                 detachedWindow.render(guiGraphics);
             });
 
@@ -177,14 +207,6 @@ public abstract class MinecraftMixin implements MinecraftAccess {
         RenderSystem.disableDepthTest();
     }
 
-    @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
-    void b(Screen screen, CallbackInfo ci) {
-        if (screenSetter != null) {
-            screenSetter.accept(screen);
-            ci.cancel();
-        }
-    }
-
     @Inject(method = "tick", at = @At("HEAD"))
     void c(CallbackInfo ci) {
         profiler.push("Other windows");
@@ -194,33 +216,11 @@ public abstract class MinecraftMixin implements MinecraftAccess {
                 toRemove.add(detachedWindow);
                 continue;
             }
-            figuraExtrass$withWindow(detachedWindow.window.window, detachedWindow.window.renderTarget, detachedWindow::tick);
+            figuraExtras$withWindow(detachedWindow.window.window, detachedWindow.window.renderTarget, detachedWindow::tick);
         }
         for (DetachedWindow detachedWindow : toRemove) {
             FiguraExtras.windows.remove(detachedWindow);
         }
         profiler.pop();
-    }
-
-    @Inject(method = "clearLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("RETURN"))
-    void e(CallbackInfo ci) {
-        FiguraExtras.updateInformation();
-    }
-
-    @Inject(method = "setLevel", at = @At("RETURN"))
-    void e(ClientLevel world, CallbackInfo ci) {
-        if (IPCManager.INSTANCE.isConnected()) {
-            IPCManager.INSTANCE.getC2CClient().joinedWorld();
-        }
-        FiguraExtras.updateInformation();
-    }
-
-    public WindowContentPopOutHost figuraExtrass$getContentPopOutHost() {
-        return host;
-    }
-
-    @Override
-    public MonitorContentPopOutHost figuraExtrass$getMonitorPopUpHost() {
-        return monitorHost;
     }
 }

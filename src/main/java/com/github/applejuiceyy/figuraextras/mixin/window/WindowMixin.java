@@ -41,7 +41,7 @@ public class WindowMixin implements WindowAccess {
     }
 
     @Override
-    public void figuraExtrass$setShouldTerminateGLFWOnExit(boolean terminate) {
+    public void figuraExtras$setShouldTerminateGLFWOnExit(boolean terminate) {
         terminateGLFW = terminate;
     }
 }

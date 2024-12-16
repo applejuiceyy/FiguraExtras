@@ -62,7 +62,7 @@ public class Sourcer {
         } else {
             Integer sourceReference = source.getSourceReference();
             if (sourceReference != null) {
-                return ((LuaRuntimeAccess) currentAvatar.luaRuntime).figuraExtrass$getSource(sourceReference);
+                return ((LuaRuntimeAccess) currentAvatar.luaRuntime).figuraExtras$getSource(sourceReference);
             }
         }
         return null;
@@ -76,7 +76,7 @@ public class Sourcer {
         for (String source : ((LuaRuntimeAccessor) owner.getCurrentAvatar().luaRuntime).getLoadedScripts().keySet()) {
             sources.add(sourceScript(source));
         }
-        for (Map.Entry<Integer, Tuple<String, String>> entry : ((LuaRuntimeAccess) owner.getCurrentAvatar().luaRuntime).figuraExtrass$getRegisteredDynamicSources().entrySet()) {
+        for (Map.Entry<Integer, Tuple<String, String>> entry : ((LuaRuntimeAccess) owner.getCurrentAvatar().luaRuntime).figuraExtras$getRegisteredDynamicSources().entrySet()) {
             sources.add(dynamicSourceScript(entry.getKey(), entry.getValue().getB()));
         }
         return sources.toArray(new Source[0]);
@@ -112,7 +112,7 @@ public class Sourcer {
 
     public Source toSource(Prototype proto) {
         WeakHashMap<Prototype, Integer> weakHashMap = ((LuaRuntimeAccess) owner.getCurrentAvatar().luaRuntime)
-                .figuraExtrass$getPrototypesMarkedAsLoadStringed();
+                .figuraExtras$getPrototypesMarkedAsLoadStringed();
 
         if (weakHashMap.containsKey(proto)) {
             return dynamicSourceScript(weakHashMap.get(proto), proto.source.tojstring());

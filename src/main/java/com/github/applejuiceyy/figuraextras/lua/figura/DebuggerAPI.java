@@ -19,7 +19,7 @@ public class DebuggerAPI {
     @LuaWhitelist
     public void marker(String name) {
         Globals globals = ((LuaRuntimeAccessor) runtime).getUserGlobals();
-        Hook callHook = ((GlobalsAccess) globals).figuraExtrass$getCaptureState().getSink();
+        Hook callHook = ((GlobalsAccess) globals).figuraExtras$getCaptureState().getSink();
         if (callHook != null) {
             callHook.marker(name);
         }
@@ -28,7 +28,7 @@ public class DebuggerAPI {
     @LuaWhitelist
     public void region(String regionName) {
         Globals globals = ((LuaRuntimeAccessor) runtime).getUserGlobals();
-        Hook callHook = ((GlobalsAccess) globals).figuraExtrass$getCaptureState().getSink();
+        Hook callHook = ((GlobalsAccess) globals).figuraExtras$getCaptureState().getSink();
         if (callHook != null) {
             callHook.region(regionName);
         }

@@ -161,7 +161,7 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
 
     private View.ViewConstructor<View.Context<Avatar>, ? extends Lifecycle> ensureAvatarLoaded(View.ViewConstructor<View.Context<Avatar>, ? extends Lifecycle> what) {
         return View.context()
-                .predicate(avatar -> avatar.loaded && !((AvatarAccess) avatar).figuraExtrass$isCleaned())
+                .predicate(avatar -> avatar.loaded && !((AvatarAccess) avatar).figuraExtras$isCleaned())
                 .ifTrue(what)
                 .ifFalse("Avatar not loaded");
     }

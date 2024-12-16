@@ -190,7 +190,7 @@ public class LocalAvatarLoaderMixin {
                 ci.cancel();
                 return;
             }
-            ((UserDataAccess) target).figuraExtrass$setFutureAvatarGuestNbt(guestCompoundTag);
+            ((UserDataAccess) target).figuraExtras$setFutureAvatarGuestNbt(guestCompoundTag);
         }
 
         if (!hostFiguraExtras.isEmpty()) {

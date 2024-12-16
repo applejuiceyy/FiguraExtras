@@ -76,7 +76,7 @@ public class SoundView implements Lifecycle {
         );
 
         vanillaSoundsDifferential = new Differential<>(
-                () -> ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtrass$getFiguraHandles()
+                () -> ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtras$getFiguraHandles()
                         .stream()
                         .filter(sound -> {
                             ChannelHandleAccessor accessor = (ChannelHandleAccessor) sound.getHandle();
@@ -191,7 +191,7 @@ public class SoundView implements Lifecycle {
                 if (soundComponent != null) {
                     soundComponent.sampleEnding = soundComponent.sampleCount();
                 }
-                handle = ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtrass$createHandle(Library.Pool.STATIC);
+                handle = ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtras$createHandle(Library.Pool.STATIC);
                 handle.execute(channel -> {
                     channel.attachStaticBuffer(sound);
                     channel.setPitch(1);
@@ -218,7 +218,7 @@ public class SoundView implements Lifecycle {
         }
 
         public ByteBuffer searchForByteBuffer(SoundBuffer sound, String key) {
-            ByteBuffer buffer = ((SoundBufferAccess) sound).figuraExtrass$getKeptBuffer();
+            ByteBuffer buffer = ((SoundBufferAccess) sound).figuraExtras$getKeptBuffer();
             if (buffer != null) {
                 return buffer;
             }
@@ -272,7 +272,7 @@ public class SoundView implements Lifecycle {
             }
 
             int sounds = 0;
-            for (LuaSound luaSound : ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtrass$getFiguraHandles()) {
+            for (LuaSound luaSound : ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtras$getFiguraHandles()) {
                 if (((LuaSoundAccessor) luaSound).getBuffer() == null) continue; // it's a vanilla sound
                 ChannelHandleAccessor accessor = (ChannelHandleAccessor) luaSound.getHandle();
                 if (luaSound.isPlaying() && accessor != null && accessor.getOwner().equals(context.getValue().owner) && luaSound.getId().equals(name)) {

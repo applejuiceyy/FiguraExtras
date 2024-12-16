@@ -35,14 +35,14 @@ public class SecondaryWindow implements WindowEventHandler {
         this.callback = callback;
         Minecraft minecraft = Minecraft.getInstance();
 
-        VirtualScreen screen = ((MinecraftAccess) minecraft).figuraExtrass$getScreenManager();
+        VirtualScreen screen = ((MinecraftAccess) minecraft).figuraExtras$getScreenManager();
 
-        ((VirtualScreenAccess) (Object) screen).figuraExtrass$setEventListener(this);
+        ((VirtualScreenAccess) (Object) screen).figuraExtras$setEventListener(this);
         window = creator.apply(screen);
         recalculateGuiScale(false);
-        ((WindowAccess) (Object) window).figuraExtrass$setShouldTerminateGLFWOnExit(false);
+        ((WindowAccess) (Object) window).figuraExtras$setShouldTerminateGLFWOnExit(false);
         GLFW.glfwMakeContextCurrent(Minecraft.getInstance().getWindow().getWindow());
-        ((VirtualScreenAccess) (Object) screen).figuraExtrass$setEventListener(null);
+        ((VirtualScreenAccess) (Object) screen).figuraExtras$setEventListener(null);
 
 
         InputConstants.setupKeyboardCallbacks(
@@ -231,7 +231,7 @@ public class SecondaryWindow implements WindowEventHandler {
     }
 
     public void createOwoLibBlurShaderCompatibility() {
-        ((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$withWindow(window, renderTarget, () -> {
+        ((MinecraftAccess) Minecraft.getInstance()).figuraExtras$withWindow(window, renderTarget, () -> {
             owoLibCompatBlurProgramTexture = new TextureTarget(window.getWidth(), window.getHeight(), false, Minecraft.ON_OSX);
         });
     }

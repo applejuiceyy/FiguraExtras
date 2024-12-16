@@ -22,7 +22,7 @@ public class PCallMixin {
     void entry(Varargs args, CallbackInfoReturnable<Varargs> cir) {
         Globals globals = ((BaseLibAccessor) this$0).getGlobals();
         GlobalsAccess globalsAccess = ((GlobalsAccess) globals);
-        Hook capture = globalsAccess.figuraExtrass$getCaptureState().getSink();
+        Hook capture = globalsAccess.figuraExtras$getCaptureState().getSink();
         if (capture != null) {
             capture.intoPCall();
         }
@@ -32,7 +32,7 @@ public class PCallMixin {
     void exit(Varargs args, CallbackInfoReturnable<Varargs> cir) {
         Globals globals = ((BaseLibAccessor) this$0).getGlobals();
         GlobalsAccess globalsAccess = ((GlobalsAccess) globals);
-        Hook capture = globalsAccess.figuraExtrass$getCaptureState().getSink();
+        Hook capture = globalsAccess.figuraExtras$getCaptureState().getSink();
         if (capture != null) {
             capture.outOfPCall();
         }

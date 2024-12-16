@@ -274,7 +274,7 @@ public class FiguraExtras implements ClientModInitializer {
             Style style = Badges.System.SOUND.badge.getStyle();
             Component speakers = Badges.System.SOUND.badge.copy().withStyle(style.withFont(Badges.FONT));
             PoseStack poseStack = ctx.matrixStack();
-            for (LuaSound sound : ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtrass$getFiguraHandles()) {
+            for (LuaSound sound : ((SoundEngineAccess) SoundAPI.getSoundEngine()).figuraExtras$getFiguraHandles()) {
                 ChannelHandleAccessor accessor = (ChannelHandleAccessor) sound.getHandle();
                 if (sound.isPlaying() && accessor != null && showSoundPositions.containsKey(accessor.getOwner())) {
                     poseStack.pushPose();

@@ -11,27 +11,27 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public interface MinecraftAccess {
-    VirtualScreen figuraExtrass$getScreenManager();
+    VirtualScreen figuraExtras$getScreenManager();
 
-    <T> T figuraExtrass$withWindow(Window window, RenderTarget target, Supplier<T> runnable);
-
-    default void figuraExtrass$withWindow(Window window, RenderTarget target, Runnable runnable) {
-        figuraExtrass$withWindow(window, target, () -> {
+    default void figuraExtras$withWindow(Window window, RenderTarget target, Runnable runnable) {
+        figuraExtras$withWindow(window, target, () -> {
             runnable.run();
             return null;
         });
     }
 
-    <T> T figuraExtrass$withSetScreen(Consumer<Screen> setScreen, Supplier<T> runnable);
+    <T> T figuraExtras$withWindow(Window window, RenderTarget target, Supplier<T> runnable);
 
-    default void figuraExtrass$withSetScreen(Consumer<Screen> screen, Runnable runnable) {
-        figuraExtrass$withSetScreen(screen, () -> {
+    default void figuraExtras$withSetScreen(Consumer<Screen> screen, Runnable runnable) {
+        figuraExtras$withSetScreen(screen, () -> {
             runnable.run();
             return null;
         });
     }
 
-    WindowContentPopOutHost figuraExtrass$getContentPopOutHost();
+    <T> T figuraExtras$withSetScreen(Consumer<Screen> setScreen, Supplier<T> runnable);
 
-    MonitorContentPopOutHost figuraExtrass$getMonitorPopUpHost();
+    WindowContentPopOutHost figuraExtras$getContentPopOutHost();
+
+    MonitorContentPopOutHost figuraExtras$getMonitorPopUpHost();
 }

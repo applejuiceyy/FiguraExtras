@@ -28,7 +28,7 @@ public class ActivityView implements Lifecycle {
         this.context = context;
         root.cols().percentage(1).content().fixed(10).content();
         differential = new Differential<>(
-                ((GlobalsAccess) ((LuaRuntimeAccessor) context.getValue().luaRuntime).getUserGlobals()).figuraExtrass$getCaptureState().getAvailableSingularCaptures().entrySet(),
+                ((GlobalsAccess) ((LuaRuntimeAccessor) context.getValue().luaRuntime).getUserGlobals()).figuraExtras$getCaptureState().getAvailableSingularCaptures().entrySet(),
                 Map.Entry::getValue,
                 o -> {
                     Instance i = new Instance(o);
@@ -74,7 +74,7 @@ public class ActivityView implements Lifecycle {
 
             nowButton.activation.subscribe(event -> {
                 Globals globals = ((LuaRuntimeAccessor) context.getValue().luaRuntime).getUserGlobals();
-                ((GlobalsAccess) globals).figuraExtrass$getCaptureState().queueSingularCapture(
+                ((GlobalsAccess) globals).figuraExtras$getCaptureState().queueSingularCapture(
                         new ActiveOpportunity<>(value.getValue(), new GraphBuilder(context.getValue().luaRuntime.typeManager, frame -> {
                             context.setView((context, additionPoint) -> new FlameGraphView(additionPoint, frame));
                         })));

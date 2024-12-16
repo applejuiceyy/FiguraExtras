@@ -126,8 +126,8 @@ public class TextureView implements Lifecycle {
 
             figuraTextureComponent = new FiguraTextureComponent(texture, c -> {
                 if (this.showingUpdatedTexture) {
-                    ((FiguraTextureAccess) texture).figuraExtrass$refreshUpdatedTexture();
-                    return ((FiguraTextureAccess) texture).figuraExtrass$getUpdatedTexture();
+                    ((FiguraTextureAccess) texture).figuraExtras$refreshUpdatedTexture();
+                    return ((FiguraTextureAccess) texture).figuraExtras$getUpdatedTexture();
                 } else {
                     return texture.getLocation();
                 }
@@ -139,9 +139,9 @@ public class TextureView implements Lifecycle {
         private void setShowingUpdatedTexture(boolean showing) {
             if (showingUpdatedTexture != showing) {
                 if (showing) {
-                    ((FiguraTextureAccess) texture).figuraExtrass$lockUpdatedTexture();
+                    ((FiguraTextureAccess) texture).figuraExtras$lockUpdatedTexture();
                 } else {
-                    ((FiguraTextureAccess) texture).figuraExtrass$unlockUpdatedTexture();
+                    ((FiguraTextureAccess) texture).figuraExtras$unlockUpdatedTexture();
                 }
                 figuraTextureComponent.enqueueDirtySection(false, false);
                 showingUpdatedTexture = showing;
@@ -153,14 +153,14 @@ public class TextureView implements Lifecycle {
         }
 
         public void tick() {
-            boolean modifications = ((FiguraTextureAccess) texture).figuraExtrass$hasPendingModifications();
+            boolean modifications = ((FiguraTextureAccess) texture).figuraExtras$hasPendingModifications();
             label.setText(modifications ? dirty : notDirty);
             nomenclatureLayout.getSettings(button).setInvisible(!modifications);
         }
 
         public void dispose() {
             if (showingUpdatedTexture) {
-                ((FiguraTextureAccess) texture).figuraExtrass$lockUpdatedTexture();
+                ((FiguraTextureAccess) texture).figuraExtras$lockUpdatedTexture();
                 showingUpdatedTexture = false;
             }
             root.getParent().remove(root);
