@@ -56,7 +56,7 @@ public class SettingsScaffoldBuilder<V> {
                 jsonObject = JsonParser.parseString(new String(bytes)).getAsJsonObject();
                 inputStream.close();
 
-            } catch (NoSuchFileException e) {
+            } catch (FileNotFoundException | JsonSyntaxException e) {
                 jsonObject = new JsonObject();
                 Writer out = new FileWriter(file);
                 Streams.write(jsonObject, new JsonWriter(out));
