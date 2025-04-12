@@ -9,75 +9,55 @@ import com.github.applejuiceyy.figuraextras.tech.gui.elements.Elements;
 import com.github.applejuiceyy.figuraextras.tech.gui.elements.Label;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Flow;
 import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
+import com.github.applejuiceyy.figuraextras.util.Differential;
 import com.github.applejuiceyy.figuraextras.util.Lifecycle;
 import com.github.applejuiceyy.figuraextras.views.View;
+import com.google.common.collect.Iterators;
 import net.minecraft.ChatFormatting;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.model.rendering.texture.FiguraTexture;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 
 public class TextureView implements Lifecycle {
     private final Flow layout;
     private final View.Context<Avatar> context;
 
     private final HashMap<FiguraTexture, Instance> textures = new HashMap<>();
+    private final Differential<FiguraTexture, FiguraTexture, Instance> differential;
 
     public TextureView(View.Context<Avatar> context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
 
         layout = new Flow();
         additionPoint.accept(Elements.withVerticalScroll(layout));
+
+        differential = new Differential<>(
+            () -> Iterators.concat(context.getValue().renderer.textures.values().iterator(), context.getValue().renderer.customTextures.values().iterator()),
+            tex -> tex,
+            tex -> {
+                Instance inst = new Instance(tex, context);
+                layout.add(inst.root);
+                textures.put(tex, inst);
+                return inst;
+            },
+            Instance::dispose
+        );
     }
 
     @Override
     public void tick() {
-        ArrayList<FiguraTexture> seen = new ArrayList<>();
-        for (FiguraTexture texture : context.getValue().renderer.textures.values()) {
-            if (!textures.containsKey(texture)) {
-                Instance inst = new Instance(texture, context);
-                layout.add(inst.root);
-                textures.put(texture, inst);
-                seen.add(texture);
-            }
-            seen.add(texture);
-        }
-
-        for (FiguraTexture texture : context.getValue().renderer.customTextures.values()) {
-            if (!textures.containsKey(texture)) {
-                Instance inst = new Instance(texture, context);
-                layout.add(inst.root);
-                textures.put(texture, inst);
-            }
-            seen.add(texture);
-        }
-
-        for (Iterator<Map.Entry<FiguraTexture, Instance>> iterator = textures.entrySet().iterator(); iterator.hasNext(); ) {
-            Map.Entry<FiguraTexture, Instance> figuraTextureTextureComponentEntry = iterator.next();
-            if (!seen.contains(figuraTextureTextureComponentEntry.getKey())) {
-                iterator.remove();
-                figuraTextureTextureComponentEntry.getValue().dispose();
-            } else {
-                figuraTextureTextureComponentEntry.getValue().tick();
-            }
-        }
+        differential.update(Instance::tick);
     }
 
     @Override
     public void render() {
-        for (Instance value : textures.values()) {
-            value.render();
-        }
+        differential.update(Instance::render);
     }
 
     @Override
     public void dispose() {
-        for (Instance value : textures.values()) {
-            value.dispose();
-        }
+        differential.dispose();
     }
 
     static class Instance {
@@ -93,7 +73,7 @@ public class TextureView implements Lifecycle {
                 net.minecraft.network.chat.Component.literal("Showing Uploaded Texture").withStyle(ChatFormatting.UNDERLINE);
         private final net.minecraft.network.chat.Component showUploadedTexture =
                 net.minecraft.network.chat.Component.literal("Showing Updated Texture").withStyle(ChatFormatting.UNDERLINE);
-        public Flow root;
+        public Grid root;
         private boolean showingUpdatedTexture = false;
 
         public Instance(FiguraTexture texture, View.Context<Avatar> context) {
@@ -101,8 +81,13 @@ public class TextureView implements Lifecycle {
             dirty = net.minecraft.network.chat.Component.literal(texture.getName() + "*    ").withStyle(ChatFormatting.GOLD);
             this.texture = texture;
 
-            root = new Flow();
+            root = new Grid();
+            root.rows().fixed(2).percentage(1).fixed(2).cols().fixed(2).percentage(1).fixed(2);
             root.setSurface(Surface.contextBackground());
+
+            Grid rootContent = new Grid();
+            rootContent.rows().content().content().content().cols().percentage(1);
+            root.add(rootContent).setRow(1).setColumn(1);
 
             label = (Label) new Label().setText(texture.getName());
             this.nomenclatureLayout = new Grid();
@@ -121,8 +106,9 @@ public class TextureView implements Lifecycle {
             nomenclatureLayout.add(label);
             nomenclatureLayout.add(button).setColumn(1);
 
-            root.add(nomenclatureLayout);
-            root.add(new Label(net.minecraft.network.chat.Component.literal("   (" + texture.getWidth() + "x" + texture.getHeight() + ")").withStyle(ChatFormatting.GRAY)));
+            rootContent.add(nomenclatureLayout);
+            rootContent.add(new Label(net.minecraft.network.chat.Component.literal("   (" + texture.getWidth() + "x" + texture.getHeight() + ")").withStyle(ChatFormatting.GRAY)))
+                .setRow(1);
 
             figuraTextureComponent = new FiguraTextureComponent(texture, c -> {
                 if (this.showingUpdatedTexture) {
@@ -133,7 +119,10 @@ public class TextureView implements Lifecycle {
                 }
             }, context.getValue());
 
-            root.add(Elements.withHorizontalScroll(new Flow().addAnd(figuraTextureComponent), true));
+            Grid textureContainer = new Grid();
+            textureContainer.rows().content().cols().percentage(1).content().percentage(1);
+            textureContainer.add(figuraTextureComponent).setColumn(1);
+            rootContent.add(Elements.withHorizontalScroll(textureContainer, true)).setRow(2);
         }
 
         private void setShowingUpdatedTexture(boolean showing) {
@@ -155,14 +144,13 @@ public class TextureView implements Lifecycle {
         public void tick() {
             boolean modifications = ((FiguraTextureAccess) texture).figuraExtras$hasPendingModifications();
             label.setText(modifications ? dirty : notDirty);
-            nomenclatureLayout.getSettings(button).setInvisible(!modifications);
+            Grid.GridSettings settings = nomenclatureLayout.getSettings(button);
+            settings.setInvisible(!modifications);
+            settings.setDoLayout(modifications);
         }
 
         public void dispose() {
-            if (showingUpdatedTexture) {
-                ((FiguraTextureAccess) texture).figuraExtras$lockUpdatedTexture();
-                showingUpdatedTexture = false;
-            }
+            setShowingUpdatedTexture(false);
             root.getParent().remove(root);
         }
     }

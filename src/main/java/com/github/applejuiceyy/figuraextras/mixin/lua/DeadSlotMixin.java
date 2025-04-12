@@ -29,12 +29,12 @@ public class DeadSlotMixin {
         }
     }
 
-    @SuppressWarnings({"InvalidInjectorMethodSignature", "rawtypes"})
+    @SuppressWarnings({"rawtypes"})
     // it's drunk again (and it's also a bunch of private classes)
-    @Inject(method = "remove", at = @At(value = "RETURN", ordinal = 1), cancellable = true)
+    @Inject(method = "remove", at = @At(value = "FIELD", ordinal = 2, target = "Lorg/luaj/vm2/LuaTable$DeadSlot;next:Lorg/luaj/vm2/LuaTable$Slot;"), cancellable = true)
     void a(@Coerce Object target, CallbackInfoReturnable cir) throws InvocationTargetException, IllegalAccessException {
-        //noinspection unchecked
         Object obj = nextField.get(this);
+        //noinspection unchecked
         cir.setReturnValue(obj == null ? null : removeMethod.invoke(obj, target));
     }
 }

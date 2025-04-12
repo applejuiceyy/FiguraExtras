@@ -7,6 +7,7 @@ import com.github.applejuiceyy.figuraextras.ducks.statics.LuaRuntimeDuck;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.SourceListener;
 import com.github.applejuiceyy.figuraextras.lua.figura.DebuggerAPI;
 import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
+import com.github.applejuiceyy.figuraextras.tech.captures.captures.GraphBuilder;
 import com.github.applejuiceyy.figuraextras.tech.captures.figura.FiguraData;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -18,6 +19,7 @@ import org.figuramc.figura.lua.FiguraLuaRuntime;
 import org.figuramc.figura.lua.LuaTypeManager;
 import org.figuramc.figura.lua.api.event.EventsAPI;
 import org.figuramc.figura.lua.api.event.LuaEvent;
+import org.jetbrains.annotations.Nullable;
 import org.luaj.vm2.*;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -57,7 +59,15 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     private int nextSource = 1;
 
     @Shadow
+    @Final
+    public Avatar owner;
+    @Unique
+    private GraphBuilder.Frame initFrame = null;
+
+    @Shadow
     public abstract void setGlobal(String name, Object obj);
+    @Unique
+    private GraphBuilder.Frame entityInitFrame = null;
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Ljava/util/Map;putAll(Ljava/util/Map;)V"))
     void init(Avatar avatar, Map<String, String> scripts, CallbackInfo ci) {
@@ -73,8 +83,20 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     }
 
     @Inject(method = "init", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;initializeScript(Ljava/lang/String;)Lorg/luaj/vm2/Varargs;"))
-    void initStart(ListTag autoScripts, CallbackInfoReturnable<Boolean> cir) {
+    void initScriptStart(ListTag autoScripts, CallbackInfoReturnable<Boolean> cir) {
         initCount = 0;
+        Runnable[] runnable = new Runnable[1];
+        GraphBuilder subscriber = new GraphBuilder(typeManager, frame -> {
+            runnable[0].run();
+            if (initFrame == null) {
+                initFrame = frame;
+            } else {
+                initFrame.getChildren().addAll(frame.getChildren());
+                initFrame.invalidateCachedInstructions();
+            }
+
+        });
+        runnable[0] = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getEvent().subscribe(subscriber);
     }
 
     @Inject(method = "init", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/lua/FiguraLuaRuntime;error(Ljava/lang/Throwable;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
@@ -117,6 +139,12 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
         ((GlobalsAccess) userGlobals)
                 .figuraExtras$getCaptureState()
                 .startEvent(toRun);
+
+        if (toRun == events.ENTITY_INIT || toRun.equals("ENTITY_INIT")) {
+            ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().singularCapture(
+                new GraphBuilder(typeManager, frame -> entityInitFrame = frame)
+            );
+        }
 
         Hook hook = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getSink();
         if (hook != null) {
@@ -214,5 +242,17 @@ public abstract class LuaRuntimeMixin implements LuaRuntimeAccess {
     @Override
     public WeakHashMap<Prototype, Integer> figuraExtras$getPrototypesMarkedAsLoadStringed() {
         return prototypesMarkedAsLoadStringed;
+    }
+
+    @Nullable
+    @Override
+    public GraphBuilder.Frame figuraExtras$getInitFrame() {
+        return initFrame;
+    }
+
+    @Nullable
+    @Override
+    public GraphBuilder.Frame figuraExtras$getEntityInitFrame() {
+        return entityInitFrame;
     }
 }

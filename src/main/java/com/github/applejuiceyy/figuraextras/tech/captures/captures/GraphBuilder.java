@@ -37,6 +37,11 @@ public class GraphBuilder implements Hook {
     }
 
     @Override
+    public void startInit(String name) {
+        eventCount++;
+    }
+
+    @Override
     public void intoFunction(LuaClosure luaClosure, Varargs varargs, LuaValue[] stack, LuaDuck.CallType type, String possibleName) {
         flushInstructions();
         MutableComponent text = Component.empty();
@@ -206,7 +211,7 @@ public class GraphBuilder implements Hook {
             return cachedInstructions = children.stream().mapToInt(Child::getInstructions).sum();
         }
 
-        protected void invalidateCachedInstructions() {
+        public void invalidateCachedInstructions() {
             cachedInstructions = -1;
         }
 

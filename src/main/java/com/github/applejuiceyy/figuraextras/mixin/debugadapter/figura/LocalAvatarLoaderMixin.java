@@ -150,14 +150,16 @@ public class LocalAvatarLoaderMixin {
                         },
                         FiguraExtras.prepInstructionCount.value
                 ).arg1();
-            } catch (LuaError err) {
+            } catch (Throwable err) {
+                LuaError val = err instanceof LuaError v ? v : new LuaError(err);
+
                 FiguraExtras.sendBrandedMessage("Preprocessing Error", style -> style.withColor(ChatFormatting.RED), "An error has happened in preprocessing");
                 Minecraft.getInstance().execute(() ->
                         FiguraMod.sendChatMessage(Component.literal(err.getMessage()).withStyle(ChatFormatting.RED))
                 );
-                FiguraExtras.logger.error("Error while preprocessing", err);
+                FiguraExtras.logger.error("Error while preprocessing", val);
 
-                loadError = "Preprocessing error: " + err.getMessage();
+                loadError = "Preprocessing error: " + val.getMessage();
                 ci.cancel();
                 return;
             }

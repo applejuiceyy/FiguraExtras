@@ -17,8 +17,10 @@ import com.github.applejuiceyy.figuraextras.window.WindowContext;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Tuple;
+import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
+import org.jetbrains.annotations.NotNull;
 
 public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
     private final Button guiScaleButton;
@@ -82,30 +84,25 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
             );
             Elements.spawnContextMenu(root.getState(), pos.getA(), pos.getB(), (flow, culler) -> {
                 boolean empty = true;
-                for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
+                boolean emitSep = false;
+
+                Avatar selfAvatar = AvatarManager.getLoadedAvatar(FiguraMod.getLocalPlayerUUID());
+                if (selfAvatar != null) {
                     empty = false;
-                    Component text = Component.literal(loadedAvatar.entityName).append(": ").append(loadedAvatar.name);
-                    Button button = (Button) Button.minimal().addAnd(text);
-                    button.activation.subscribe(r -> {
-                        culler.run();
-                        avatarSelectedLabel.setText(text);
-                        container.setView(ensureAvatarLoaded((c1, c2) -> {
-                            TabView<Avatar> tabView = new TabView<>(c1, c2);
-                            tabView.add("Object View", ensureScript(ObjectView::new));
-                            tabView.add("Model View", ensureScript(ModelView::new));
-                            tabView.add(Elements.separator());
-                            tabView.add("Activity", ensureScript(ActivityView::new));
-                            tabView.add(Elements.separator());
-                            tabView.add("Textures", TextureView::new);
-                            tabView.add("Sounds", SoundView::new);
-                            tabView.add(Elements.separator());
-                            tabView.add("Output", ChatLikeView::new);
-                            tabView.add("Network", NetworkView::new);
-                            tabView.add(Elements.separator());
-                            tabView.add(Button.minimal().addAnd("Download Avatar"));
-                            return tabView;
-                        }), loadedAvatar);
-                    });
+                    Button button = createAvatarButton(culler, selfAvatar);
+                    button.setSurface(Surface.solid(0xffaa0000));
+                    flow.add(button);
+                    emitSep = true;
+                }
+
+                for (Avatar loadedAvatar : AvatarManager.getLoadedAvatars()) {
+                    if (loadedAvatar.isHost) continue;
+                    if (emitSep) {
+                        flow.add(Elements.separator());
+                        emitSep = false;
+                    }
+                    empty = false;
+                    Button button = createAvatarButton(culler, loadedAvatar);
                     flow.add(button);
                 }
                 if (empty) {
@@ -118,6 +115,32 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
         this.guiScaleButton = (Button) Button.minimal(2).addAnd("Gui Scale: Auto");
         guiScaleButtonSettings = top.add(guiScaleButton);
         guiScaleButtonSettings.setColumn(2).setDoLayout(false).setInvisible(true);
+    }
+
+    private @NotNull Button createAvatarButton(Runnable culler, Avatar loadedAvatar) {
+        Component text = Component.literal(loadedAvatar.entityName).append(": ").append(loadedAvatar.name);
+        Button button = (Button) Button.minimal().addAnd(text);
+        button.activation.subscribe(r -> {
+            culler.run();
+            avatarSelectedLabel.setText(text);
+            container.setView(ensureAvatarLoaded((c1, c2) -> {
+                TabView<Avatar> tabView = new TabView<>(c1, c2);
+                tabView.add("Object View", ensureScript(ObjectView::new));
+                tabView.add("Model View", ensureScript(ModelView::new));
+                tabView.add(Elements.separator());
+                tabView.add("Activity", ensureScript(ActivityView::new));
+                tabView.add(Elements.separator());
+                tabView.add("Textures", TextureView::new);
+                tabView.add("Sounds", SoundView::new);
+                tabView.add(Elements.separator());
+                tabView.add("Output", ChatLikeView::new);
+                tabView.add("Network", NetworkView::new);
+                tabView.add(Elements.separator());
+                tabView.add(Button.minimal().addAnd("Download Avatar"));
+                return tabView;
+            }), loadedAvatar);
+        });
+        return button;
     }
 
     @Override

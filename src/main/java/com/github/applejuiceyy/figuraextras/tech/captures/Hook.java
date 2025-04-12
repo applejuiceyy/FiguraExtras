@@ -50,6 +50,8 @@ public interface Hook {
     }
 
     interface Discernible {
+        Discernible EMPTY = new Discernible() {
+        };
         /**
          * basically an easier version of instanceof
          * @param cls The type to instanceof into
