@@ -29,6 +29,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Mixin(value = UserData.class, remap = false)
@@ -37,7 +38,9 @@ public class UserDataMixin implements UserDataAccess {
     @Final
     public UUID id;
     @Unique
-    public CompoundTag guestNbt;
+    public CompoundTag otherNbt;
+    @Unique
+    public AvatarAccess.Side sideKind;
 
     @Inject(method = "loadAvatar", at = @At("HEAD"), cancellable = true, remap = true)
     void verify(CompoundTag n, CallbackInfo ci, @Local(argsOnly = true) LocalRef<CompoundTag> nbtVar) {
@@ -87,7 +90,7 @@ public class UserDataMixin implements UserDataAccess {
                     bucket.set(CommonOps.TIME, Instant.now());
                     try {
                         nbtVar.set(NbtIo.readCompressed(new ByteArrayInputStream(bytes)));
-                        guestNbt = n;
+                        figuraExtras$setFutureAvatarOtherNbt(n, AvatarAccess.Side.HOST);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -96,17 +99,22 @@ public class UserDataMixin implements UserDataAccess {
         }
     }
 
-    @ModifyExpressionValue(method = "loadAvatar", at = @At(value = "NEW", target = "(Ljava/util/UUID;)Lorg/figuramc/figura/avatar/Avatar;"))
-    Avatar setGuestNbt(Avatar original) {
-        if (guestNbt != null) {
-            ((AvatarAccess) original).figuraExtras$setGuestNbt(guestNbt);
-            guestNbt = null;
-        }
-        return original;
+    @Override
+    public void figuraExtras$setFutureAvatarOtherNbt(CompoundTag tag, AvatarAccess.Side side) {
+        Objects.requireNonNull(tag);
+        Objects.requireNonNull(side);
+        otherNbt = tag;
+        sideKind = side;
     }
 
-    @Override
-    public void figuraExtras$setFutureAvatarGuestNbt(CompoundTag tag) {
-        guestNbt = tag;
+    @ModifyExpressionValue(method = "loadAvatar", at = @At(value = "NEW", target = "(Ljava/util/UUID;)Lorg/figuramc/figura/avatar/Avatar;"))
+    Avatar setGuestNbt(Avatar original) {
+        if (otherNbt != null) {
+            ((AvatarAccess) original).figuraExtras$setOtherNbt(otherNbt);
+            ((AvatarAccess) original).figuraExtras$setCurrentSide(sideKind);
+            otherNbt = null;
+            sideKind = null;
+        }
+        return original;
     }
 }

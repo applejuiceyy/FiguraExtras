@@ -26,9 +26,18 @@ public interface AvatarAccess {
 
     Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtras$getNetworkLogger();
 
-    CompoundTag figuraExtras$getGuestNbt();
 
-    int figuraExtras$getGuestFileSize();
+    CompoundTag figuraExtras$getOtherNbt();
 
-    void figuraExtras$setGuestNbt(CompoundTag tag);
+    int figuraExtras$getOtherFileSize();
+
+    void figuraExtras$setOtherNbt(CompoundTag tag);
+
+    void figuraExtras$setCurrentSide(Side side);
+
+    Side figuraExtras$getCurrentSide();
+
+    enum Side {
+        GUEST, HOST
+    }
 }

@@ -112,6 +112,8 @@ public class AvatarMixin implements AvatarAccess {
     private CompoundTag guestNbt = null;
     @Unique
     private int guestSize;
+    @Unique
+    private Side currentSide = null;
 
     @Inject(method = "clean", at = @At("HEAD"))
     void b(CallbackInfo ci) {
@@ -166,17 +168,17 @@ public class AvatarMixin implements AvatarAccess {
     }
 
     @Override
-    public CompoundTag figuraExtras$getGuestNbt() {
+    public CompoundTag figuraExtras$getOtherNbt() {
         return guestNbt;
     }
 
     @Override
-    public int figuraExtras$getGuestFileSize() {
+    public int figuraExtras$getOtherFileSize() {
         return guestSize;
     }
 
     @Override
-    public void figuraExtras$setGuestNbt(CompoundTag tag) {
+    public void figuraExtras$setOtherNbt(CompoundTag tag) {
         guestNbt = tag;
         try {
             // get size
@@ -187,5 +189,15 @@ public class AvatarMixin implements AvatarAccess {
             FiguraMod.LOGGER.warn("Failed to generate file size for guest nbt of avatar " + name, e);
             guestSize = 0;
         }
+    }
+
+    @Override
+    public void figuraExtras$setCurrentSide(Side side) {
+        currentSide = side;
+    }
+
+    @Override
+    public Side figuraExtras$getCurrentSide() {
+        return currentSide;
     }
 }

@@ -27,7 +27,6 @@ public class ChatLikeView implements Lifecycle {
     private final MessageStackComponent stack = new MessageStackComponent();
 
     private final List<FiguraLuaPrinterDuck.Kind> show = new ArrayList<>();
-    private final Grid root;
     private final Flow scrollReceptacle;
     Runnable sub;
 
@@ -38,7 +37,7 @@ public class ChatLikeView implements Lifecycle {
             FiguraExtras.sendBrandedMessage("Redirecting output to informational screens");
         }
 
-        root = new Grid();
+        Grid root = new Grid();
 
         root
                 .rows()

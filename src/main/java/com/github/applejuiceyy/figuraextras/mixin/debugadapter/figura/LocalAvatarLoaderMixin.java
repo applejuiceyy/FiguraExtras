@@ -2,6 +2,7 @@ package com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
 import com.github.applejuiceyy.figuraextras.constants.Identities;
+import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.UserDataAccess;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.lua.MinecraftLuaBridge;
@@ -48,7 +49,6 @@ public class LocalAvatarLoaderMixin {
     @Shadow
     private static String loadError;
 
-    @SuppressWarnings("UnresolvedMixinReference") // false
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/avatar/AvatarManager;loadLocalAvatar(Ljava/nio/file/Path;)V"), cancellable = true)
     static private void reloading(CallbackInfo ci) {
         if (DebugProtocolServer.getInternalInterface() != null) {
@@ -192,7 +192,7 @@ public class LocalAvatarLoaderMixin {
                 ci.cancel();
                 return;
             }
-            ((UserDataAccess) target).figuraExtras$setFutureAvatarGuestNbt(guestCompoundTag);
+            ((UserDataAccess) target).figuraExtras$setFutureAvatarOtherNbt(guestCompoundTag, AvatarAccess.Side.HOST);
         }
 
         if (!hostFiguraExtras.isEmpty()) {
