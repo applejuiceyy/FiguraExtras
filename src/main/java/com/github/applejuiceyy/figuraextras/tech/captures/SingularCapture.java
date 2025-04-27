@@ -45,8 +45,8 @@ public class SingularCapture implements Hook {
     }
 
     @Override
-    public void startEvent(String runReason, Object toRun, Varargs val) {
-        in.startEvent(runReason, toRun, val);
+    public void startEvent(Discernible discernible) {
+        in.startEvent(discernible);
     }
 
     @Override

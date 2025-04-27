@@ -27,18 +27,17 @@ public class ChatLikeView implements Lifecycle {
     private final MessageStackComponent stack = new MessageStackComponent();
 
     private final List<FiguraLuaPrinterDuck.Kind> show = new ArrayList<>();
-    private final Grid root;
     private final Flow scrollReceptacle;
     Runnable sub;
 
     public ChatLikeView(View.Context<Avatar> context, ParentElement.AdditionPoint additionPoint) {
         this.context = context;
-        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getValue()).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getValue()).figuraExtras$getChatRedirect();
         if (!event.hasSubscribers() && (Configs.LOG_OTHERS.value || FiguraMod.isLocal(context.getValue().owner))) {
             FiguraExtras.sendBrandedMessage("Redirecting output to informational screens");
         }
 
-        root = new Grid();
+        Grid root = new Grid();
 
         root
                 .rows()
@@ -50,7 +49,7 @@ public class ChatLikeView implements Lifecycle {
         additionPoint.accept(root);
 
         // FlowLayout controls = Containers.horizontalFlow(Sizing.fill(100), Sizing.fill(10));
-        // root.add(controls);
+        // button.add(controls);
 
         // CheckboxComponent showPings = Components.checkbox(net.minecraft.network.chat.Component.literal("Show pings"));
         // CheckboxComponent showLogs = Components.checkbox(net.minecraft.network.chat.Component.literal("Show logs"));
@@ -118,7 +117,7 @@ public class ChatLikeView implements Lifecycle {
     @Override
     public void dispose() {
         sub.run();
-        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getValue()).figuraExtrass$getChatRedirect();
+        Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> event = ((AvatarAccess) context.getValue()).figuraExtras$getChatRedirect();
         if (!event.hasSubscribers() && (Configs.LOG_OTHERS.value || FiguraMod.isLocal(context.getValue().owner))) {
             FiguraExtras.sendBrandedMessage("No longer redirecting output to informational screens");
         }

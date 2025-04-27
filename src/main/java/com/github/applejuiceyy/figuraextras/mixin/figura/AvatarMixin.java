@@ -112,6 +112,8 @@ public class AvatarMixin implements AvatarAccess {
     private CompoundTag guestNbt = null;
     @Unique
     private int guestSize;
+    @Unique
+    private Side currentSide = null;
 
     @Inject(method = "clean", at = @At("HEAD"))
     void b(CallbackInfo ci) {
@@ -136,47 +138,47 @@ public class AvatarMixin implements AvatarAccess {
 
     @Inject(method = "loadSound", at = @At(value = "INVOKE", target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"), locals = LocalCapture.CAPTURE_FAILSOFT)
     void e(String name, byte[] data, CallbackInfo ci, ByteArrayInputStream inputStream, OggAudioStream oggAudioStream, SoundBuffer sound) {
-        ((SoundBufferAccess) sound).figuraExtrass$keepBuffer();
+        ((SoundBufferAccess) sound).figuraExtras$keepBuffer();
     }
 
 
     @Override
-    public boolean figuraExtrass$isCleaned() {
+    public boolean figuraExtras$isCleaned() {
         return cleaned;
     }
 
     @Override
-    public Expander<LuaValue> figuraExtrass$getObjectViewTree() {
+    public Expander<LuaValue> figuraExtras$getObjectViewTree() {
         return objectRoot;
     }
 
     @Override
-    public Expander<DummyExpander.Dummy> figuraExtrass$getModelViewTree() {
+    public Expander<DummyExpander.Dummy> figuraExtras$getModelViewTree() {
         return modelRoot;
     }
 
     @Override
-    public Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect() {
+    public Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtras$getChatRedirect() {
         return chatRedirector;
     }
 
     @Override
-    public Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtrass$getNetworkLogger() {
+    public Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtras$getNetworkLogger() {
         return networkEvent;
     }
 
     @Override
-    public CompoundTag figuraExtrass$getGuestNbt() {
+    public CompoundTag figuraExtras$getOtherNbt() {
         return guestNbt;
     }
 
     @Override
-    public int figuraExtrass$getGuestFileSize() {
+    public int figuraExtras$getOtherFileSize() {
         return guestSize;
     }
 
     @Override
-    public void figuraExtrass$setGuestNbt(CompoundTag tag) {
+    public void figuraExtras$setOtherNbt(CompoundTag tag) {
         guestNbt = tag;
         try {
             // get size
@@ -187,5 +189,15 @@ public class AvatarMixin implements AvatarAccess {
             FiguraMod.LOGGER.warn("Failed to generate file size for guest nbt of avatar " + name, e);
             guestSize = 0;
         }
+    }
+
+    @Override
+    public void figuraExtras$setCurrentSide(Side side) {
+        currentSide = side;
+    }
+
+    @Override
+    public Side figuraExtras$getCurrentSide() {
+        return currentSide;
     }
 }

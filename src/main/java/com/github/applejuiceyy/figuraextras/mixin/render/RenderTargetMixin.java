@@ -23,7 +23,7 @@ public class RenderTargetMixin implements RenderTargetAccess {
     int stencilId = -1;
 
     @Override
-    public void figuraExtrass$setStencil(int texture) {
+    public void figuraExtras$setStencil(int texture) {
         if (texture == stencilId) return;
         stencilId = texture;
         if (frameBufferId >= 0) {

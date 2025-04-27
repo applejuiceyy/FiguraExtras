@@ -1,6 +1,8 @@
 package com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
+import com.github.applejuiceyy.figuraextras.constants.Identities;
+import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.UserDataAccess;
 import com.github.applejuiceyy.figuraextras.ipc.dsp.DebugProtocolServer;
 import com.github.applejuiceyy.figuraextras.lua.MinecraftLuaBridge;
@@ -8,7 +10,8 @@ import com.github.applejuiceyy.figuraextras.lua.types.resource.Resources;
 import com.github.applejuiceyy.figuraextras.util.LuaRuntimes;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.github.applejuiceyy.luabridge.LuaRuntime;
-import com.github.applejuiceyy.luabridge.limiting.DefaultInstructionLimiter;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import net.minecraft.ChatFormatting;
@@ -16,33 +19,36 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.UserData;
 import org.figuramc.figura.avatar.local.LocalAvatarLoader;
-import org.figuramc.figura.lua.FiguraLuaPrinter;
+import org.figuramc.figura.config.Configs;
+import org.figuramc.figura.parsers.LuaScriptParser;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 @Mixin(value = LocalAvatarLoader.class, remap = false)
 public class LocalAvatarLoaderMixin {
+    @Shadow
+    private static String loadError;
+
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/avatar/AvatarManager;loadLocalAvatar(Ljava/nio/file/Path;)V"), cancellable = true)
     static private void reloading(CallbackInfo ci) {
         if (DebugProtocolServer.getInternalInterface() != null) {
@@ -51,8 +57,42 @@ public class LocalAvatarLoaderMixin {
         }
     }
 
+    @WrapOperation(method = "lambda$loadAvatar$2", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/avatar/local/LocalAvatarLoader;loadScripts(Ljava/nio/file/Path;Lnet/minecraft/nbt/CompoundTag;)V", remap = true))
+    private static void disableMinifier(Path name, CompoundTag script, Operation<Void> original) {
+        if (willPreprocess(name) && Configs.FORMAT_SCRIPT.value != 0) {
+            Integer value = Configs.FORMAT_SCRIPT.value;
+            Configs.FORMAT_SCRIPT.value = 0;
+            try {
+                original.call(name, script);
+            } finally {
+                Configs.FORMAT_SCRIPT.value = value;
+            }
+        } else {
+            original.call(name, script);
+        }
+    }
+
+    @Unique
+    static private boolean willPreprocess(Path path) {
+        Path resolve = path.resolve(".preprocess");
+
+        return resolve.toFile().isDirectory() && resolve.resolve("main.lua").toFile().isFile();
+    }
+
     @Inject(method = "lambda$loadAvatar$2", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/avatar/UserData;loadAvatar(Lnet/minecraft/nbt/CompoundTag;)V"), cancellable = true, remap = true)
     static private void mutateRead(Path finalPath, UserData target, CallbackInfo ci, @Local(ordinal = 0) LocalRef<CompoundTag> tag) {
+        // hurt (doing this because LoadState is a private enum)
+        try {
+            // no need to setAccessible, everything is this class or a child
+            // (I hope)
+            Field loadState = LocalAvatarLoader.class.getDeclaredField("loadState");
+            Class<?> cls = Class.forName("org.figuramc.figura.avatar.local.LocalAvatarLoader$LoadState");
+            Field unknown = cls.getField("UNKNOWN");
+            loadState.set(null, unknown.get(null));
+        } catch (NoSuchFieldException | ClassNotFoundException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+
         Path resolve = finalPath.resolve(".preprocess");
 
         CompoundTag hostCompoundTag = tag.get();
@@ -61,44 +101,20 @@ public class LocalAvatarLoaderMixin {
         CompoundTag hostFiguraExtras = new CompoundTag();
         CompoundTag guestFiguraExtras = new CompoundTag();
 
-        if (resolve.toFile().isDirectory() && resolve.resolve("main.lua").toFile().isFile()) {
-            LuaRuntime<MinecraftLuaBridge> luaRuntime = new LuaRuntime<>(
-                    LuaRuntimes.buildDefaultBridge(),
-                    DefaultInstructionLimiter::new
-            ) {
-                @Override
-                protected void printImplementation(Varargs text) {
-                    FiguraLuaPrinter.sendLuaMessage(
-                            bridge.getPrintableValue(text),
-                            Minecraft.getInstance().getUser().getName() + "-preprocessor"
-                    );
+        if (willPreprocess(finalPath)) {
+            LuaRuntime<MinecraftLuaBridge> luaRuntime = LuaRuntimes.buildDefaultRuntime(
+                    Minecraft.getInstance().getUser().getName() + "-preprocessor",
+                    resolve
+            );
+            luaRuntime.addSearcher(path -> {
+                path = LuaRuntimes.sanitizePath(path);
+                String prefix = "@avatar" + FileSystems.getDefault().getSeparator();
+                if (!path.startsWith(prefix)) {
+                    throw new LuaRuntime.SearchException("Not relevant");
                 }
-
-                @Override
-                protected String sanitizeRequirePath(String path) {
-                    path = path.trim();
-                    FileSystem fileSystem = FileSystems.getDefault();
-                    path = path
-                            .replace(".", fileSystem.getSeparator())
-                            .replace("\\", fileSystem.getSeparator())
-                            .replace("/", fileSystem.getSeparator());
-                    path = Pattern.compile(Pattern.quote(fileSystem.getSeparator() + "+")).matcher(path).replaceAll(fileSystem.getSeparator());
-                    return path + ".lua";
-                }
-
-                @Override
-                protected LuaValue requireImplementation(String path) {
-                    LuaValue load;
-                    try (FileReader reader = new FileReader(resolve.resolve(path).toFile())) {
-                        load = getGlobals().load(reader, path);
-                    } catch (FileNotFoundException e) {
-                        throw new LuaError("File \"" + path + "\" not found");
-                    } catch (IOException e) {
-                        throw new LuaError("File \"" + path + "\" not able to be read: " + e.getMessage());
-                    }
-                    return load.call();
-                }
-            };
+                path = path.substring(prefix.length());
+                return LuaRuntimes.importPath(luaRuntime, finalPath, path);
+            });
 
             LuaRuntimes.fillUtilities(luaRuntime);
             luaRuntime.set("resource", new Resources(finalPath));
@@ -134,12 +150,16 @@ public class LocalAvatarLoaderMixin {
                         },
                         FiguraExtras.prepInstructionCount.value
                 ).arg1();
-            } catch (LuaError err) {
+            } catch (Throwable err) {
+                LuaError val = err instanceof LuaError v ? v : new LuaError(err);
+
                 FiguraExtras.sendBrandedMessage("Preprocessing Error", style -> style.withColor(ChatFormatting.RED), "An error has happened in preprocessing");
                 Minecraft.getInstance().execute(() ->
                         FiguraMod.sendChatMessage(Component.literal(err.getMessage()).withStyle(ChatFormatting.RED))
                 );
-                FiguraExtras.logger.error("Error while preprocessing", err);
+                FiguraExtras.logger.error("Error while preprocessing", val);
+
+                loadError = "Preprocessing error: " + val.getMessage();
                 ci.cancel();
                 return;
             }
@@ -149,15 +169,16 @@ public class LocalAvatarLoaderMixin {
 
             if (!nbts[0].equals(nbts[1])) {
                 guestCompoundTag = nbts[1];
+                performDelayedFormatter(guestCompoundTag);
             }
+            performDelayedFormatter(hostCompoundTag);
         }
 
 
         if (FiguraExtras.signAvatars.value > 0) {
-            byte[] signature = FiguraExtras.avatarSigner.sign((guestCompoundTag == null ? hostCompoundTag : guestCompoundTag).getAsString().getBytes(StandardCharsets.UTF_8));
+            byte[] signature = Identities.avatarSigner.sign((guestCompoundTag == null ? hostCompoundTag : guestCompoundTag).getAsString().getBytes(StandardCharsets.UTF_8));
             (guestCompoundTag == null ? hostFiguraExtras : guestFiguraExtras).put("signature", new ByteArrayTag(signature));
         }
-        ;
 
         if (guestCompoundTag != null) {
             try {
@@ -166,11 +187,12 @@ public class LocalAvatarLoaderMixin {
                 byte[] bytes = outputStream.toByteArray();
                 guestFiguraExtras.put("host-counterpart", new ByteArrayTag(Util.hashBytes(bytes)));
             } catch (IOException e) {
+                loadError = "An error happened while processing host-splitting: " + e.getMessage();
                 FiguraExtras.sendBrandedMessage("Host Splitting Error", style -> style.withColor(ChatFormatting.RED), "An error has happened while managing host splitting: " + e.getMessage());
                 ci.cancel();
                 return;
             }
-            ((UserDataAccess) target).figuraExtrass$setFutureAvatarGuestNbt(guestCompoundTag);
+            ((UserDataAccess) target).figuraExtras$setFutureAvatarOtherNbt(guestCompoundTag, AvatarAccess.Side.HOST);
         }
 
         if (!hostFiguraExtras.isEmpty()) {
@@ -178,6 +200,33 @@ public class LocalAvatarLoaderMixin {
         }
         if (!guestFiguraExtras.isEmpty() && guestCompoundTag != null) {
             guestCompoundTag.put("figura-extras", guestFiguraExtras);
+        }
+    }
+
+    @Unique
+    static private void performDelayedFormatter(CompoundTag nbt) {
+        if (Configs.FORMAT_SCRIPT.value == 0) {
+            return;
+        }
+
+        if (!nbt.contains("scripts")) {
+            return;
+        }
+
+        Tag tag = nbt.get("scripts");
+
+        if (!(tag instanceof CompoundTag ct)) {
+            return;
+        }
+
+        for (String key : ct.getAllKeys()) {
+            Tag script = ct.get(key);
+
+            if (!(script instanceof ByteArrayTag st)) {
+                continue;
+            }
+
+            ct.put(key, LuaScriptParser.parseScript(key, new String(st.getAsByteArray(), StandardCharsets.UTF_8)));
         }
     }
 

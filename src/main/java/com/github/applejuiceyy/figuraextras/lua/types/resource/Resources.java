@@ -2,10 +2,6 @@ package com.github.applejuiceyy.figuraextras.lua.types.resource;
 
 import com.github.applejuiceyy.luabridge.annotation.LuaClass;
 import com.github.applejuiceyy.luabridge.annotation.LuaMethod;
-import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.minecraft.nbt.Tag;
-import net.minecraft.nbt.TagParser;
 import org.luaj.vm2.LuaError;
 
 import java.io.IOException;
@@ -19,16 +15,6 @@ public class Resources {
 
     public Resources(Path avatarPath) {
         this.avatarPath = avatarPath;
-    }
-
-    @LuaMethod
-    Tag readNbt(Path file) {
-        TagParser parser = new TagParser(new StringReader(readFile(file)));
-        try {
-            return parser.readValue();
-        } catch (CommandSyntaxException e) {
-            throw new LuaError(e.getMessage());
-        }
     }
 
     @LuaMethod

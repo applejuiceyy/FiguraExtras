@@ -18,7 +18,7 @@ public class SoundBufferMixin implements SoundBufferAccess {
     private @Nullable ByteBuffer data;
 
     @Override
-    public void figuraExtrass$keepBuffer() {
+    public void figuraExtras$keepBuffer() {
         if (data == null) {
             FiguraExtras.logger.warn("KeepBuffer called too late, data already gone");
             return;
@@ -27,7 +27,7 @@ public class SoundBufferMixin implements SoundBufferAccess {
     }
 
     @Override
-    public ByteBuffer figuraExtrass$getKeptBuffer() {
+    public ByteBuffer figuraExtras$getKeptBuffer() {
         return keptBuffer;
     }
 }

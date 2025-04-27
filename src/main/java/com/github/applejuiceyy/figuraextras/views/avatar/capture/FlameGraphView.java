@@ -26,8 +26,7 @@ public class FlameGraphView implements Lifecycle {
 
         additionPoint.accept(root);
 
-        component = new FlameGraphComponent(frame) {
-        };
+        component = new FlameGraphComponent(frame);
 
         root.add(component);
 

@@ -106,8 +106,7 @@ public class DefaultCancellableEvent {
         }
     }
 
-    public static class ToolTipEvent extends DefaultCancellableEvent.MousePositionEvent {
-        private final Runnable invalidator;
+    public static abstract class ToolTipEvent extends DefaultCancellableEvent.MousePositionEvent {
         private final List<Component> components = new ArrayList<>();
         Event<Runnable> disposing = Event.runnable();
         public final Event<Runnable>.Source dispose = disposing.getSource();
@@ -115,9 +114,8 @@ public class DefaultCancellableEvent {
         private GuiState state = null;
         private List<Element> componentElementMapping = null;
 
-        public ToolTipEvent(double x, double y, Runnable invalidator) {
+        public ToolTipEvent(double x, double y) {
             super(x, y);
-            this.invalidator = invalidator;
         }
 
         public Runnable add(Component component) {
@@ -155,9 +153,7 @@ public class DefaultCancellableEvent {
             return flow;
         }
 
-        public void invalidate() {
-            invalidator.run();
-        }
+        public abstract void invalidate();
 
         Either<List<Component>, Flow> get() {
             return flow == null ? Either.left(components) : Either.right(flow);

@@ -14,12 +14,12 @@ public class LuaTypeManagerMixin implements LuaTypeManagerAccess {
     Avatar avatar;
 
     @Override
-    public void figuraExtrass$setAvatar(@Nullable Avatar avatar) {
+    public void figuraExtras$setAvatar(@Nullable Avatar avatar) {
         this.avatar = avatar;
     }
 
     @Override
-    public @Nullable Avatar figuraExtrass$getAvatar() {
+    public @Nullable Avatar figuraExtras$getAvatar() {
         return avatar;
     }
 }

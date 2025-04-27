@@ -16,19 +16,28 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
 
 public interface AvatarAccess {
-    boolean figuraExtrass$isCleaned();
+    boolean figuraExtras$isCleaned();
 
-    Expander<LuaValue> figuraExtrass$getObjectViewTree();
+    Expander<LuaValue> figuraExtras$getObjectViewTree();
 
-    Expander<DummyExpander.Dummy> figuraExtrass$getModelViewTree();
+    Expander<DummyExpander.Dummy> figuraExtras$getModelViewTree();
 
-    Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtrass$getChatRedirect();
+    Event<BiPredicate<Component, FiguraLuaPrinterDuck.Kind>> figuraExtras$getChatRedirect();
 
-    Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtrass$getNetworkLogger();
+    Event<TriConsumer<CompletableFuture<HttpResponse<InputStream>>, HttpRequest, CompletableFuture<String>>> figuraExtras$getNetworkLogger();
 
-    CompoundTag figuraExtrass$getGuestNbt();
 
-    int figuraExtrass$getGuestFileSize();
+    CompoundTag figuraExtras$getOtherNbt();
 
-    void figuraExtrass$setGuestNbt(CompoundTag tag);
+    int figuraExtras$getOtherFileSize();
+
+    void figuraExtras$setOtherNbt(CompoundTag tag);
+
+    void figuraExtras$setCurrentSide(Side side);
+
+    Side figuraExtras$getCurrentSide();
+
+    enum Side {
+        GUEST, HOST
+    }
 }

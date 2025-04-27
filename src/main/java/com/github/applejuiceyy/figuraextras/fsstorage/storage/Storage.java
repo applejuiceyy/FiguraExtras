@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 public abstract class Storage implements Iterable<Bucket> {
     static final Logger logger = LoggerFactory.getLogger("FiguraExtras:BucketStorage");
@@ -19,6 +20,20 @@ public abstract class Storage implements Iterable<Bucket> {
 
     Storage(StorageState state) {
         this.state = state;
+    }
+
+    static ChildCreator creator(Function<String, ChildCreator> supplier) {
+        return new ChildCreator() {
+            @Override
+            public Storage createFromExisting(Path path, String[] buckets, Runnable deleter) {
+                return supplier.apply(buckets[buckets.length - 1]).createFromExisting(path, buckets, deleter);
+            }
+
+            @Override
+            public Storage createFromNew(Path path, String[] buckets, Runnable deleter, Map<DataId<?>, Object> values) {
+                return supplier.apply(buckets[buckets.length - 1]).createFromNew(path, buckets, deleter, values);
+            }
+        };
     }
 
     public static Storage create(Path path, Set<DataId<?>> dataIds, int bucketCount) {
@@ -60,7 +75,7 @@ public abstract class Storage implements Iterable<Bucket> {
     protected abstract Bucket _createBucket(String[] buckets, int pos, Map<DataId<?>, Object> values);
 
 
-    interface ChildCreator {
+    public interface ChildCreator {
         Storage createFromExisting(Path path, String[] buckets, Runnable deleter);
 
         Storage createFromNew(Path path, String[] buckets, Runnable deleter, Map<DataId<?>, Object> values);

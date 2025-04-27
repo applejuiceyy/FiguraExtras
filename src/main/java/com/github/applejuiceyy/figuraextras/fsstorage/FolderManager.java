@@ -8,6 +8,8 @@ import com.google.gson.JsonParser;
 import net.minecraft.Util;
 import net.minecraft.util.Tuple;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -17,6 +19,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class FolderManager implements Iterable<Tuple<String, Path>> {
+    public static Logger logger = LoggerFactory.getLogger("FiguraExtras:FolderManager");
+
+
     private static final String INDEXJSON = "index.json";
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
     private final Path path;
@@ -60,16 +65,31 @@ public class FolderManager implements Iterable<Tuple<String, Path>> {
     }
 
     public Path getFolder(String name) {
+        Path folderPath;
         if (actualToFolder.has(name)) {
-            return path.resolve(actualToFolder.get(name).getAsString());
+            folderPath = path.resolve(actualToFolder.get(name).getAsString());
+            if (!Files.exists(folderPath) || !Files.isDirectory(folderPath)) {
+                logger.warn("Unexpected deletion of folder with alternate name {}", folderPath);
+                actualToFolder.remove(name);
+                try {
+                    saveIndex();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         } else {
             if (name.contains(path.getFileSystem().getSeparator())) return null;
             try {
-                return path.resolve(name);
+                folderPath = path.resolve(name);
             } catch (InvalidPathException ignored) {
                 return null;
             }
+            if (!Files.exists(folderPath) || !Files.isDirectory(folderPath)) {
+                return null;
+            }
         }
+
+        return folderPath;
     }
 
     public Path createFolder(String name) throws IOException {

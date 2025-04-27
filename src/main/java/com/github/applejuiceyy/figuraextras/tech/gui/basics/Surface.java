@@ -105,9 +105,9 @@ public interface Surface {
                 mask.render(null, graphics, mouseX, mouseY, delta, children, self_);
                 RenderTarget rendered = Stacks.RENDER_TARGETS.pop(false);
                 RenderTarget target = Stacks.RENDER_TARGETS.peek();
-                ((RenderTargetAccess) target).figuraExtrass$setStencil(rendered.getColorTextureId());
+                ((RenderTargetAccess) target).figuraExtras$setStencil(rendered.getColorTextureId());
                 self.render(null, graphics, mouseX, mouseY, delta, children, self_);
-                ((RenderTargetAccess) target).figuraExtrass$setStencil(0);
+                ((RenderTargetAccess) target).figuraExtras$setStencil(0);
                 Stacks.RENDER_TARGETS.reclaim(rendered);
             }
 

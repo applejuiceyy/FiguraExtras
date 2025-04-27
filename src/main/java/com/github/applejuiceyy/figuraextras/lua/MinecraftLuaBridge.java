@@ -56,7 +56,7 @@ public class MinecraftLuaBridge extends Bridge {
                     MethodHandle finalHandle = handle;
                     printerCallback = (a, b) -> {
                         try {
-                            return (Component) finalHandle.invokeExact(a, b);
+                            return (Component) finalHandle.invoke(a, b);
                         } catch (Throwable e) {
                             throw new RuntimeException(e);
                         }

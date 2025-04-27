@@ -43,7 +43,7 @@ public class WindowContentPopOutHost implements ContentPopOutHost {
             graphics.drawString(font, Component.literal("Drop here to transfer to monitor"), 12, 1, 0xffffffff);
             graphics.fill(0, 0, 10, 10, 0xffff0000);
         }
-        if (((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$getMonitorPopUpHost().canReinsert()) {
+        if (((MinecraftAccess) Minecraft.getInstance()).figuraExtras$getMonitorPopUpHost().canReinsert()) {
             graphics.fill(0, 0, window.getGuiScaledWidth(), window.getGuiScaledHeight(), 0x55000000);
             Component component = Component.literal("Click here to transfer to screen");
             graphics.drawString(font, component,
@@ -55,8 +55,8 @@ public class WindowContentPopOutHost implements ContentPopOutHost {
     }
 
     public boolean onMouseDown(double mouseX, double mouseY, int buttons) {
-        if (((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$getMonitorPopUpHost().canReinsert()) {
-            ((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$getMonitorPopUpHost().reinsert(this::add);
+        if (((MinecraftAccess) Minecraft.getInstance()).figuraExtras$getMonitorPopUpHost().canReinsert()) {
+            ((MinecraftAccess) Minecraft.getInstance()).figuraExtras$getMonitorPopUpHost().reinsert(this::add);
             return true;
         }
         for (Instance instance : instances) {
@@ -84,7 +84,7 @@ public class WindowContentPopOutHost implements ContentPopOutHost {
     public boolean onMouseRelease(double x, double y, int button) {
         if (dragging != null) {
             if (x > 0 && x < 10 && y > 0 && y < 10) {
-                ((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$getMonitorPopUpHost().add(dragging.component);
+                ((MinecraftAccess) Minecraft.getInstance()).figuraExtras$getMonitorPopUpHost().add(dragging.component);
                 dragging.sub.stop();
                 instances.remove(dragging);
             }

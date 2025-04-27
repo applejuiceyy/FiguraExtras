@@ -35,7 +35,7 @@ public abstract class MouseHandlerMixin {
     )
     void a(long window, double x, double y, CallbackInfo ci, Screen screen, double d, double e, double f, double g) {
         if (!isMouseGrabbed() &&
-                ((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$getContentPopOutHost().onMouseDrag(d, e, activeButton, f, g)) {
+                ((MinecraftAccess) Minecraft.getInstance()).figuraExtras$getContentPopOutHost().onMouseDrag(d, e, activeButton, f, g)) {
             xpos = x;
             ypos = y;
             ci.cancel();
@@ -52,7 +52,7 @@ public abstract class MouseHandlerMixin {
             cancellable = true
     )
     void a(long window, int button, int action, int modifiers, CallbackInfo ci, boolean bl, int i, boolean[] bls, double d, double e) {
-        WindowContentPopOutHost o = ((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$getContentPopOutHost();
+        WindowContentPopOutHost o = ((MinecraftAccess) Minecraft.getInstance()).figuraExtras$getContentPopOutHost();
 
         if (bl) {
             if (o.onMouseDown(d, e, i)) {

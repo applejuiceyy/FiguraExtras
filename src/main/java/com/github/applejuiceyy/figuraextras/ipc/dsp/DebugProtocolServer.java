@@ -10,6 +10,7 @@ import com.github.applejuiceyy.figuraextras.ipc.DisconnectAware;
 import com.github.applejuiceyy.figuraextras.ipc.underlying.IPCFactory;
 import com.github.applejuiceyy.figuraextras.mixin.debugadapter.figura.LuaRuntimeAccessor;
 import com.github.applejuiceyy.figuraextras.tech.captures.Hook;
+import com.github.applejuiceyy.figuraextras.tech.captures.figura.FiguraData;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Util;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -234,7 +235,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     @Override
     public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
         clientCapabilities = args;
-        Util.after(client::initialized, 1000);
+        Util.after(client::initialized, 1000, "Initialize");
         return CompletableFuture.completedFuture(capabilities);
     }
 
@@ -402,7 +403,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     @Override
     public CompletableFuture<SourceResponse> source(SourceArguments args) {
         int sourceReference = args.getSourceReference();
-        String content = ((LuaRuntimeAccess) getCurrentAvatar().luaRuntime).figuraExtrass$getSource(sourceReference);
+        String content = ((LuaRuntimeAccess) getCurrentAvatar().luaRuntime).figuraExtras$getSource(sourceReference);
         SourceResponse response = new SourceResponse();
         response.setContent(content);
         response.setMimeType("text/x-lua");
@@ -586,7 +587,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
     private void doContextualHook(Hook hook) {
         com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor luaRuntime = (com.github.applejuiceyy.figuraextras.mixin.figura.lua.LuaRuntimeAccessor) getCurrentAvatar().luaRuntime;
         GlobalsAccess globals = ((GlobalsAccess) luaRuntime.getUserGlobals());
-        situationalBreakpointRemover = globals.figuraExtrass$getCaptureState().getEvent().subscribe(hook);
+        situationalBreakpointRemover = globals.figuraExtras$getCaptureState().getEvent().subscribe(hook);
     }
 
     // it's better to separate what is DA and internal state and just internal talking to eachother
@@ -657,7 +658,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         }
 
         public void luaRuntimeBooting(FiguraLuaRuntime runtime) {
-            ((LuaRuntimeAccess) runtime).figuraExtrass$dynamicLoadsEvent().subscribe(new SourceListener() {
+            ((LuaRuntimeAccess) runtime).figuraExtras$dynamicLoadsEvent().subscribe(new SourceListener() {
                 @Override
                 public void added(String prototype, String source, int name) {
                     sourcer.registerNewDynamicLoad(prototype, name);
@@ -671,7 +672,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
         }
 
         public void avatarBooting(Avatar owner, Globals userGlobals) {
-            destroyers.subscribe(((AvatarAccess) owner).figuraExtrass$getChatRedirect().getSource().subscribe((component, kind) -> {
+            destroyers.subscribe(((AvatarAccess) owner).figuraExtras$getChatRedirect().getSource().subscribe((component, kind) -> {
                 String category = kind == FiguraLuaPrinterDuck.Kind.ERRORS ? OutputEventArgumentsCategory.STDERR : OutputEventArgumentsCategory.STDOUT;
                 OutputEventArguments outputEventArguments = new OutputEventArguments();
                 outputEventArguments.setCategory(category);
@@ -689,7 +690,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 client.output(outputEventArguments);
                 return true;
             }));
-            Runnable runnable = ((GlobalsAccess) userGlobals).figuraExtrass$getCaptureState().getEvent().subscribe(new Hook() {
+            Runnable runnable = ((GlobalsAccess) userGlobals).figuraExtras$getCaptureState().getEvent().subscribe(new Hook() {
                 int reentrantCount = 0;
 
                 @Override
@@ -716,7 +717,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                     int p = luaClosure.p.lineinfo[pc];
 
                     WeakHashMap<Prototype, Integer> markedAsLoadStringed = ((LuaRuntimeAccess) getCurrentAvatar().luaRuntime)
-                            .figuraExtrass$getPrototypesMarkedAsLoadStringed();
+                            .figuraExtras$getPrototypesMarkedAsLoadStringed();
 
                     Either<String, Integer> sourceIndex;
                     if (markedAsLoadStringed.containsKey(luaClosure.p)) {
@@ -777,7 +778,7 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                 }
 
                 @Override
-                public void startEvent(String runReason, Object toRun, Varargs val) {
+                public void startEvent(Discernible discernible) {
                     if (stackTrace.isActive) {
                         // onPlaySound event causes Avatar.run to be reentrant
                         // we will discard it under a compromise
@@ -786,7 +787,8 @@ public class DebugProtocolServer implements IDebugProtocolServer, DisconnectAwar
                     }
                     stackTrace.frameList.clear();
                     stackTrace.isActive = true;
-                    stackTrace.kickstarter = runReason;
+                    Optional<FiguraData> as = discernible.getAs(FiguraData.class);
+                    stackTrace.kickstarter = as.orElseThrow().reason();
                 }
 
                 @Override

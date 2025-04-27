@@ -4,9 +4,9 @@ import com.github.applejuiceyy.figuraextras.tech.captures.CaptureState;
 import org.luaj.vm2.LuaTable;
 
 public interface GlobalsAccess {
-    LuaTable figuraExtrass$getOffTheShelfDebugLib();
+    LuaTable figuraExtras$getOffTheShelfDebugLib();
 
-    void figuraExtrass$setOffTheShelfDebugLib(LuaTable table);
+    void figuraExtras$setOffTheShelfDebugLib(LuaTable table);
 
-    CaptureState figuraExtrass$getCaptureState();
+    CaptureState figuraExtras$getCaptureState();
 }

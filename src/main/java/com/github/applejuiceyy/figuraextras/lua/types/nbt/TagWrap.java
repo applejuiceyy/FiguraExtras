@@ -29,7 +29,8 @@ public class TagWrap {
     @LuaPrint
     public static Component print(Tag tag, boolean expand) {
         TextComponentTagVisitor visitor = new TextComponentTagVisitor("    ", 0);
-        ((TextComponentTagVisitorAccess) visitor).figuraExtrass$setElementLimit(10);
+        ((TextComponentTagVisitorAccess) visitor).figuraExtras$setElementLimit(10);
         return visitor.visit(tag);
     }
+
 }

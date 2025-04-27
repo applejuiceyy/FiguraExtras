@@ -15,6 +15,6 @@ public class ObjectView extends ObjectTreeView<LuaValue> {
 
     @Override
     protected Expander<LuaValue> getRootExpander() {
-        return ((AvatarAccess) context.getValue()).figuraExtrass$getObjectViewTree();
+        return ((AvatarAccess) context.getValue()).figuraExtras$getObjectViewTree();
     }
 }

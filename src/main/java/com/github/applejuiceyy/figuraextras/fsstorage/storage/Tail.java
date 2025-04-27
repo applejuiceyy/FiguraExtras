@@ -31,7 +31,7 @@ public class Tail extends Storage {
         this.buckets = buckets;
     }
 
-    static ChildCreator creator(StorageState state, Set<DataId<?>> dataIds) {
+    public static ChildCreator creator(StorageState state, Set<DataId<?>> dataIds) {
         return new ChildCreator() {
             @Override
             public Storage createFromExisting(Path path, String[] buckets, Runnable deleter) {
@@ -65,12 +65,12 @@ public class Tail extends Storage {
 
     @Override
     protected Bucket _getBucket(String[] buckets, int pos) {
-        return getBucket();
+        return verifyDataAndCacheBucket();
     }
 
     @Override
     protected Iterator<Bucket> _iterate(String[] buckets, int pos) {
-        ImplBucket implBucket = getBucket();
+        ImplBucket implBucket = verifyDataAndCacheBucket();
         if (implBucket == null) {
             return Iterators.forArray();
         }
@@ -79,45 +79,44 @@ public class Tail extends Storage {
 
     @Override
     protected Bucket _createBucket(String[] buckets, int pos, Map<DataId<?>, Object> map) {
-        return getBucket();
+        return verifyDataAndCacheBucket();
     }
 
-    private ImplBucket getBucket() {
+    private ImplBucket verifyDataAndCacheBucket() {
         ImplBucket implBucket;
         if (bucket != null && (implBucket = bucket.get()) != null) {
             return implBucket;
         }
-        if (!probeData()) {
-            Storage.logger.error("Malformed storage data for {}", path);
-            return null;
-        }
         Map<DataId<?>, DataProperty<?>> properties = new HashMap<>();
         for (DataId<?> dataId : dataIds) {
-            DataProperty<?> value = new DataProperty<>(path.resolve(dataId.name), dataId);
-            properties.put(dataId, value);
+            Path dataIdPath = getDataIdPath(path, dataId);
+            if (!Files.exists(dataIdPath)) {
+                return brokenData(dataId.name + " does not exist");
+            }
+            if (!Files.isRegularFile(dataIdPath)) {
+                return brokenData(dataId.name + " is not a regular file");
+            }
+            try {
+                DataProperty<?> value = new DataProperty<>(dataIdPath, dataId);
+                if (!value.dataId.buffered && value.dataId.readWriter != DataId.PASS_THROUGH) {
+                    value.read();
+                }
+                properties.put(dataId, value);
+            } catch (RuntimeException | IOException | DataId.ParseException e) {
+                Storage.logger.error("Error while trying to read {}", dataIdPath, e);
+                return brokenData(dataId.name + " is not readable");
+            }
         }
         implBucket = new ImplBucket(properties);
         bucket = new SoftReference<>(implBucket);
         return implBucket;
     }
 
-    private boolean probeData() {
-        for (DataId<?> dataId : dataIds) {
-            Path dataIdPath = getDataIdPath(path, dataId);
-            if (!Files.exists(dataIdPath)) {
-                return false;
-            }
-            if (!Files.isRegularFile(dataIdPath)) {
-                return false;
-            }
-            DataProperty<?> property = new DataProperty<>(getDataIdPath(path, dataId), dataId);
-            try {
-                property.read();
-            } catch (IOException | DataId.ParseException e) {
-                return false;
-            }
-        }
-        return true;
+    private ImplBucket brokenData(String reason) {
+        Storage.logger.error("Malformed storage data for {} ({})", path, reason);
+        deleter.run();
+        deleted = true;
+        return null;
     }
 
     private class ImplBucket implements Bucket {

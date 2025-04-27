@@ -1,7 +1,11 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
 plugins {
-    id 'fabric-loom' version '1.6-SNAPSHOT'
-    id 'maven-publish'
+    id 'fabric-loom' version '1.9.2' apply false
 }
+
+apply plugin: 'fabric-loom'
 
 version = project.mod_version
 group = project.maven_group
@@ -12,6 +16,11 @@ repositories {
     maven { url 'https://maven.wispforest.io' }
     maven { url "https://repo.maven.apache.org/maven2/" }
     maven { url "https://maven.figuramc.org/releases" }
+
+    maven {
+        name = "Terraformers"
+        url = "https://maven.terraformersmc.com/"
+    }
 
 
     maven {
@@ -32,6 +41,8 @@ dependencies {
     modImplementation "org.figuramc:figura-fabric:${project.figura}+1.20.1"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
+    modImplementation("com.terraformersmc:modmenu:7.2.2")
+
     include(implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.22.0"))
     include(implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.debug:0.22.0"))
     include(implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.22.0"))
@@ -44,18 +55,27 @@ dependencies {
         exclude group: "org.slf4j", module: "slf4j-api"
         exclude group: "com.google.guava", module: "guava"
     })
+
+    for (final def sub in project(":SubMods").subprojects) {
+        include(sub)
+        implementation(project(path: sub.path, configuration: "namedElements"))
+    }
 }
 
 processResources {
     inputs.property "version", project.version
     inputs.property "minecraft_version", project.minecraft_version
     inputs.property "loader_version", project.loader_version
+
     filteringCharset "UTF-8"
 
     filesMatching("fabric.mod.json") {
         expand "version": project.version,
                 "minecraft_version": project.minecraft_version,
                 "loader_version": project.loader_version
+
+
+        filter(FabricModFilterReader, subProject: project("SubMods"))
     }
 }
 
@@ -89,14 +109,70 @@ jar {
     }
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
+class FabricModFilterReader extends FilterReader {
+    CharArrayReader underlying
+    Project subProject
+    Reader o
+
+    FabricModFilterReader(Reader reader) {
+        super(reader)
+        o = reader
+    }
+
+    @Override
+    int read() throws IOException {
+        return getReader().read()
+    }
+
+    @Override
+    int read(char[] cbuf, int off, int len) throws IOException {
+        return getReader().read(cbuf, off, len)
+    }
+
+    @Override
+    long skip(long n) throws IOException {
+        return getReader().skip(n)
+    }
+
+    @Override
+    boolean ready() throws IOException {
+        return getReader().ready()
+    }
+
+    @Override
+    boolean markSupported() {
+        return getReader().markSupported()
+    }
+
+    @Override
+    void mark(int readAheadLimit) throws IOException {
+        getReader().mark(readAheadLimit)
+    }
+
+    @Override
+    void reset() throws IOException {
+        getReader().reset()
+    }
+
+    @Override
+    void close() throws IOException {
+        getReader().close()
+    }
+
+    private Reader getReader() {
+        if (underlying != null) return underlying
+
+        def parse = new JsonSlurper().parse(o)
+        for (final def subproject in subProject.subprojects) {
+            def extension = subproject.extensions.getByType(JavaPluginExtension.class)
+            def p = extension.sourceSets.getByName("main").resources.matching {
+                include("fabric.mod.json")
+            }
+            def object = new JsonSlurper().parse(p.singleFile)
+            parse.depends."$object.id" = "*"
         }
+        return underlying = new CharArrayReader(JsonOutput.prettyPrint(JsonOutput.toJson(parse)).toCharArray())
     }
 
-    repositories {
 
-    }
 }

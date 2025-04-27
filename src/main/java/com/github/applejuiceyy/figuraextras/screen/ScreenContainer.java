@@ -50,7 +50,7 @@ public abstract class ScreenContainer {
     }
 
     public <T> T withContext(Supplier<T> running) {
-        return ((MinecraftAccess) Minecraft.getInstance()).figuraExtrass$withSetScreen(this::setScreen, () -> _withContext(running));
+        return ((MinecraftAccess) Minecraft.getInstance()).figuraExtras$withSetScreen(this::setScreen, () -> _withContext(running));
     }
 
     public void withContext(Runnable running) {

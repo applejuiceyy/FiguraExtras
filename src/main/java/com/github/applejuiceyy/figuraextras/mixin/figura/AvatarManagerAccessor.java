@@ -1,9 +1,11 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
 import org.figuramc.figura.avatar.AvatarManager;
+import org.figuramc.figura.avatar.UserData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -14,5 +16,8 @@ public interface AvatarManagerAccessor {
         throw new IllegalStateException("Not injected");
     }
 
-    ;
+    @Accessor("LOADED_USERS")
+    static Map<UUID, UserData> getLoadedUsers() {
+        throw new IllegalStateException("Not injected");
+    }
 }

@@ -66,7 +66,7 @@ public class NetworkView implements Lifecycle {
         Style values = Style.EMPTY.withColor(0x77aa99);
         Style fragment = Style.EMPTY.withColor(0x229922);
 
-        unsub = ((AvatarAccess) context.getValue()).figuraExtrass$getNetworkLogger().getSource().subscribe((future, request, bodyBytes) -> {
+        unsub = ((AvatarAccess) context.getValue()).figuraExtras$getNetworkLogger().getSource().subscribe((future, request, bodyBytes) -> {
             URI uri = request.uri();
 
             net.minecraft.network.chat.MutableComponent component = net.minecraft.network.chat.Component.literal("HTTP ");

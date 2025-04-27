@@ -22,10 +22,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Util {
+    public static ThreadGroup threadGroup = new ThreadGroup("FiguraExtras Threads");
     public static void setupTransforms(Window window) {
         Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float) ((double) window.getGuiScaledWidth()), (float) ((double) window.getGuiScaledHeight()), 0.0F, 1000.0F, 21000.0F);
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
@@ -97,13 +99,7 @@ public class Util {
         in.shouldStopListen().subscribe(o::stop);
     }
 
-    public static Thread thread(Runnable runnable) {
-        Thread thread = new Thread(runnable);
-        thread.start();
-        return thread;
-    }
-
-    public static Thread after(Runnable runnable, long millis) {
+    public static Thread after(Runnable runnable, long millis, String name) {
         return thread(() -> {
             try {
                 Thread.sleep(millis);
@@ -111,7 +107,13 @@ public class Util {
                 return;
             }
             runnable.run();
-        });
+        }, name + "(sleep " + millis + ")");
+    }
+
+    public static Thread thread(Runnable runnable, String name) {
+        Thread thread = new Thread(threadGroup, runnable, name);
+        thread.start();
+        return thread;
     }
 
     public static SafeCloseable maybeTry(Supplier<SafeCloseable> in, boolean yes) {
@@ -123,22 +125,36 @@ public class Util {
     }
 
     public static Iterable<Tuple<LuaValue, LuaValue>> iterateLua(LuaValue value) {
+        return iterateLua(value, LuaValue::next);
+    }
+
+    public static Iterable<Tuple<LuaValue, LuaValue>> iterateLua(LuaValue value, BiFunction<LuaValue, LuaValue, Varargs> pair) {
         return () -> new Iterator<>() {
             LuaValue k = LuaValue.NIL;
+            Varargs currentResult = null;
 
             @Override
             public boolean hasNext() {
-                Varargs n = value.next(k);
-                return !n.arg1().isnil();
+                return !fetch().arg1().isnil();
             }
 
             @Override
             public Tuple<LuaValue, LuaValue> next() {
-                Varargs n = value.next(k);
-                if ((k = n.arg1()).isnil())
+                Varargs n = fetch();
+                LuaValue key = n.arg1();
+                if (key.isnil())
                     throw new NoSuchElementException();
+                currentResult = null;
+                k = key;
                 LuaValue v = n.arg(2);
-                return new Tuple<>(k, v);
+                return new Tuple<>(key, v);
+            }
+
+            private Varargs fetch() {
+                if (currentResult == null) {
+                    currentResult = pair.apply(value, k);
+                }
+                return currentResult;
             }
         };
     }

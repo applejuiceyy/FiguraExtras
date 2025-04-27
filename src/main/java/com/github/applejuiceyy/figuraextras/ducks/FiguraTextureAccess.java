@@ -4,15 +4,15 @@ import net.minecraft.resources.ResourceLocation;
 
 public interface FiguraTextureAccess {
 
-    boolean figuraExtrass$hasRealTimePendingModifications();
+    boolean figuraExtras$hasRealTimePendingModifications();
 
-    boolean figuraExtrass$hasPendingModifications();
+    boolean figuraExtras$hasPendingModifications();
 
-    void figuraExtrass$lockUpdatedTexture();
+    void figuraExtras$lockUpdatedTexture();
 
-    ResourceLocation figuraExtrass$getUpdatedTexture();
+    ResourceLocation figuraExtras$getUpdatedTexture();
 
-    void figuraExtrass$refreshUpdatedTexture();
+    void figuraExtras$refreshUpdatedTexture();
 
-    void figuraExtrass$unlockUpdatedTexture();
+    void figuraExtras$unlockUpdatedTexture();
 }

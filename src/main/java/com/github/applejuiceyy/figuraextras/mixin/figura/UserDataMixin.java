@@ -1,6 +1,7 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
 import com.github.applejuiceyy.figuraextras.FiguraExtras;
+import com.github.applejuiceyy.figuraextras.constants.Identities;
 import com.github.applejuiceyy.figuraextras.ducks.AvatarAccess;
 import com.github.applejuiceyy.figuraextras.ducks.UserDataAccess;
 import com.github.applejuiceyy.figuraextras.fsstorage.Bucket;
@@ -29,6 +30,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Mixin(value = UserData.class, remap = false)
@@ -37,9 +39,11 @@ public class UserDataMixin implements UserDataAccess {
     @Final
     public UUID id;
     @Unique
-    public CompoundTag guestNbt;
+    public CompoundTag otherNbt;
+    @Unique
+    public AvatarAccess.Side sideKind;
 
-    @Inject(method = "loadAvatar", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "loadAvatar", at = @At("HEAD"), cancellable = true, remap = true)
     void verify(CompoundTag n, CallbackInfo ci, @Local(argsOnly = true) LocalRef<CompoundTag> nbtVar) {
         if (!id.equals(FiguraMod.getLocalPlayerUUID())) {
             return;
@@ -54,7 +58,7 @@ public class UserDataMixin implements UserDataAccess {
                 nbt.remove("figura-extras");
                 if (figuraExtras.contains("signature", Tag.TAG_BYTE_ARRAY)) {
                     byte[] signature = figuraExtras.getByteArray("signature");
-                    verified = FiguraExtras.avatarSigner.verify(nbt.getAsString().getBytes(StandardCharsets.UTF_8), signature);
+                    verified = Identities.avatarSigner.verify(nbt.getAsString().getBytes(StandardCharsets.UTF_8), signature);
                 }
                 nbt.put("figura-extras", figuraExtras);
             }
@@ -87,7 +91,7 @@ public class UserDataMixin implements UserDataAccess {
                     bucket.set(CommonOps.TIME, Instant.now());
                     try {
                         nbtVar.set(NbtIo.readCompressed(new ByteArrayInputStream(bytes), NbtAccounter.unlimitedHeap()));
-                        guestNbt = n;
+                        figuraExtras$setFutureAvatarOtherNbt(n, AvatarAccess.Side.HOST);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -96,17 +100,22 @@ public class UserDataMixin implements UserDataAccess {
         }
     }
 
-    @ModifyExpressionValue(method = "loadAvatar", at = @At(value = "NEW", target = "(Ljava/util/UUID;)Lorg/figuramc/figura/avatar/Avatar;"))
-    Avatar setGuestNbt(Avatar original) {
-        if (guestNbt != null) {
-            ((AvatarAccess) original).figuraExtrass$setGuestNbt(guestNbt);
-            guestNbt = null;
-        }
-        return original;
+    @Override
+    public void figuraExtras$setFutureAvatarOtherNbt(CompoundTag tag, AvatarAccess.Side side) {
+        Objects.requireNonNull(tag);
+        Objects.requireNonNull(side);
+        otherNbt = tag;
+        sideKind = side;
     }
 
-    @Override
-    public void figuraExtrass$setFutureAvatarGuestNbt(CompoundTag tag) {
-        guestNbt = tag;
+    @ModifyExpressionValue(method = "loadAvatar", at = @At(value = "NEW", target = "(Ljava/util/UUID;)Lorg/figuramc/figura/avatar/Avatar;"))
+    Avatar setGuestNbt(Avatar original) {
+        if (otherNbt != null) {
+            ((AvatarAccess) original).figuraExtras$setOtherNbt(otherNbt);
+            ((AvatarAccess) original).figuraExtras$setCurrentSide(sideKind);
+            otherNbt = null;
+            sideKind = null;
+        }
+        return original;
     }
 }

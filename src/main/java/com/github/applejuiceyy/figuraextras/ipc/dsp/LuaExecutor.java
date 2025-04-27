@@ -71,7 +71,7 @@ public class LuaExecutor {
             };
             LuaTable configMeta = new LuaTable();
             configMeta.set("__metatable", LuaValue.FALSE);
-            configMeta.set("__index", ((GlobalsAccess) globals).figuraExtrass$getOffTheShelfDebugLib());
+            configMeta.set("__index", ((GlobalsAccess) globals).figuraExtras$getOffTheShelfDebugLib());
             vars.put("config", config);
         }
 

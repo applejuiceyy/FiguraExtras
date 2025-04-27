@@ -108,11 +108,11 @@ public class NetworkStuffMixin {
         }
     }
 
-    @ModifyExpressionValue(method = "uploadAvatar", at = @At(value = "FIELD", target = "Lorg/figuramc/figura/avatar/Avatar;nbt:Lnet/minecraft/nbt/CompoundTag;", ordinal = 1))
+    @ModifyExpressionValue(method = "uploadAvatar", at = @At(value = "FIELD", target = "Lorg/figuramc/figura/avatar/Avatar;nbt:Lnet/minecraft/nbt/CompoundTag;", ordinal = 1), remap = true)
     private static CompoundTag uploadGuestNbt(CompoundTag original, @Local(argsOnly = true) Avatar avatar) {
-        CompoundTag guestNbt = ((AvatarAccess) avatar).figuraExtrass$getGuestNbt();
-        if (guestNbt != null) {
+        CompoundTag guestNbt = ((AvatarAccess) avatar).figuraExtras$getOtherNbt();
 
+        if (guestNbt != null) {
             try {
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream(1024);
                 NbtIo.writeCompressed(avatar.nbt, outputStream);

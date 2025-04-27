@@ -28,7 +28,7 @@ jobs:
       - name: Probe branches
         id: branches
         run:
-          echo "branches=$(git branch -r --format='%(refname:short)' | jq -R -s -c '[split("\n")[:-1][] | .[7:] | select(. != "1.20.1" and . != "vscode")]')" >> "$GITHUB_OUTPUT"
+          echo "branches=$(git branch -r --format='%(refname:short)' | jq -R -s -c '[split("\n")[:-1][] | .[7:] | select(. != "1.20.1" and . != "vscode" and . != "")]')" >> "$GITHUB_OUTPUT"
 
 
   transfer:
@@ -43,6 +43,7 @@ jobs:
         with:
           ref: 1.20.1
           fetch-depth: 0
+          persist-credentials: false
       - name: checkout repository
         uses: actions/checkout@v3
         with:
@@ -60,5 +61,5 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.TOKEN_TO_RERUN_ACTIONS_ONLY }}
           branch: ${{matrix.branches}}

@@ -35,9 +35,8 @@ public class LuaRuntime6Mixin {
         LuaValue loaded = globals.load(stream, chunkName, mode, env);
 
         if (loaded instanceof LuaClosure closure) {
-            ((LuaRuntimeAccess) val$runtime).figuraExtrass$newDynamicLoad(closure.p, new String(buf));
+            ((LuaRuntimeAccess) val$runtime).figuraExtras$newDynamicLoad(closure.p, new String(buf));
         }
-        ;
         return loaded;
     }
 }

@@ -56,12 +56,12 @@ public abstract class LuaClosureMixin {
 
         if (globals != null) {
             GlobalsAccess globalsAccess = ((GlobalsAccess) globals);
-            Hook capture = globalsAccess.figuraExtrass$getCaptureState().getSink();
+            Hook capture = globalsAccess.figuraExtras$getCaptureState().getSink();
             if (capture != null) {
                 String possibleName = null;
 
                 if (globals.debuglib != null) {
-                    LuaTable debugLib = ((GlobalsAccess) globals).figuraExtrass$getOffTheShelfDebugLib();
+                    LuaTable debugLib = ((GlobalsAccess) globals).figuraExtras$getOffTheShelfDebugLib();
                     LuaTable o = debugLib.get("getinfo").invoke(LuaValue.varargsOf(LuaValue.valueOf(1), LuaValue.valueOf("n"))).arg1().checktable();
                     possibleName = o.get("name").checkjstring();
                     possibleName = possibleName.equals("?") ? null : possibleName;
@@ -80,7 +80,7 @@ public abstract class LuaClosureMixin {
     void instruction(LuaValue[] stack, Varargs varargs, CallbackInfoReturnable<Varargs> cir, int pc, int top, Varargs v, int[] code, LuaValue[] k, UpValue[] openups) {
         if (globals != null) {
             GlobalsAccess globalsAccess = ((GlobalsAccess) globals);
-            Hook capture = globalsAccess.figuraExtrass$getCaptureState().getSink();
+            Hook capture = globalsAccess.figuraExtras$getCaptureState().getSink();
             if (capture != null) {
                 capture.instruction((LuaClosure) (Object) this, varargs, stack, code[pc], pc);
             }
@@ -102,7 +102,7 @@ public abstract class LuaClosureMixin {
     void outOfFunction(LuaValue[] stack, Varargs varargs, Object returns, LuaDuck.ReturnType returnType) {
         if (globals != null) {
             GlobalsAccess globalsAccess = ((GlobalsAccess) globals);
-            Hook capture = globalsAccess.figuraExtrass$getCaptureState().getSink();
+            Hook capture = globalsAccess.figuraExtras$getCaptureState().getSink();
             if (capture != null) {
                 capture.outOfFunction((LuaClosure) (Object) this, varargs, stack, returns, returnType);
             }

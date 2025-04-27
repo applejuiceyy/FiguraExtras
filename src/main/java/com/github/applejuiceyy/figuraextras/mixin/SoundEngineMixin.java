@@ -24,12 +24,12 @@ public class SoundEngineMixin implements SoundEngineAccess {
     private List<LuaSound> figuraHandlers;
 
     @Override
-    public ChannelAccess.ChannelHandle figuraExtrass$createHandle(Library.Pool mode) {
+    public ChannelAccess.ChannelHandle figuraExtras$createHandle(Library.Pool mode) {
         return channelAccess.createHandle(mode).join();
     }
 
     @Override
-    public List<LuaSound> figuraExtrass$getFiguraHandles() {
+    public List<LuaSound> figuraExtras$getFiguraHandles() {
         return figuraHandlers;
     }
 }
