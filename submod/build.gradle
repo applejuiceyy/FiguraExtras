@@ -36,7 +36,7 @@ project.subprojects { sub ->
         modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
         if (includeFigura == "true") {
-            modImplementation "org.figuramc:figura-fabric:${project.figura}+1.20.1"
+            modImplementation "org.figuramc:figura-fabric:${project.figura}+${project.minecraft_version}"
             modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
         }
     }

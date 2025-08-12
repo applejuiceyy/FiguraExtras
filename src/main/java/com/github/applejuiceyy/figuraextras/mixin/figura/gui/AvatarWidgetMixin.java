@@ -130,15 +130,14 @@ public class AvatarWidgetMixin {
             pose.popPose();
         }
 
-        @Override
-        public void render(GuiGraphics gui, int mouseX, int mouseY, float delta) {
+        @Inject(method = "renderWidget", at = @At(value = "HEAD"))
+        public void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float delta, CallbackInfo ci) {
             float time = FiguraMod.ticks - shakeTick + Minecraft.getInstance().getDeltaFrameTime();
             if (time > 70) {
                 setX(val$instance.getX());
             } else {
                 setX((int) (val$instance.getX() + Math.cos((time + shakeTick) / 2) * Math.min(time, 1 / (time + 1) * 20) * 3));
             }
-            super.render(gui, mouseX, mouseY, delta);
         }
 
         @Override
