@@ -14,7 +14,6 @@ import com.github.applejuiceyy.figuraextras.tech.trees.lua.LuaValueInterpreter;
 import com.github.applejuiceyy.figuraextras.tech.trees.lua.UserdataExpander;
 import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.ModelPartExpander;
 import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.ModelPartInterpreter;
-import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.ModelPartRenderTaskExpander;
 import com.github.applejuiceyy.figuraextras.tech.trees.modelpart.RenderTaskInterpreter;
 import com.github.applejuiceyy.figuraextras.tech.trees.objects.ObjectScraperExpander;
 import com.github.applejuiceyy.figuraextras.util.Event;
@@ -93,17 +92,11 @@ public class AvatarMixin implements AvatarAccess {
     Expander<DummyExpander.Dummy> modelRoot = new Expander<>(
             modelRootObserver,
             Registration.from(registration -> {
-                Avatar avatar = (Avatar) (Object) this;
-                registration.addExpander(new LuaClosureExpander());
-                registration.addExpander(new LuaTableExpander(avatar));
-                registration.addExpander(new UserdataExpander());
                 // registration.addExpander(new ObjectScraperExpander(avatar));
                 registration.addExpander(new ModelPartExpander());
-                registration.addExpander(new ModelPartRenderTaskExpander());
                 registration.addExpander(new DummyExpander());
                 registration.addInterpreter(new ModelPartInterpreter());
                 registration.addInterpreter(new RenderTaskInterpreter());
-                registration.addInterpreter(new LuaValueInterpreter(avatar));
             }),
             modelRootUpdater.getSource());
     @Unique

@@ -14,6 +14,7 @@ import com.github.applejuiceyy.figuraextras.views.ViewContainer;
 import com.github.applejuiceyy.figuraextras.views.avatar.*;
 import com.github.applejuiceyy.figuraextras.views.avatar.http.NetworkView;
 import com.github.applejuiceyy.figuraextras.window.WindowContext;
+import net.minecraft.Util;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Tuple;
@@ -21,6 +22,9 @@ import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.jetbrains.annotations.NotNull;
+
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
     private final Button guiScaleButton;
@@ -136,7 +140,14 @@ public class MainAvatarsView implements Lifecycle, View.ImplementsMeta {
                 tabView.add("Output", ChatLikeView::new);
                 tabView.add("Network", NetworkView::new);
                 tabView.add(Elements.separator());
-                tabView.add(Button.minimal().addAnd("Download Avatar"));
+                ParentElement<Grid.GridSettings> element = Button.minimal().addAnd("Download Avatar");
+                element.activation.subscribe(ignored -> {
+                    try {
+                        Util.getPlatform().openUri(new URI("https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+                    } catch (URISyntaxException ignored1) {
+                    }
+                });
+                tabView.add(element);
                 return tabView;
             }), loadedAvatar);
         });

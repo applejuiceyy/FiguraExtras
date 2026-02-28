@@ -15,6 +15,8 @@
     "figura.ConfigManagerMixin",
     "figura.EntityUtilsMixin",
     "figura.ImmediateAvatarRendererAccessor",
+    "figura.ImmediateAvatarRendererMixin",
+    "figura.RenderTaskAccessor",
     "figura.UserDataMixin",
     "figura.gui.AvatarInfoMixin",
     "figura.gui.StatusWidgetMixin",

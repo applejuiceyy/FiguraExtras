@@ -6,6 +6,7 @@ import com.github.applejuiceyy.figuraextras.tech.gui.layout.Grid;
 import com.github.applejuiceyy.figuraextras.tech.trees.interfaces.ObjectInterpreter;
 import com.github.applejuiceyy.figuraextras.util.Event;
 import com.github.applejuiceyy.figuraextras.util.Observers;
+import com.github.applejuiceyy.figuraextras.views.Hover;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.model.FiguraModelPart;
@@ -18,6 +19,8 @@ public class ModelPartInterpreter implements ObjectInterpreter<FiguraModelPart> 
         Button component = Button.minimal();
         Label label = new Label();
         component.add(label);
+
+        Hover.elementHoverObject(component, updater::get);
 
         remover.subscribe(
                 ticker.subscribe(() -> {
