@@ -35,7 +35,7 @@ public abstract class ModelPartMixin {
             method = "pushVerticesImmediate",
             at = @At("RETURN")
     )
-    void a(ImmediateAvatarRenderer avatarRenderer, int[] remainingComplexity, CallbackInfoReturnable<Boolean> cir) {
+    void renderGhost(ImmediateAvatarRenderer avatarRenderer, int[] remainingComplexity, CallbackInfoReturnable<Boolean> cir) {
         if (Hover.currentHover.get() == null || !(Hover.currentHover.get() instanceof FiguraModelPart)) {
             return;
         }
@@ -55,7 +55,7 @@ public abstract class ModelPartMixin {
             PartCustomization c = new PartCustomization();
             c.alpha = 1f;
             c.light = LightTexture.pack(15, 15);
-            c.setPrimaryRenderType(RenderTypes.LINES);
+            c.setPrimaryRenderType(RenderTypes.LINES_STRIP);
             c.setSecondaryRenderType(RenderTypes.NONE);
             stack.push(c);
             avatarRenderer.pushFaces(facesByTexture.get(i), new int[1], textures.get(i), vertices.get(i));

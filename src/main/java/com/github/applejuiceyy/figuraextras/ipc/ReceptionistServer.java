@@ -54,6 +54,7 @@ public class ReceptionistServer implements AutoCloseable {
         C2CServer object = ServiceEndpoints.toServiceObject(new GenericEndpoint(e), C2CServer.class);
         allClients.add(e);
         C2CClient.setServer(object);
+        e.setClient(C2CClient);
         return object;
     }
 
@@ -67,7 +68,7 @@ public class ReceptionistServer implements AutoCloseable {
         int i = 0;
         for (ServerClientInterface a : allClients) {
             autos[i] = a.closer;
-            i += 2;
+            i += 1;
         }
         for (ReceptionistVSCInterface a : vscInterfaces) {
             autos[i] = a.input;
@@ -144,7 +145,6 @@ public class ReceptionistServer implements AutoCloseable {
                 if (client.information != null) {
                     information.add(client.information);
                 }
-                ;
             }
             return CompletableFuture.completedFuture(information);
         }
