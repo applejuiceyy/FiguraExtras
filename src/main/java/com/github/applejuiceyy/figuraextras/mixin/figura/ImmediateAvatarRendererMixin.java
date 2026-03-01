@@ -25,7 +25,7 @@ public class ImmediateAvatarRendererMixin {
     @Final
     protected PartCustomization.PartCustomizationStack customizationStack;
 
-    @Inject(method = "renderPart", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/model/rendertasks/RenderTask;render(Lorg/figuramc/figura/model/PartCustomization$PartCustomizationStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V", shift = At.Shift.AFTER))
+    @Inject(method = "renderPart", at = @At(value = "INVOKE", target = "Lorg/figuramc/figura/model/rendertasks/RenderTask;render(Lorg/figuramc/figura/model/PartCustomization$PartCustomizationStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V", shift = At.Shift.AFTER, remap = true))
     void renderGhost(FiguraModelPart part, int[] remainingComplexity, boolean prevPredicate, CallbackInfoReturnable<Boolean> cir, @Local(name = "task") RenderTask renderTask) {
         Object hover = Hover.currentHover.get();
         if (hover == null) {
