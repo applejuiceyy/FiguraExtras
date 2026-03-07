@@ -1,13 +1,15 @@
 package com.github.applejuiceyy.figuraextras.mixin.figura;
 
+import com.github.applejuiceyy.figuraextras.util.WireFrameVertexConsumer;
 import com.github.applejuiceyy.figuraextras.views.Hover;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.RenderType;
+import org.figuramc.figura.math.vector.FiguraVec4;
 import org.figuramc.figura.model.FiguraModelPart;
 import org.figuramc.figura.model.PartCustomization;
 import org.figuramc.figura.model.rendering.ImmediateAvatarRenderer;
 import org.figuramc.figura.model.rendering.Vertex;
+import org.figuramc.figura.model.rendering.texture.FiguraTexture;
 import org.figuramc.figura.model.rendering.texture.FiguraTextureSet;
-import org.figuramc.figura.model.rendering.texture.RenderTypes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -31,6 +33,9 @@ public abstract class ModelPartMixin {
     @Shadow
     public List<FiguraTextureSet> textures;
 
+    @Shadow
+    public abstract List<FiguraTexture> getTextures();
+
     @Inject(
             method = "pushVerticesImmediate",
             at = @At("RETURN")
@@ -50,16 +55,26 @@ public abstract class ModelPartMixin {
             }
         }
 
+        FiguraVec4 pos = FiguraVec4.of();
+        WireFrameVertexConsumer vertexConsumer = WireFrameVertexConsumer.of(avatarRenderer.bufferSource);
+        vertexConsumer.getBuffer(RenderType.endPortal());
+
         for (int i = 0; i < facesByTexture.size(); i++) {
             PartCustomization.PartCustomizationStack stack = ((ImmediateAvatarRendererAccessor) avatarRenderer).getCustomizationStack();
-            PartCustomization c = new PartCustomization();
-            c.alpha = 1f;
-            c.light = LightTexture.pack(15, 15);
-            c.setPrimaryRenderType(RenderTypes.LINES_STRIP);
-            c.setSecondaryRenderType(RenderTypes.NONE);
-            stack.push(c);
-            avatarRenderer.pushFaces(facesByTexture.get(i), new int[1], textures.get(i), vertices.get(i));
-            stack.pop();
+
+            List<Vertex> vertexList = vertices.get(i);
+            if (facesByTexture.get(i) == 0) {
+                continue;
+            }
+
+            for (Vertex vertex : vertexList) {
+                pos.set(vertex.x, vertex.y, vertex.z, 1);
+                pos.transform(stack.peek().positionMatrix);
+
+                vertexConsumer
+                    .vertex(pos.x, pos.y, pos.z)
+                    .endVertex();
+            }
         }
     }
 }
